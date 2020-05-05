@@ -1,0 +1,22 @@
+price_var: price_unadj
+vol_var: average_volume
+solver: glpk
+strategies:
+  strategy_1:
+    in_var: alpha_1
+    strategy_capital: 1e6
+    ideal_long_weight: 1.7625
+    ideal_short_weight: 1.2375
+    position_limit_pct_adv: 30
+    position_limit_pct_lmv: 1
+    position_limit_pct_smv: 1
+    trading_limit_pct_adv: 10
+  strategy_2:
+    in_var: alpha_2
+    strategy_capital: 1e6
+    ideal_long_weight: 1
+    ideal_short_weight: 1
+    position_limit_pct_adv: 30
+    position_limit_pct_lmv: 1
+    position_limit_pct_smv: 1
+    trading_limit_pct_adv: 10

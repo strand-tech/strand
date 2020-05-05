@@ -1,0 +1,7 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+sample_data
+inst/application/sample_data
+vignettes/sample_data

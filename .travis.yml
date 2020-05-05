@@ -1,0 +1,17 @@
+language: r
+
+r:
+  - oldrel
+  - release
+  - devel
+
+before_install:
+  - sudo apt-get -y install coinor-libsymphony-dev
+  - sudo apt-get -y install coinor-libcgl-dev
+  - sudo apt-get -y install libglpk-dev
+  
+r_github_packages:
+  - r-lib/covr
+
+after_success:
+  - Rscript -e 'covr::codecov()'

@@ -1,0 +1,759 @@
+#' Simulation class
+#'
+#' @description Class for running a simulation and getting results.
+#'
+#' @details The \code{Simulation} class is used to set up and run a daily
+#'   simulation over a particular period. Portfolio construction parameters and
+#'   other simulator settings can be configured in a yaml file that is passed to
+#'   the object's constructor. See the package vignette for information on
+#'   configuration file setup.
+#'
+#' @export
+Simulation <- R6Class(
+  "Simulation",
+  public = list(
+
+    #' @description Create a new \code{Simulation} object.
+    #' @param config An object of class \code{list} or \code{character}. If the
+    #'   value passed is a character vector, it should be of length 1 and
+    #'   specify the path to a yaml configuration file that contains the
+    #'   object's configuration info. If the value passed is of class list(),
+    #'   the list should contain the object's configuration info in list form
+    #'   (e.g, the return value of calling \code{yaml.load_file} on the
+    #'   configuration file).
+    #' @param raw_input_data A data frame that contains all of the input data
+    #'   (for all periods) for the simulation. The data frame must have a
+    #'   \code{date} column. If \code{NULL}, input data will taken from daily
+    #'   files specified in \code{config}. Defaults to \code{NULL}.
+    #' @param raw_pricing_data A data frame that contains all of the input data
+    #'   (for all periods) for the simulation. The data frame must have a
+    #'   \code{date} column. If \code{NULL}, pricing data will taken from daily
+    #'   files specified in \code{config}. Defaults to \code{NULL}.
+    #' @param security_reference_data A data frame that contains reference data
+    #'   on the securities in the simulation, including any categories that are
+    #'   used in portfolio construction constraints. Note that the simulator
+    #'   will throw an error if there are input data records for which there is
+    #'   no entry in the security reference.
+    #' @param delisting_dates_data A data frame that contains the dates on which
+    #'   securities are delisted. It must contain two columns: id (character)
+    #'   and delisting_date (Date). The date in the delisting_date column means
+    #'   the day on which a stock will be removed from the simulation portfolio,
+    #'   at the beginning of the day, due to delisting. If \code{NULL},
+    #'   delisting data will taken from a file specified in \code{config}.
+    #'   Defaults to \code{NULL}.
+    #' @return A new \code{Simulation} object.
+    initialize = function(config,
+                          raw_input_data = NULL,
+                          raw_pricing_data = NULL,
+                          security_reference_data = NULL,
+                          delisting_dates_data = NULL) {
+      
+      if (is.character(config)) {
+        config <- yaml.load_file(config)
+        private$config <- StrategyConfig$new(config)
+      } else if (is.list(config)) {
+        private$config <- StrategyConfig$new(config)
+      } else if (is(config, "StrategyConfig")) {
+        private$config <- config
+      } else {
+        stop("config must be of class list, character, or StrategyConfig")
+      }
+      
+      # Set security_reference field
+      #
+      # TODO Improve the mechanism by which we set up the object using
+      # constructor parameters or file / database resources.
+      secref_config <- private$config$getConfig("simulator")$secref_data
+      stopifnot(!is.null(secref_config$type),
+                length(secref_config$type) %in% 1,
+                is.character(secref_config$type))
+      
+      if (secref_config$type %in% "file") {
+        private$security_reference <- read_feather(secref_config$filename)
+      } else if (secref_config$type %in% "object") {
+        private$security_reference <- security_reference_data
+      } else {
+        stop(paste0("Invalid config value for secref_config/type: ", secref_config$type))
+      }
+
+      # Set delisting_dates field. Delisting dates are not required. If no
+      # delisting_data field is present in the config, set the delisting_dates
+      # field to an empty data frame with the appropriate columns.
+      #
+      # TODO Pull setup logic for secref and delisting dates into helper
+      # methods.
+      delistings_config <- private$config$getConfig("simulator")$delisting_data
+      if (is.null(delistings_config)) {
+        private$delisting_dates <- data.frame(id = character(0),
+                                              delisting_date = structure(numeric(0), class = "Date"))
+      } else {
+      
+        stopifnot(!is.null(delistings_config$type),
+                  length(delistings_config$type) %in% 1,
+                  is.character(delistings_config$type))
+        
+        if (delistings_config$type %in% "file") {
+          private$delisting_dates <- read_feather(delistings_config$filename)
+        } else if (delistings_config$type %in% "object") {
+          private$delisting_dates <- delisting_dates_data
+        } else {
+          stop(paste0("Invalid config value for delistings_config/type: ", delistings_config$type))
+        }
+      }
+      
+      # Set raw data from constuctor parameters.
+      
+      if (!is.null(raw_input_data)) {
+        stopifnot("date" %in% names(raw_input_data))
+        private$raw_input_data <- raw_input_data
+      }
+      
+      if (!is.null(raw_pricing_data)) {
+        stopifnot("date" %in% names(raw_pricing_data))
+        private$raw_pricing_data <- raw_pricing_data
+      }
+      
+      if (isTRUE(private$config$getConfig("simulator")$verbose)) {
+        private$verbose <- TRUE
+      }
+      
+      invisible(self)
+    },
+    
+    #' @description Set the verbose flag to control info output.
+    #' @param verbose Logical flag indicating whether to be verbose or not.
+    setVerbose = function(verbose) {
+      stopifnot(is.logical(verbose),
+                length(verbose) %in% 1)
+      private$verbose <- verbose
+      invisible(self)
+    },
+
+    #' @description Set the callback function for updating progress when running
+    #'   a simulation in shiny.
+    #' @param callback A function suitable for updating a shiny Progress object.
+    #'   It must have two parameters: \code{value}, indicating the progress
+    #'   amount, and detail, and \code{detail}, a text string for display on the
+    #'   progress bar.
+    setShinyCallback = function(callback) {
+      if (!is.function(callback)) {
+        stop("callback must be a function")
+      }
+      private$shiny_callback <- callback
+      invisible(self)
+    },
+    
+    #' @description Get security reference information.
+    #' @return The security reference data frame for the object.
+    getSecurityReference = function() {
+      invisible(private$security_reference)
+    },
+  
+    #' @description Run the simulation.
+    #' @return An object of class \code{SimResult} that contains the results of the simulation.  
+    run = function() {
+      
+      # Create object to store result
+      sim_result <- SimResult$new(private$config)
+      
+      # Grab simulator section of config
+      simulator_config <- private$config$getConfig("simulator")
+
+      # Input data object
+      stopifnot(!is.null(simulator_config$input_data$type),
+                length(simulator_config$input_data$type) %in% 1,
+                is.character(simulator_config$input_data$type),
+                simulator_config$input_data$type %in% c("object", "file"))
+      
+      if (simulator_config$input_data$type %in% "object") {
+        input_data_obj <- CrossSection$new(TRUE)
+        input_data_obj$setRaw(private$raw_input_data)
+      } else if (simulator_config$input_data$type %in% "file") {
+        input_data_obj <- CrossSectionFromFile$new(TRUE,
+                                                   simulator_config$input_data$directory,
+                                                   simulator_config$input_data$prefix)
+      } else {
+        stop("Unsupported value for input_data/type")
+      }
+      
+      if (!is.null(simulator_config$input_data$na_replace)) {
+        input_data_obj$setNAReplaceValue(simulator_config$input_data$na_replace)
+      }
+
+      # Pricing data object
+      stopifnot(!is.null(simulator_config$pricing_data$type),
+                length(simulator_config$pricing_data$type) %in% 1,
+                is.character(simulator_config$pricing_data$type),
+                simulator_config$pricing_data$type %in% c("object", "file"))
+
+      if (simulator_config$pricing_data$type %in% "object") {
+        pricing_data_obj <- CrossSection$new(TRUE)
+        pricing_data_obj$setRaw(private$raw_pricing_data)
+      } else if (simulator_config$pricing_data$type %in% "file") {
+        pricing_data_obj <- CrossSectionFromFile$new(TRUE,
+                                                   simulator_config$pricing_data$directory,
+                                                   simulator_config$pricing_data$prefix)
+      } else {
+        stop("Unsupported value for pricing_data/type")
+      }
+      pricing_data_obj$setColumnMap(simulator_config$pricing_data$columns)
+      pricing_data_obj$setCarryForwardValue(list(
+        volume = 0,
+        adjustment_ratio = 1,
+        dividend = as.numeric(NA),
+        distribution = as.numeric(NA)
+      ))
+      
+      all_strategies <- private$config$getStrategyNames()
+      portfolio <- Portfolio$new(all_strategies)
+      
+      all_dates <- self$getSimDates()
+
+      for (current_date in as.list(all_dates)) {
+
+        if (isTRUE(private$verbose)) {
+          cat("Working on ", format(current_date), "\n", sep = "")
+        }
+        
+        if (is.function(private$shiny_callback)) {
+          private$shiny_callback(which(all_dates %in% current_date) / length(all_dates),
+                              paste0("Working on ", format(current_date)))
+        }
+
+        # Retrieve data for the current period.
+        #
+        # TODO Impose restrictions on allowable input data column names. For
+        # example, columns of the form shares_{strategy name} will collide with
+        # the simulator's work columns. There are other ways around this issue
+        # but imposing column restrictions is the easiest.
+        input_data <- input_data_obj$get(current_date)
+        pricing_data <- pricing_data_obj$get(current_date)
+      
+        if (!is.null(simulator_config$input_data$track_metadata)) {}
+          input_stats <- input_data_obj$periodStats(simulator_config$input_data$track_metadata)
+          sim_result$saveInputStats(current_date, input_stats)
+
+        # Properties we enforce on input data:
+        #
+        # 1. Each security with an entry in input_data must have an entry in
+        # pricing_data *unless* the simulator is configured to omit inputs
+        # records that have not yet been priced.
+        #
+        # 2. Each security in which there is a non-zero position has an entry in
+        # pricing_data and input_data.
+        #
+        # 3. All securities must be present in the security reference.
+        stopifnot(
+          all(input_data$id %in% private$security_reference$id),
+          all(portfolio$getPositions()$id %in% private$security_reference$id),
+          all(portfolio$getPositions()$id %in% pricing_data$id),
+          all(portfolio$getPositions()$id %in% input_data$id)
+        )
+        
+        if (!isTRUE(simulator_config$inputs_without_pricing %in% "omit")) {
+          if (!all(input_data$id %in% pricing_data$id)) {
+            stop("Inputs found without pricing data. Consider setting simulator/inputs_without_pricing=omit")
+          }
+        } else {
+          input_data <- filter(input_data, id %in% pricing_data$id)
+        }
+
+        pricing_data <- pricing_data %>%
+          select("id",
+                 "close_price", "prior_close_price",
+                 "adjustment_ratio", "volume",
+                 "dividend", "distribution","carry_forward") %>%
+          rename(pricing_carry_forward = carry_forward)
+        
+        stopifnot(all(pricing_data$close_price > 0),
+                  all(pricing_data$prior_close_price > 0))
+        
+        # A further adjustment is required for pricing data that is
+        # carried-forward: the prior close price must be set to the same value
+        # as the close price.
+        #
+        # TODO Stop requiring that the user passes in the prior close price.
+        # Once we remove this requirement we can keep track of prior values as
+        # we iterate over period-by-period cross sections (and can remove logic
+        # like the below).
+        pricing_data$prior_close_price <- ifelse(pricing_data$pricing_carry_forward,
+                                                 pricing_data$close_price,
+                                                 pricing_data$prior_close_price)
+        
+        # Create start and end price columns to keep things clear. The start
+        # price must be adjusted by the adjustment ratio. In the case of a 2:1
+        # split, the adjustment ratio is 0.5 (number of old shares over number
+        # of new shares). So, we multiply the previous day's unadjusted price by
+        # the adjustment ratio to bring yesterday's price in line with today's.
+        #
+        # Note that data sanitization (replacing NAs with default values) should
+        # be moved to CrossSection.
+        pricing_data <- pricing_data %>%
+          mutate(start_price = .data$prior_close_price * .data$adjustment_ratio,
+                 end_price = .data$close_price,
+                 volume = replace_na(.data$volume, 0),
+                 adjustment_ratio = replace_na(.data$adjustment_ratio, 1),
+                 dividend = replace_na(.data$dividend, 0),
+                 distribution = replace_na(.data$distribution, 0)
+                 )
+        
+        portfolio <- portfolio$applyAdjustmentRatio(
+          select(pricing_data, "id", "adjustment_ratio"))
+
+        # Process delistings
+        if (isTRUE(simulator_config$delisting_policy %in% "remove")) {
+          
+          # TODO For delisted stocks we can go back to our data interfaces and
+          # ensure data for them is not carried back after the delisting date.
+          # For now we remove any position on the delisting date and prevent
+          # further entry by (later in this method) setting the investable flag
+          # to FALSE for all delisted securities.
+          
+          # We could save time and use equality on current_date here, but we run
+          # the risk of having dead securities in the portfolio.
+          id_delisted <- private$delisting_dates$id[private$delisting_dates$delisting_date <= current_date]
+          pos_delisted <- portfolio$getPositions() %>% filter(.data$id %in% id_delisted &
+                                                                (.data$int_shares != 0 | .data$ext_shares != 0))
+          pos_delisted <- pos_delisted %>% left_join(select(pricing_data, "id", "start_price"), by = "id")
+          
+          if (nrow(pos_delisted) > 0) {
+            # Record delisting info
+            sim_result$saveDelistings(current_date, pos_delisted)
+            # Remove from portfolio
+            portfolio$removePositions(pos_delisted$id)
+          }
+        } else {
+          id_delisted <- c()
+        }
+        
+        # Merge together consolidated, wide format positions, pricing data,
+        # security reference and inputs data for passing to the optimization.
+        # This merge will create rows with NA volues for stocks that have not
+        # previously appeared in the data feed. May want to use a special column
+        # prefix for shares columns (as opposed to "shares_") to avoid name
+        # conflict with user columns.
+        #
+        # Note that the reference price for the optimization is the start_price.
+        # We could save some cycles by setting price_var = "start_price" in the
+        # config.
+        #
+        # Note the importance of the assertion above that each position appear
+        # in the input data feed. If the assertion were to be false, then we
+        # would lose position records in first left join.
+        #
+        # TODO slim down security reference so that it only contains columns
+        # used in category constraints.
+        input_data <-
+          left_join(input_data,
+                    portfolio$getConsolidatedPositions(),
+                    by = "id") %>%
+          left_join(pricing_data,
+                    by = "id") %>%
+          left_join(private$security_reference,
+                    by = "id") %>%
+          mutate(ref_price = .data$start_price,
+                 investable = TRUE) %>%
+          mutate_at(.vars = vars(portfolio$getShareColumns()),
+                    .funs = ~ replace_na(., 0))
+        
+        
+        # Set investable flag based on
+        #
+        # 1. Delisting status
+        # 2. Universe configuration
+        #
+        # TODO Move universe logic into PortOpt class. It's OK to sort out
+        # delistings in the simulator, but each strategy should be able to have
+        # its own universe.
+        input_data$investable <- !input_data$id %in% id_delisted
+        if (!is.null(simulator_config$universe) && length(simulator_config$universe) > 0) {
+          univ <- eval(rlang::parse_expr(simulator_config$universe), envir = input_data)
+          if (any(is.na(univ))) {
+            stop("Found NA universe values")
+          }
+          input_data$investable <- input_data$investable & univ
+        }
+        
+        # Perform normalization, if necessary. Here we normalize the entire
+        # vector, but we should consider, especially in the case of a signal
+        # vector, how we are treating values for stocks not in the universe,
+        # stocks for which data has been carried forward, delisted stocks, etc.
+        if (!is.null(simulator_config$normalize_vars)) {
+          for (normalize_var in simulator_config$normalize_vars) {
+            input_data[[normalize_var]] <- normalize(input_data[[normalize_var]])
+          }
+        }
+        
+        stopifnot(!any(is.na(input_data)))
+        
+        # Create problem and solve
+        portOpt <- PortOpt$new(private$config, input_data)
+        portOpt$solve()
+        
+        # Record information on loosened constraints
+        if (length(portOpt$loosened_constraints) > 0) {
+          loosened_df <- data.frame(date = current_date,
+                                    constraint_name = names(portOpt$loosened_constraints),
+                                    pct_loosened = 100 * (1 - as.vector(unlist(portOpt$loosened_constraints))))
+          sim_result$saveLooseningInfo(current_date, loosened_df)
+        }
+        
+        orders <- portOpt$getResultData() %>%
+          select("id", contains("shares"))
+        
+        # Joint result data back to the inputs data that was passed to the
+        # optimization.
+        stopifnot(setequal(orders$id, input_data$id))
+        input_data <-
+          inner_join(input_data, orders, by = "id")
+        
+        # Now for each strategy, separate orders that need to be worked in the
+        # market from orders that net down with orders from other strategies.
+        
+        # 0. Pre-compute the maximum number of shares that are available for
+        # fills, computed as the product of the configured fill rate and the
+        # day's dollar trading volume.
+        stopifnot(!is.null(simulator_config$fill_rate_pct_vol),
+                  simulator_config$fill_rate_pct_vol > 0)
+        
+        input_data$fill_shares_max <-
+            round(input_data$volume * simulator_config$fill_rate_pct_vol / 100)
+        
+        # Compute the fill rate ahead of time for each stock. The fill rate is 1
+        # if the maximum number of shares available (fill_shares_max) is greater
+        # than the size of the total order across all strategies. Computing this
+        # value makes fill calculations easier.
+        input_data$fill_rate <-
+          ifelse(input_data$order_shares_joint %in% 0 |
+                   abs(input_data$order_shares_joint) <= input_data$fill_shares_max,
+                 1,
+                 input_data$fill_shares_max / abs(input_data$order_shares_joint))
+        
+        stopifnot(!any(is.na(input_data$fill_shares_max)))
+        
+        # 1. Compute the total number of shares bought and sold across all
+        # strategies.
+        input_data$buy_shares_joint <- input_data$sell_shares_joint <- 0
+        for (strategy in private$config$getStrategyNames()) {
+          this_order_shares <- input_data[[paste0("order_shares_", strategy)]]
+          
+          input_data$buy_shares_joint <- input_data$buy_shares_joint + 
+            ifelse(this_order_shares > 0, this_order_shares, 0)
+          input_data$sell_shares_joint <- input_data$sell_shares_joint +
+            ifelse(this_order_shares < 0, this_order_shares, 0)
+        }
+
+        strategy_name_regexp <- paste0(private$config$getStrategyNames(), collapse = "|")
+        
+        # 2. Using the totals computed in (1), pivot the data to long format to
+        # calculate fills.
+        res <- input_data %>%
+          select("id", "fill_rate",
+                 contains("shares")) %>%
+          # Is there a cleaner way to select all strategy columns for the pivot?
+          # Note that the below names_pattern requires that strategy names only
+          # consist of alpha numeric characters.
+          pivot_longer(cols = matches(!!strategy_name_regexp),
+                              names_to = c(".value", "strategy"),
+                              names_pattern = paste0("(.*)_(", strategy_name_regexp, ")$")) %>%
+          left_join(portfolio$getPositions(), by = c("id", "strategy")) %>%
+          mutate(
+            
+            # Orders
+            #
+            # Calculate shares that must be traded in the market
+            market_order_shares = as.integer(round(
+              ifelse(.data$order_shares > 0 & .data$order_shares_joint > 0,
+                     .data$order_shares / .data$buy_shares_joint * .data$order_shares_joint,
+                     ifelse(.data$order_shares < 0 & .data$order_shares_joint < 0,
+                            abs(.data$order_shares / .data$sell_shares_joint) * .data$order_shares_joint,
+                            0)))),
+            # Shares transferred to other strategies
+            transfer_order_shares = as.integer(.data$order_shares - .data$market_order_shares),
+            
+            # Fills
+            #
+            # Market fills are subject to market liquidity  
+            market_fill_shares = as.integer(floor(round(.data$market_order_shares * .data$fill_rate))),
+            # Transfers are filled completely
+            transfer_fill_shares = as.integer(.data$transfer_order_shares),
+            
+            int_shares = replace_na(.data$int_shares, 0L),
+            ext_shares = replace_na(.data$ext_shares, 0L),
+            
+            # External and internal end positions are computed from market and
+            # transfer fills
+            end_int_shares = as.integer(.data$int_shares + .data$transfer_fill_shares),
+            end_ext_shares = as.integer(.data$ext_shares + .data$market_fill_shares),
+            
+            # Total fill = market + transfer
+            fill_shares = .data$transfer_fill_shares + .data$market_fill_shares,
+            
+            # End number of shares = start + fill
+            end_shares = .data$shares + .data$fill_shares)
+        
+        
+        res <- res %>%
+          select("id", "strategy", "shares",
+                        ends_with("_shares"))
+        
+        # Roll up strategy data to a "joint" top level with a sum.
+        joint_data <- res %>%
+          select(-"strategy") %>%
+          group_by(.data$id) %>%
+          summarise_all(sum) %>%
+          mutate(strategy = "joint")
+        
+        res <- rbind(res, joint_data)
+        
+        # Compute market values, costs, and P&L.
+        
+        stopifnot(
+          !is.null(simulator_config$transaction_cost_pct),
+          simulator_config$transaction_cost_pct >= 0,
+          !is.null(simulator_config$financing_cost_pct),
+          simulator_config$financing_cost_pct >= 0
+        )
+
+        res <- res %>%
+          inner_join(select(input_data, "id", "start_price", "end_price", "dividend", "distribution",
+                            !!simulator_config$save_detail_columns),
+                            by = "id") %>%
+          mutate(
+            # Position P&L is computed by comparing the value of the starting
+            # position to the value of the ending position (including adjustments
+            # for dividends and distributions).
+            position_pnl = .data$shares * 
+              (.data$end_price + .data$dividend + .data$distribution - .data$start_price),
+            
+            # Trading P&L is computed by comparing the end price to a benchmark
+            # price.
+            #
+            # Temporarily: assuming trading at the close, so trading P&L is zero.
+            trading_pnl = 0,
+            
+            # Apply trade costs
+            #
+            # Temporarily: trade costs are a fixed percentage of the notional of the market
+            # trade (valued at the close). There is no cost to transfer to other
+            # strategies.
+            trade_costs = abs(.data$market_fill_shares * .data$end_price) *
+              simulator_config$transaction_cost_pct / 100,
+            
+            # Apply financing costs
+            #
+            # Temporarily: financing costs are 100bps of the notional of the
+            # starting value of the portfolio's external positions. External
+            # positions are positions held on the street and are recorded in the
+            # ext_shares column.
+            #
+            # Use a standard 360-day-count methodology, charging for three days
+            # on Monday.
+      
+            financing_costs = abs(.data$ext_shares * .data$start_price) *
+              simulator_config$financing_cost_pct / 100 / 360 *
+              ifelse(weekdays(current_date, FALSE) %in% "Monday", 3, 1),
+
+            gross_pnl = .data$position_pnl + .data$trading_pnl,
+            net_pnl = .data$gross_pnl - .data$trade_costs - .data$financing_costs,
+            
+            # TODO use benchmark price in trade valuations
+            market_order_gmv = abs(.data$market_order_shares * .data$end_price),
+            market_fill_nmv = .data$market_fill_shares * .data$end_price,
+            market_fill_gmv = abs(.data$market_fill_nmv),
+            transfer_fill_nmv = .data$transfer_fill_shares * .data$end_price,
+            transfer_fill_gmv = abs(.data$transfer_fill_nmv),
+            
+            start_nmv = (.data$int_shares + .data$ext_shares) * .data$start_price,
+            end_nmv = .data$end_shares * .data$end_price,
+            end_gmv = abs(.data$end_nmv))
+
+        # if (nrow(filter(res, strategy %in% "joint" & transfer_fill_gmv != 0))) browser()
+        
+        # Simple sums
+        summary_sum_data <- res %>%
+          select("strategy",
+                        ends_with("_nmv"),
+                        ends_with("_gmv"),
+                        ends_with("_pnl"),
+                        ends_with("_costs")) %>%
+          group_by(.data$strategy) %>%
+          summarise_all(sum) %>%
+          ungroup() %>%
+          mutate(fill_rate_pct = 100 * .data$market_fill_gmv / .data$market_order_gmv)
+
+        # More complex aggregation on nmv
+        summary_addl_data <- res %>%
+          select("strategy", "end_nmv", "start_nmv") %>%
+          group_by(.data$strategy) %>%
+          summarise(
+            end_lmv = sum(.data$end_nmv[.data$end_nmv > 0]),
+            end_smv = sum(.data$end_nmv[.data$end_nmv < 0]),
+            start_lmv = sum(.data$start_nmv[.data$start_nmv > 0]),
+            start_smv = sum(.data$start_nmv[.data$start_nmv < 0]),
+            end_num = sum(.data$end_nmv != 0),
+            end_num_long = sum(.data$end_nmv > 0),
+            end_num_short = sum(.data$end_nmv < 0)
+            )
+
+        summary_data <- 
+          inner_join(summary_sum_data,
+                            summary_addl_data, by = "strategy")
+        
+        # Update positions
+        portfolio$setPositions(
+          filter(res, !.data$strategy %in% "joint") %>%
+          select("id",
+                        "strategy",
+                        "int_shares" = "end_int_shares",
+                        "ext_shares" = "end_ext_shares"))
+
+        # Calculate EOD exposures.
+        #
+        # First prepare data. Columns for category grouping are static and live
+        # in this object's security_reference member. Factor data is different
+        # each day and can be found in 'input_data'.
+        #
+        # TODO automatically calculate exposures for all categories and factors
+        # used in constraints.
+        category_vars <- simulator_config$calculate_exposures$category_vars
+        factor_vars <- simulator_config$calculate_exposures$factor_vars
+        if (!is.null(category_vars) || !is.null(factor_vars)) {
+          
+          exposures_input <-
+            res %>%
+            select("strategy", "id", "end_nmv") %>%
+            left_join(select(private$security_reference, "id", one_of(!!category_vars)),
+                             by = "id") %>%
+            left_join(select(input_data, "id", one_of(!!factor_vars)),
+                             by = "id")
+          
+          exposures <- private$calculateExposures(exposures_input, category_vars, factor_vars)
+          sim_result$saveExposures(current_date, exposures)
+        }
+        
+        # Save sim summary, sim detail, and optimization data.
+        sim_result$saveSimSummary(current_date, summary_data)
+        
+        # TODO Add flags that control saving of other data. Right now we can
+        # only turn saving detail off and on.
+        if (is.null(simulator_config$skip_saving) ||
+            !"detail" %in% simulator_config$skip_saving) {
+          sim_result$saveSimDetail(current_date, res)
+        }
+        sim_result$saveOptimizationSummary(current_date, portOpt$summaryDf())
+      }
+
+      invisible(sim_result)
+    },
+    
+    #' @description Get a list of all date for the simulation.
+    #' @return A vector of dates over which the simulation currently iterates: all
+    # weekdays between the 'from' and 'to' dates in the simulation's config.
+    getSimDates = function() {
+      from <- as.Date(private$config$getConfig("from"))
+      to <- as.Date(private$config$getConfig("to"))
+      
+      if (to < from) {
+        stop("to date must not be earlier than from date")
+      }
+      
+      # The simulator currently iterates over each weekday between the dates
+      # 'from' and 'to'.
+      all_dates <- seq(from = from, to = to, by = "1 day")
+      all_dates <- all_dates[!weekdays(all_dates, abbreviate = FALSE) %in% c("Saturday", "Sunday")]
+      
+      # Dates can be omitted using the omit_dates simulator config option.
+      omit_dates <- private$config$getConfig("simulator")$omit_dates
+      if (length(omit_dates) > 0) {
+        omit_dates <- as.Date(omit_dates)
+        all_dates <- all_dates[!all_dates %in% omit_dates]
+      }
+
+      all_dates
+    }
+  ),
+  
+  private = list(
+    
+    config = NULL,
+    raw_input_data = NULL,
+    raw_pricing_data = NULL,
+    security_reference = NULL,
+    delisting_dates = NULL,
+    shiny_callback = NULL,
+    verbose = FALSE,
+    
+    # @description Get the strategy capital levels for the strategy, based on
+    #   the simulator's config.
+    # @return A data frame with two columns: strategy (name of the strategy, or
+    #   'joint'), and strategy_capital (capital for the strategy).
+    getStrategyCapital = function() {
+      strategy_capital_df <- NULL
+      joint_capital <- 0
+      
+      for (strategy_name in private$config$getStrategyNames()) {
+        
+        this_capital <- private$config$getStrategyConfig(strategy_name, "strategy_capital")
+        joint_capital <- joint_capital + this_capital
+        
+        strategy_capital_df <- rbind(
+          strategy_capital_df,
+          data.frame(
+            strategy = strategy_name,
+            strategy_capital = this_capital,
+            stringsAsFactors = FALSE)
+        )
+      }
+      
+      rbind(strategy_capital_df,
+            data.frame(
+              strategy = "joint",
+              strategy_capital = joint_capital,
+              stringsAsFactors = FALSE)
+      )
+    },
+    
+    # @description Calculate ending portfolio exposures relative to strategy
+    #   capital, for factors and categories, for all strategies in a simulation
+    #   and for the joint strategy. This method is used to compute the
+    #   exposures that are saved in a simulation's \code{SimResult} object.
+    # @return A data frame of exposure information.
+    calculateExposures = function(detail_df, category_vars = NULL, factor_vars = NULL) {
+      exp_res <- private$getStrategyCapital()
+      
+      for (cat_var in category_vars) {
+        this_exposures <- 
+          detail_df %>%
+          group_by(.dots = c("strategy", cat_var)) %>%
+          summarise(exposure = sum(.data$end_nmv)) %>%
+          left_join(private$getStrategyCapital(),
+                    by = "strategy") %>%
+          mutate(exposure = .data$exposure / .data$strategy_capital) %>%
+          pivot_wider(
+            names_from = cat_var,
+            names_prefix = paste0(cat_var, "_"),
+            values_from = "exposure") %>%
+          select(-"strategy_capital")
+        
+        exp_res <- left_join(exp_res, this_exposures, by = "strategy")    
+      }
+      
+      for (fact_var in factor_vars) {
+        this_exposures <- 
+          detail_df %>%
+          group_by(.data$strategy) %>%
+          summarise(!!fact_var := sum(.data$end_nmv * .data[[fact_var]])) %>%
+          left_join(private$getStrategyCapital(),
+                    by = "strategy") %>%
+          mutate(!!fact_var := .data[[fact_var]] / .data$strategy_capital) %>%
+          select(-"strategy_capital")
+        
+        exp_res <- left_join(exp_res, this_exposures, by = "strategy")    
+      }
+      
+      exp_res
+    }
+    
+  )
+)

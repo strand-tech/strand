@@ -1,0 +1,64 @@
+price_var: price_unadj
+vol_var: average_volume
+solver: glpk
+strategies:
+  strategy_1:
+    in_var: alpha_1
+    strategy_capital: 1e6
+    ideal_long_weight: 1.7625
+    ideal_short_weight: 1.2375
+    position_limit_pct_adv: 30
+    position_limit_pct_lmv: 0.5
+    position_limit_pct_smv: 0.5
+    trading_limit_pct_adv: 10
+    constraints:
+      factor_1:
+        in_var: factor_1
+        type: factor
+        upper_bound: 0.01
+        lower_bound: -0.01
+      factor_2:
+        in_var: factor_2
+        type: factor
+        upper_bound: 0.01
+        lower_bound: -0.01
+      factor_3:
+        in_var: factor_3
+        type: factor
+        upper_bound: 0.01
+        lower_bound: -0.01
+      factor_4:
+        in_var: factor_4
+        type: factor
+        upper_bound: 0.01
+        lower_bound: -0.01
+  strategy_2:
+    in_var: alpha_2
+    strategy_capital: 1e6
+    ideal_long_weight: 1
+    ideal_short_weight: 1
+    position_limit_pct_adv: 30
+    position_limit_pct_lmv: 0.5
+    position_limit_pct_smv: 0.5
+    trading_limit_pct_adv: 10
+    constraints:
+      factor_1:
+        in_var: factor_1
+        type: factor
+        upper_bound: 0.01
+        lower_bound: -0.01
+      factor_2:
+        in_var: factor_2
+        type: factor
+        upper_bound: 0.01
+        lower_bound: -0.01
+      factor_3:
+        in_var: factor_3
+        type: factor
+        upper_bound: 0.01
+        lower_bound: -0.01
+      factor_4:
+        in_var: factor_4
+        type: factor
+        upper_bound: 0.01
+        lower_bound: -0.01

@@ -1,0 +1,31 @@
+name: test
+from: 2019-01-02
+to: 2019-01-04
+strategies:
+  strategy_1:
+    in_var: alpha_1
+    strategy_capital: 500
+    ideal_long_weight: 1
+    ideal_short_weight: 0
+    position_limit_pct_adv: 30
+    position_limit_pct_lmv: 100
+    position_limit_pct_smv: 100
+    trading_limit_pct_adv: 100
+target_weight_policy: full
+simulator:
+  fill_rate_pct_vol: 20
+  transaction_cost_pct: 0.1
+  financing_cost_pct: 1
+  input_data:
+    type: object
+  pricing_data:
+    type: object
+    columns:
+      close_price: price_unadj
+      prior_close_price: prior_close_unadj
+      adjustment_ratio: adjustment_ratio
+      volume: volume
+      dividend: dividend_unadj
+      distribution: distribution_unadj
+  secref_data:
+    type: object

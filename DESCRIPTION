@@ -1,0 +1,32 @@
+Package: strand
+Type: Package
+Title: A framework for investment strategy simulation
+Version: 0.1.0
+Date: 2020-05-05
+Authors@R: c(person("Jeff", "Enos", email = "jeff@strand.tech", role = c("cre", "aut")),
+             person("David", "Kane", email = "david@strand.tech", role = c("aut")))
+Description: The strand package provides a framework for performing discrete (share-level)
+    simulations of investment strategies.
+License: GPL-3
+Depends: R (>= 3.5.0)
+Imports:
+    R6,
+    Matrix,
+    Rglpk,
+    Rsymphony,
+    dplyr,
+    tidyr,
+    feather,
+    lubridate,
+    rlang,
+    yaml,
+    ggplot2
+Suggests:
+    testthat,
+    knitr,
+    rmarkdown,
+    shiny,
+    DT
+Encoding: UTF-8
+VignetteBuilder: knitr
+RoxygenNote: 7.1.0

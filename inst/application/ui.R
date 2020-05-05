@@ -1,0 +1,108 @@
+library(DT)
+
+.readYamlConfig <- function(filename) {
+  con <- file(filename)
+  txt <- paste0(readLines(con), collapse = "\n")
+  close(con)
+  txt
+}
+
+ui <- fluidPage(
+  
+  fluidRow(
+    column(12,
+      titlePanel("strand"),
+      hr()
+    )
+  ),
+  
+  tabsetPanel(
+    id = "top",
+    type = "tabs",
+    tabPanel("Configuration",
+             br(),
+             column(2,
+                    dateInput("startDate", label = "Start date", value = "2019-01-02",
+                              min = "2019-01-02", max = "2019-12-31",
+                              daysofweekdisabled = c(0,6)),
+                    dateInput("endDate", label = "End date", value = "2019-01-31",
+                              min = "2019-01-02", max = "2019-12-31",
+                              daysofweekdisabled = c(0,6)),
+                    actionButton("runSim", "Run simulation")
+             ),
+             column(10,
+                    textAreaInput("config", "Configuration",
+                                  width = "600px",
+                                  height = "400px",
+                                  value = .readYamlConfig("strategy_config.yaml")
+                                  )
+             )),
+    tabPanel(
+      "Results",
+      br(),
+      tabsetPanel(
+        id = "results",
+        type = "tabs",
+        tabPanel(
+          "Overall Stats",
+          fluidRow(
+            column(
+              4,
+              align = "left",
+              br(),
+              tableOutput("overallStatsTable")
+            ),
+            column(
+              8,
+              br(),
+              plotOutput('plot_1')
+            )
+          ),
+          fluidRow(
+            column(
+              12,
+              br(),
+              DT::dataTableOutput('perfTable')
+            )
+          )
+          
+        ),
+        tabPanel(
+          "Market Values",
+          fluidRow(
+            column(
+              12,
+              br(),
+              plotOutput('plot_2'),
+              DT::dataTableOutput('marketValueTable')
+            )
+          )
+        ),
+        tabPanel(
+          "Exposures",
+          fluidRow(
+            column(
+              12,
+              br(),
+              plotOutput('plot_3'),
+              plotOutput('plot_4')
+            )
+          )
+        ),
+        tabPanel(
+          "Holdings",
+          fluidRow(
+            column(
+              12,
+              DT::dataTableOutput('positionSummaryTable'),
+              br(),
+              dateInput("holdingsDate", label = "Date", value = "2019-01-02",
+                        daysofweekdisabled = c(0,6)),
+              DT::dataTableOutput('holdingsTable')
+            )
+          )
+        )
+      )
+    )
+  )
+)
