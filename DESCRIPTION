@@ -14,8 +14,9 @@ Authors@R:
              role = c("aut")),
       person(given = "Strand Technologies, Inc.",
              role = "cph"))
-Description: The strand package provides a framework for performing discrete (share-level)
-    simulations of investment strategies.
+Description: Provides a framework for performing discrete (share-level) simulations of
+  investment strategies. Simulated portfolios optimize exposure to an input signal subject
+  to constraints such as position size and factor exposure.
 License: GPL-3
 URL: https://github.com/strand-tech/strand
 BugReports: https://github.com/strand-tech/strand/issues
