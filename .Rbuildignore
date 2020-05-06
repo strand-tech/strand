@@ -8,3 +8,4 @@ docker-compose.yml
 ^inst/application/sample_data$
 ^vignettes/sample_data$
 sample_data.tar.gz
+LICENSE
