@@ -10,4 +10,4 @@
 ^sample_data.tar.gz$
 ^LICENSE$
 ^README.md$
-^vignettes/strand.pdf$
+^README.Rmd$
