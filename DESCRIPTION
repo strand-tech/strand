@@ -1,6 +1,6 @@
 Package: strand
 Type: Package
-Title: A framework for investment strategy simulation
+Title: A Framework for Investment Strategy Simulation
 Version: 0.1.0
 Date: 2020-05-05
 Authors@R:
