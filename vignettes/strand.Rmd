@@ -426,7 +426,7 @@ The `strand` package is implemented using the `R6` OOP system. To run the backte
 
 ```{r}
 sim <- Simulation$new("sample.yaml")
-res <- sim$run()
+sim$run()
 
 ```
 
@@ -435,11 +435,11 @@ res <- sim$run()
 When the backtest is finished, we can call methods to summarize and plot the results. For example, the `overallStatsDf()` method returns a data frame of key statistics:
 
 ```{r, echo = FALSE}
-overall_stats <- res$overallStatsDf()
+overall_stats <- sim$overallStatsDf()
 ```
 
 ```{r}
-res$overallStatsDf()
+sim$overallStatsDf()
 ```
 
 This display shows that, gross of transaction and financing costs, the strategy had a return of `r overall_stats$Gross[overall_stats$Item %in% "Total Return on GMV (%)"]`\% on gross market value (GMV) and had an annualized Sharpe ratio of `r overall_stats$Gross[overall_stats$Item %in% "Annualized Sharpe"]`.  Net of costs, the strategy's return was `r overall_stats$Net[overall_stats$Item %in% "Total Return on GMV (%)"]`\% with a Sharpe of `r overall_stats$Net[overall_stats$Item %in% "Annualized Sharpe"]`.  The average gross market value of the portfolio (GMV) was `r overall_stats$Net[overall_stats$Item %in% "Avg GMV"]`, while the average net market value (NMV) was `r overall_stats$Net[overall_stats$Item %in% "Avg NMV"]`, as expected given that the strategy's target market values are \$1mm long, -\$1mm short.  On average there were `r overall_stats$Net[overall_stats$Item %in% "Avg Count"]` positions in the portfolio.  The average daily turnover (gross market value of trading) was  `r overall_stats$Net[overall_stats$Item %in% "Avg Daily Turnover"]`, implying a holding period of  `r overall_stats$Net[overall_stats$Item %in% "Holding Period (months)"]` months.
@@ -453,7 +453,7 @@ There are several methods that can be used to visualize backtest results.
 The `plotPerformance()` method plots gross and net return on GMV over time:
 
 ```{r}
-res$plotPerformance()
+sim$plotPerformance()
 ```
 
 #### Market values
@@ -461,14 +461,14 @@ res$plotPerformance()
 The `plotMarketValue()` method plots gross market value (GMV), net market value (NMV), long market value (LMV) and short market value (SMV) over time:
 
 ```{r}
-res$plotMarketValue()
+sim$plotMarketValue()
 ```
 
 #### Category exposures
 
 The `plotCategoryExposure()` method shows the exposure over time within each level of a given category. Below we plot the exposure within the levels of `category_1`, which in our backtest has an exposure constraint of +/-2\%:
 ```{r}
-res$plotCategoryExposure("category_1")
+sim$plotCategoryExposure("category_1")
 ```
 
 Note that there are some cases where the exposure to a level of `category_1` falls outside of +/-2\% despite the category exposure constraint we impose during portfolio construction. This can be due to the following:
@@ -484,7 +484,7 @@ Exploring these scenarios is possible by looking at lower-level backtest results
 The `plotFactorExposure()` method shows the portfolio exposure over time to one or more factors. Below we plot the exposure to `factor_1` and `factor_2`, each of which in our backtest has an exposure constraint of +/-1\%:
 
 ```{r}
-res$plotFactorExposure(c("factor_1", "factor_2"))
+sim$plotFactorExposure(c("factor_1", "factor_2"))
 ```
 
 Here we can also see spikes of exposure outside the constrained range +/-1\%. As discussed in the previous section, price movement, lack of liquidity and constraint loosening are possible explanations for these spikes in end-of-day exposure. In the case of factor constraints, another possible explanation is a significant day-over-day change in factor values. Again, exploring these scenarios is possible by diving more deeply into the backtest's result data, but is outside the scope of this document.

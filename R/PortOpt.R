@@ -1,30 +1,30 @@
-#' Portfolio optimization class
-#'
-#' @description The \code{PortOpt} object is used to set up and solve a
-#'   portfolio optimization problem.
-#'
-#' @details A \code{PortOpt} object is configured in the same way as a
-#'   \code{Simulation} object, by supplying configuration in a yaml file or list
-#'   to the object constructor. Methods are available for adding constraints and
-#'   retrieving information about the optimization setup and results. See the
-#'   package vignette for information on configuration file setup.
-#'
-#' @export
+# Portfolio optimization class
+#
+# @description The \code{PortOpt} object is used to set up and solve a
+#   portfolio optimization problem.
+#
+# @details A \code{PortOpt} object is configured in the same way as a
+#   \code{Simulation} object, by supplying configuration in a yaml file or list
+#   to the object constructor. Methods are available for adding constraints and
+#   retrieving information about the optimization setup and results. See the
+#   package vignette for information on configuration file setup.
+#
+# @export
 PortOpt <- R6Class(
   "PortOpt",
   public = list(
 
-    #' @description Create a new \code{PortOpt} object.
-    #' @param config An object of class \code{list} or \code{character}. If the
-    #'   value passed is a character vector, it should be of length 1 and
-    #'   specify the path to a yaml configuration file that contains the
-    #'   object's configuration info. If the value passed is of class list(),
-    #'   the list should contain the object's configuration info in list form
-    #'   (e.g, the return value of calling \code{yaml.load_file} on the
-    #'   configuration file).
-    #' @param input_data A \code{data.frame} that contains all necessary input
-    #'   for the optimization.
-    #' @return A new \code{PortOpt} object.
+    # @description Create a new \code{PortOpt} object.
+    # @param config An object of class \code{list} or \code{character}. If the
+    #   value passed is a character vector, it should be of length 1 and
+    #   specify the path to a yaml configuration file that contains the
+    #   object's configuration info. If the value passed is of class list(),
+    #   the list should contain the object's configuration info in list form
+    #   (e.g, the return value of calling \code{yaml.load_file} on the
+    #   configuration file).
+    # @param input_data A \code{data.frame} that contains all necessary input
+    #   for the optimization.
+    # @return A new \code{PortOpt} object.
     initialize = function(config, input_data) {
       
       if (is.character(config)) {
@@ -90,8 +90,8 @@ PortOpt <- R6Class(
       invisible(self)
     },
     
-    #' @description Set the verbose flag to control info output.
-    #' @param verbose Logical flag indicating whether to be verbose or not.
+    # @description Set the verbose flag to control info output.
+    # @param verbose Logical flag indicating whether to be verbose or not.
     setVerbose = function(verbose) {
       stopifnot(is.logical(verbose),
                 length(verbose) %in% 1)
@@ -99,34 +99,34 @@ PortOpt <- R6Class(
       invisible(self)
     },
     
-    #' @description Add optimization constraints.
-    #' @param constraint_matrix Matrix with one row per constraint and \eqn{(S+1) \times N}
-    #'   columns, where S is number of strategies and N is the number of stocks.
-    #'
-    #'   The variables in the optimization are
-    #'
-    #'   \deqn{x_{1,1}, x_{2,1}, \ldots, x_{N,1},}
-    #'   \deqn{x_{1,2}, x_{2,2}, \ldots, x_{N,2},}
-    #'   \deqn{\vdots}
-    #'   \deqn{x_{1,S}, x_{2,S}, \ldots, x_{N,S},}
-    #'   \deqn{y_1, \ldots, y_N}
-    #'
-    #'   The first \eqn{N \times S} variables are the individual strategy
-    #'   trades. Variable \eqn{x_{i,s}} represents the signed trade for stock i
-    #'   in strategy s. The following N auxillary variables \eqn{y_1, \ldots, y_N}
-    #'   represent the absolute value of the net trade in each stock. So
-    #'   for a stock i, we have:
-    #'
-    #'   \deqn{y_i = \sum_s |x_{i,s}|}
-    #'
-    #' @param dir Vector of class character of length
-    #'   \code{nrow(constraint_matrix)} that specifies the direction of the
-    #'   constraints. All elements must be one of ">=", "==", or "<=".
-    #' @param rhs Vector of class numeric of length
-    #'   \code{nrow(constraint_matrix)} that specifies the bounds of the
-    #'   constraints.
-    #' @param name Character vector of length 1 that specifies a name for the
-    #'   set of constraints that are being created.
+    # @description Add optimization constraints.
+    # @param constraint_matrix Matrix with one row per constraint and \eqn{(S+1) \times N}
+    #   columns, where S is number of strategies and N is the number of stocks.
+    #
+    #   The variables in the optimization are
+    #
+    #   \deqn{x_{1,1}, x_{2,1}, \ldots, x_{N,1},}
+    #   \deqn{x_{1,2}, x_{2,2}, \ldots, x_{N,2},}
+    #   \deqn{\vdots}
+    #   \deqn{x_{1,S}, x_{2,S}, \ldots, x_{N,S},}
+    #   \deqn{y_1, \ldots, y_N}
+    #
+    #   The first \eqn{N \times S} variables are the individual strategy
+    #   trades. Variable \eqn{x_{i,s}} represents the signed trade for stock i
+    #   in strategy s. The following N auxillary variables \eqn{y_1, \ldots, y_N}
+    #   represent the absolute value of the net trade in each stock. So
+    #   for a stock i, we have:
+    #
+    #   \deqn{y_i = \sum_s |x_{i,s}|}
+    #
+    # @param dir Vector of class character of length
+    #   \code{nrow(constraint_matrix)} that specifies the direction of the
+    #   constraints. All elements must be one of ">=", "==", or "<=".
+    # @param rhs Vector of class numeric of length
+    #   \code{nrow(constraint_matrix)} that specifies the bounds of the
+    #   constraints.
+    # @param name Character vector of length 1 that specifies a name for the
+    #   set of constraints that are being created.
     addConstraints = function(constraint_matrix, dir, rhs, name) {
       stopifnot(is.matrix(constraint_matrix) ||
                 inherits(constraint_matrix, "Matrix"))
@@ -159,17 +159,17 @@ PortOpt <- R6Class(
       invisible(self)
     },
 
-    #' @description Constraint matrix access.
-    #' @return The optimization's constraint matrix.
+    # @description Constraint matrix access.
+    # @return The optimization's constraint matrix.
     getConstraintMatrix = function() {
       do.call(rbind, lapply(private$constraint_matrices, as, "sparseMatrix"))
     },
     
-    #' @description Provide high-level constraint information.
-    #' @return A data frame that contains constraint metadata, such as current constraint value and
-    #'   whether a constraint is currently within bounds, for all single-row
-    #'   constraints. Explicitly exclude net trade constraints and constraints
-    #'   that involve net trade variables.
+    # @description Provide high-level constraint information.
+    # @return A data frame that contains constraint metadata, such as current constraint value and
+    #   whether a constraint is currently within bounds, for all single-row
+    #   constraints. Explicitly exclude net trade constraints and constraints
+    #   that involve net trade variables.
     getConstraintMeta = function() {
       constr_meta <- data.frame(name = names(private$constraint_matrices),
                                 stringsAsFactors = FALSE)
@@ -201,8 +201,8 @@ PortOpt <- R6Class(
       constr_meta
     },
 
-    #' @description Solve the optimization. After running \code{solve()},
-    #'   results can be retrieved using \code{getResultData()}.
+    # @description Solve the optimization. After running \code{solve()},
+    #   results can be retrieved using \code{getResultData()}.
     solve = function() {
       indices <- 1:length(private$objective_function)
       
@@ -296,10 +296,10 @@ PortOpt <- R6Class(
       invisible(self)
     },
     
-    #' @description Get optimization result.
-    #' @return A data frame that contains the number of shares and the net
-    #'   market value of the trades at the strategy and joint (net) level
-    #'   for each stock in the optimization's input.
+    # @description Get optimization result.
+    # @return A data frame that contains the number of shares and the net
+    #   market value of the trades at the strategy and joint (net) level
+    #   for each stock in the optimization's input.
     getResultData = function() {
       
       if (length(private$solution) %in% 0) {
@@ -346,11 +346,11 @@ PortOpt <- R6Class(
       invisible(res)
     },
     
-    #' @description Provide aggregate level optimization information if the
-    #'   problem has been solved.
-    #' @return A data frame with one row per strategy, including the joint (net)
-    #'   level, and columns for starting and ending market values and factor
-    #'   expoure values.
+    # @description Provide aggregate level optimization information if the
+    #   problem has been solved.
+    # @return A data frame with one row per strategy, including the joint (net)
+    #   level, and columns for starting and ending market values and factor
+    #   expoure values.
     summaryDf = function() {
       
       # TODO Provide pre-solution output.
@@ -436,7 +436,7 @@ PortOpt <- R6Class(
       res[order(match(res$strategy, c(all_strategies, "joint"))),] %>% data.frame
     },
     
-    #' @description Print summary information. 
+    # @description Print summary information. 
     print = function() {
       # TODO Improve this print method.
       if (is.null(private$solution)) {

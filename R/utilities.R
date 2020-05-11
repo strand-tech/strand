@@ -1,32 +1,30 @@
-#' Transforms an input variable to a normal distribution.
-#' 
-#' \code{normalize} transforms an \code{in_var} to a normal distribution using 
-#' ranks. Output is also adjusted in accordance with the arguments passed in using 
-#' \code{within_var}, \code{out_sd} and \code{adj_var}. It is, generally, 
-#' impossible for the result to meet all these requirements exactly. See
-#' comments in the code for details.
-#' 
-#' @param x data frame, containing all the necessary input data.
-#'    
-#' @param in_var character vector, the name of the variable to be adjusted.
-#'   
-#' @param within_var character vector, variables within which we 
-#'   will manipulate the distribution of \code{in_var} to be N(0,1).
-#'   
-#' @param out_sd a list of lists which specify the output standard deviations to
-#'   use for different levels of specified variables. The variables here have no
-#'   necessary connection with the variables in \code{within_var}.
-#'   
-#' @param adj_var character vector, the name of the variable(s) to which we 
-#'   want \code{in_var} to be neutral. For now, neutral means uncorrelated 
-#'   with. In later versions, we hope this will mean no decile/quintile exposure
-#'   to.
-#'   
-#' @param loops numeric, number of iterations to run.
-#'   
-#' @return a numeric vector equal in length to \code{in_var}.
-#'
-#' @export
+# Transforms an input variable to a normal distribution.
+# 
+# \code{normalize} transforms an \code{in_var} to a normal distribution using 
+# ranks. Output is also adjusted in accordance with the arguments passed in using 
+# \code{within_var}, \code{out_sd} and \code{adj_var}. It is, generally, 
+# impossible for the result to meet all these requirements exactly. See
+# comments in the code for details.
+# 
+# @param x data frame, containing all the necessary input data.
+#    
+# @param in_var character vector, the name of the variable to be adjusted.
+#   
+# @param within_var character vector, variables within which we 
+#   will manipulate the distribution of \code{in_var} to be N(0,1).
+#   
+# @param out_sd a list of lists which specify the output standard deviations to
+#   use for different levels of specified variables. The variables here have no
+#   necessary connection with the variables in \code{within_var}.
+#   
+# @param adj_var character vector, the name of the variable(s) to which we 
+#   want \code{in_var} to be neutral. For now, neutral means uncorrelated 
+#   with. In later versions, we hope this will mean no decile/quintile exposure
+#   to.
+#   
+# @param loops numeric, number of iterations to run.
+#   
+# @return a numeric vector equal in length to \code{in_var}.
 normalize <- function(x, 
                       in_var = NULL, 
                       within_var = NULL, 
@@ -356,33 +354,31 @@ normalize <- function(x,
   
 }
 
-#' Transform an input variable to be uncorrelated with other variables.
-#' 
-#' \code{adjust} makes \code{in_var} neutral (uncorrelated with) the variables 
-#' in \code{adj_var}. Complexity arises because we should ensure that all the 
-#' variables used have normal distributions. Also, we generally want to be 
-#' neutral in two senses: first, uncorrelated with each \code{adj_var} and, 
-#' second, no exposure to any \code{adj_var} when looking at decile/quintile 
-#' spreads of the output variable. Of course, we would also like the output 
-#' variable to be highly correlated with \code{in_var}. We achieve this by 
-#' running both equal-weighted and sigmoid-weighted regressions in a loop.
-#' 
-#' @param x data frame, containing all the necessary input data.
-#'   
-#' @param in_var character vector, the name of the variable to be 
-#'   \code{adjust}ed.
-#'   
-#' @param adj_var character vector, the name of the variable(s) to be used in 
-#'   the \code{adjust}ment process.
-#'   
-#' @param loops numeric scalar, the number of times to run the pair of 
-#'   adjustment regressions.  The default is \code{NULL}, which just runs the 
-#'   equal-weighted regression a single time.
-#'   
-#' @return a numeric vector equal in length to \code{in_var} which is 
-#'   uncorrelated with all the variables in \code{adj_var}.
-#'
-#' @export
+# Transform an input variable to be uncorrelated with other variables.
+# 
+# \code{adjust} makes \code{in_var} neutral (uncorrelated with) the variables 
+# in \code{adj_var}. Complexity arises because we should ensure that all the 
+# variables used have normal distributions. Also, we generally want to be 
+# neutral in two senses: first, uncorrelated with each \code{adj_var} and, 
+# second, no exposure to any \code{adj_var} when looking at decile/quintile 
+# spreads of the output variable. Of course, we would also like the output 
+# variable to be highly correlated with \code{in_var}. We achieve this by 
+# running both equal-weighted and sigmoid-weighted regressions in a loop.
+# 
+# @param x data frame, containing all the necessary input data.
+#   
+# @param in_var character vector, the name of the variable to be 
+#   \code{adjust}ed.
+#   
+# @param adj_var character vector, the name of the variable(s) to be used in 
+#   the \code{adjust}ment process.
+#   
+# @param loops numeric scalar, the number of times to run the pair of 
+#   adjustment regressions.  The default is \code{NULL}, which just runs the 
+#   equal-weighted regression a single time.
+#   
+# @return a numeric vector equal in length to \code{in_var} which is 
+#   uncorrelated with all the variables in \code{adj_var}.
 adjust <- function(x, in_var, adj_var, loops = NULL){
   
   # Ought to think about the case of lots of missing values in one of the

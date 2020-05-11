@@ -1,8 +1,8 @@
 Package: strand
 Type: Package
 Title: A Framework for Investment Strategy Simulation
-Version: 0.1.0
-Date: 2020-05-05
+Version: 0.1.1
+Date: 2020-05-11
 Authors@R:
     c(person(given = "Jeff",
              family ="Enos",
@@ -40,5 +40,6 @@ Suggests:
     shiny,
     DT
 Encoding: UTF-8
+LazyData: true
 VignetteBuilder: knitr
 RoxygenNote: 7.1.0

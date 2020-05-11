@@ -53,8 +53,8 @@ sim <- Simulation$new("vignettes/sample.yaml")
 
 3. Run and summarize:
 ```{r}
-res <- sim$run()
-res$overallStatsDf()
+sim$run()
+sim$overallStatsDf()
 ```
 
 ### Docker demo

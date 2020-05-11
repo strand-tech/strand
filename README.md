@@ -76,8 +76,8 @@ sim <- Simulation$new("vignettes/sample.yaml")
 <!-- end list -->
 
 ``` r
-res <- sim$run()
-res$overallStatsDf()
+sim$run()
+sim$overallStatsDf()
 ```
 
     ##                            Item  Gross       Net

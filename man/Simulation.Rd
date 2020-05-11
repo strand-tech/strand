@@ -22,6 +22,24 @@ The \code{Simulation} class is used to set up and run a daily
 \item \href{#method-getSecurityReference}{\code{Simulation$getSecurityReference()}}
 \item \href{#method-run}{\code{Simulation$run()}}
 \item \href{#method-getSimDates}{\code{Simulation$getSimDates()}}
+\item \href{#method-getSimSummary}{\code{Simulation$getSimSummary()}}
+\item \href{#method-getSimDetail}{\code{Simulation$getSimDetail()}}
+\item \href{#method-getPositionSummary}{\code{Simulation$getPositionSummary()}}
+\item \href{#method-getInputStats}{\code{Simulation$getInputStats()}}
+\item \href{#method-getLooseningInfo}{\code{Simulation$getLooseningInfo()}}
+\item \href{#method-getOptimizationSummary}{\code{Simulation$getOptimizationSummary()}}
+\item \href{#method-getExposures}{\code{Simulation$getExposures()}}
+\item \href{#method-getDelistings}{\code{Simulation$getDelistings()}}
+\item \href{#method-getSingleStrategySummaryDf}{\code{Simulation$getSingleStrategySummaryDf()}}
+\item \href{#method-plotPerformance}{\code{Simulation$plotPerformance()}}
+\item \href{#method-plotMarketValue}{\code{Simulation$plotMarketValue()}}
+\item \href{#method-plotCategoryExposure}{\code{Simulation$plotCategoryExposure()}}
+\item \href{#method-plotFactorExposure}{\code{Simulation$plotFactorExposure()}}
+\item \href{#method-plotNumPositions}{\code{Simulation$plotNumPositions()}}
+\item \href{#method-overallStatsDf}{\code{Simulation$overallStatsDf()}}
+\item \href{#method-print}{\code{Simulation$print()}}
+\item \href{#method-writeFeather}{\code{Simulation$writeFeather()}}
+\item \href{#method-readFeather}{\code{Simulation$readFeather()}}
 \item \href{#method-clone}{\code{Simulation$clone()}}
 }
 }
@@ -156,6 +174,299 @@ Get a list of all date for the simulation.
 
 \subsection{Returns}{
 A vector of dates over which the simulation currently iterates: all
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-getSimSummary"></a>}}
+\if{latex}{\out{\hypertarget{method-getSimSummary}{}}}
+\subsection{Method \code{getSimSummary()}}{
+Get summary information.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Simulation$getSimSummary()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A data frame that contains all summary data.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-getSimDetail"></a>}}
+\if{latex}{\out{\hypertarget{method-getSimDetail}{}}}
+\subsection{Method \code{getSimDetail()}}{
+Get detail information.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Simulation$getSimDetail(
+  sim_date = NULL,
+  strategy_name = NULL,
+  security_id = NULL
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{sim_date}}{Vector of length 1 of class Date or character that
+specifies the period for which to get detail information. If
+\code{NULL} then data from all periods is returned. Note that as
+opposed to filtering on a date column in the detail data itself, the
+period index (i.e., the list element name) is used when extracting data
+for a single period. This is the same value that is supplied as the
+\code{period} parameter when calling \code{saveSimDetail()}. Defaults
+to \code{NULL}.}
+
+\item{\code{strategy_name}}{Character vector of length 1 that specifies the
+strategy for which to get detail data. If \code{NULL} data for all
+strategies is returned. Defaults to \code{NULL}.}
+
+\item{\code{security_id}}{Character vector of length 1 that specifies the
+security for which to get detail data. If \code{NULL} data for all
+securities is returned. Defaults to \code{NULL}.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A data frame that contains detail data.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-getPositionSummary"></a>}}
+\if{latex}{\out{\hypertarget{method-getPositionSummary}{}}}
+\subsection{Method \code{getPositionSummary()}}{
+Get summary information by security. This method can be
+  used, for example, to calculate the biggest winners and losers over the
+  course of the simulation.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Simulation$getPositionSummary(strategy_name = NULL)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{strategy_name}}{Character vector of length 1 that specifies the
+strategy for which to get detail data. If \code{NULL} data for all
+strategies is returned. Defaults to \code{NULL}.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A data frame of summary information aggregated by security.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-getInputStats"></a>}}
+\if{latex}{\out{\hypertarget{method-getInputStats}{}}}
+\subsection{Method \code{getInputStats()}}{
+Get input statistics.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Simulation$getInputStats()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A data frame that contains all input statistics.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-getLooseningInfo"></a>}}
+\if{latex}{\out{\hypertarget{method-getLooseningInfo}{}}}
+\subsection{Method \code{getLooseningInfo()}}{
+Get loosening information.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Simulation$getLooseningInfo()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A data frame that contains all loosening information.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-getOptimizationSummary"></a>}}
+\if{latex}{\out{\hypertarget{method-getOptimizationSummary}{}}}
+\subsection{Method \code{getOptimizationSummary()}}{
+Get optimization summary information.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Simulation$getOptimizationSummary()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A data frame that contains all optimization summary information.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-getExposures"></a>}}
+\if{latex}{\out{\hypertarget{method-getExposures}{}}}
+\subsection{Method \code{getExposures()}}{
+Get exposure information.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Simulation$getExposures()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A data frame that contains all exposure information.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-getDelistings"></a>}}
+\if{latex}{\out{\hypertarget{method-getDelistings}{}}}
+\subsection{Method \code{getDelistings()}}{
+Get information on positions removed due to delisting.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Simulation$getDelistings()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A data frame that contains all delisting information.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-getSingleStrategySummaryDf"></a>}}
+\if{latex}{\out{\hypertarget{method-getSingleStrategySummaryDf}{}}}
+\subsection{Method \code{getSingleStrategySummaryDf()}}{
+Get summary information for a single strategy suitable for
+  plotting input.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Simulation$getSingleStrategySummaryDf(strategy_name, include_zero_row = TRUE)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{strategy_name}}{Strategy for which to return summary data.}
+
+\item{\code{include_zero_row}}{Logical flag indicatiing whether to prepend a row
+to the summary data with starting values at zero. Defaults to \code{TRUE}.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A data frame that contains summary information for the desired
+  strategy, as well as columns for cumulative net and gross total return,
+  calculated as pnl divided by ending gross market value.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-plotPerformance"></a>}}
+\if{latex}{\out{\hypertarget{method-plotPerformance}{}}}
+\subsection{Method \code{plotPerformance()}}{
+Plot cumulative gross and net return by date.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Simulation$plotPerformance()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-plotMarketValue"></a>}}
+\if{latex}{\out{\hypertarget{method-plotMarketValue}{}}}
+\subsection{Method \code{plotMarketValue()}}{
+Plot total gross, long, short, and net market value by date.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Simulation$plotMarketValue()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-plotCategoryExposure"></a>}}
+\if{latex}{\out{\hypertarget{method-plotCategoryExposure}{}}}
+\subsection{Method \code{plotCategoryExposure()}}{
+Plot exposure to all levels in a category by date.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Simulation$plotCategoryExposure(in_var)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{in_var}}{Category for which exposures are plotted.}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-plotFactorExposure"></a>}}
+\if{latex}{\out{\hypertarget{method-plotFactorExposure}{}}}
+\subsection{Method \code{plotFactorExposure()}}{
+Plot exposure to factors by date.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Simulation$plotFactorExposure(in_var)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{in_var}}{Factors for which exposures are plotted.}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-plotNumPositions"></a>}}
+\if{latex}{\out{\hypertarget{method-plotNumPositions}{}}}
+\subsection{Method \code{plotNumPositions()}}{
+Plot number of long and short positions by date.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Simulation$plotNumPositions()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-overallStatsDf"></a>}}
+\if{latex}{\out{\hypertarget{method-overallStatsDf}{}}}
+\subsection{Method \code{overallStatsDf()}}{
+Calculate overall simulation summary statistics, such as
+  total P&L, Sharpe, average market values and counts, etc.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Simulation$overallStatsDf()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A data frame that contains summary statistics, suitable for
+  reporting.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-print"></a>}}
+\if{latex}{\out{\hypertarget{method-print}{}}}
+\subsection{Method \code{print()}}{
+Print overall simulation statistics.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Simulation$print()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-writeFeather"></a>}}
+\if{latex}{\out{\hypertarget{method-writeFeather}{}}}
+\subsection{Method \code{writeFeather()}}{
+Write the data in the object to feather files.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Simulation$writeFeather(out_loc)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{out_loc}}{Directory in which output files should be created.}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-readFeather"></a>}}
+\if{latex}{\out{\hypertarget{method-readFeather}{}}}
+\subsection{Method \code{readFeather()}}{
+Load files created with \code{writeFeather} into the object.
+  Note that because detail data is not re-split by period, it will not be
+  possible to use the \code{sim_date} parameter when calling
+  \code{getSimDetail} on the populated object.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Simulation$readFeather(in_loc)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{in_loc}}{Directory that contains files to be loaded.}
+}
+\if{html}{\out{</div>}}
 }
 }
 \if{html}{\out{<hr>}}

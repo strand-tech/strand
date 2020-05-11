@@ -1,12 +1,10 @@
-#' CrossSection class
-#'
-#' @description Class for providing access to cross-sectional data.
-#'
-#' @details The CrossSection class provides an interface to cross-sectional data. It
-#' handles data retrieval, validation, value carry-forward and metadata
-#' tracking.
-#'
-#' @export
+# CrossSection class
+#
+# @description Class for providing access to cross-sectional data.
+#
+# @details The CrossSection class provides an interface to cross-sectional data. It
+# handles data retrieval, validation, value carry-forward and metadata
+# tracking.
 CrossSection <-  R6Class(
   "CrossSection",
   
@@ -30,62 +28,62 @@ CrossSection <-  R6Class(
   
   public = list(
 
-    #' @description Create a new \code{CrossSection} object.
-    #' @param carry_forward Boolean that indicates whether data in the object
-    #'   should be carried forward from one period to the next. To carry forward
-    #'   data is to use data from the past for a security if no data is found
-    #'   for the present. Suppose data for security X has been retrieved in a
-    #'   prior call to \code{get()}. Setting \code{carry_forward = TRUE} will
-    #'   cause the most recent data for X to be used if no records are found for
-    #'   X in subsequent calls to \code{get()}. If carry-forward values are
-    #'   supplied using the \code{setCarryForwardValue} method these values are
-    #'   used instead of the most recent data points.
-    #' @return A new \code{CrossSection} object.
+    # @description Create a new \code{CrossSection} object.
+    # @param carry_forward Boolean that indicates whether data in the object
+    #   should be carried forward from one period to the next. To carry forward
+    #   data is to use data from the past for a security if no data is found
+    #   for the present. Suppose data for security X has been retrieved in a
+    #   prior call to \code{get()}. Setting \code{carry_forward = TRUE} will
+    #   cause the most recent data for X to be used if no records are found for
+    #   X in subsequent calls to \code{get()}. If carry-forward values are
+    #   supplied using the \code{setCarryForwardValue} method these values are
+    #   used instead of the most recent data points.
+    # @return A new \code{CrossSection} object.
     initialize = function(carry_forward) {
       private$carry_forward <- carry_forward
       private$carry_forward_value <- list()
       invisible(self)
     },
     
-    #' @description Set the carry-forward value(s) for the cross section.
-    #' @param value_list Object of class \code{list}. Each name-value pair of
-    #'   the list specifies the name of a column and the value to be used for
-    #'   that column in records that are carried forward. For example, if
-    #'   \code{value_list = list(foo = 0)} the value 0 will be used for column
-    #'   foo in records that are carried forward.
+    # @description Set the carry-forward value(s) for the cross section.
+    # @param value_list Object of class \code{list}. Each name-value pair of
+    #   the list specifies the name of a column and the value to be used for
+    #   that column in records that are carried forward. For example, if
+    #   \code{value_list = list(foo = 0)} the value 0 will be used for column
+    #   foo in records that are carried forward.
     setCarryForwardValue = function(value_list) {
       stopifnot(is.list(value_list))
       private$carry_forward_value <- c(private$carry_forward_value, value_list)
       invisible(self)
     },
     
-    #' @description Set the value(s) to be used in place of NA observations.
-    #' @param value_list Object of class \code{list}. Each name-value pair of
-    #'   the list specifies the name of a column and the value to be used in
-    #'   place of NAs that appear in that column. For example, if
-    #'   \code{value_list = list(foo = 0)} the value 0 will be used in place of
-    #'   NA in column foo.
+    # @description Set the value(s) to be used in place of NA observations.
+    # @param value_list Object of class \code{list}. Each name-value pair of
+    #   the list specifies the name of a column and the value to be used in
+    #   place of NAs that appear in that column. For example, if
+    #   \code{value_list = list(foo = 0)} the value 0 will be used in place of
+    #   NA in column foo.
     setNAReplaceValue = function(value_list) {
       stopifnot(is.list(value_list))
       private$na_replace_value <- c(private$na_replace_value, value_list)
       invisible(self)
     },
     
-    #' @description Rename columns in input data.
-    #' @param column_map Object of class \code{list}. Each name-value pair of
-    #'   the list represents the new and old column names for the object's data.
-    #'   For example, if \code{column_map = list(foo = "bar")} values in the raw
-    #'   data in column bar will appear in the column foo in the data returned
-    #'   by \code{get()}.
+    # @description Rename columns in input data.
+    # @param column_map Object of class \code{list}. Each name-value pair of
+    #   the list represents the new and old column names for the object's data.
+    #   For example, if \code{column_map = list(foo = "bar")} values in the raw
+    #   data in column bar will appear in the column foo in the data returned
+    #   by \code{get()}.
     setColumnMap = function(column_map) {
       stopifnot(is.list(column_map))
       private$column_map <- column_map
       invisible(self)
     },
     
-    #' @description Set raw data.
-    #' @param raw_data Data frame that contains raw data. Must have a column
-    #'   \code{date} of class \code{Date}.
+    # @description Set raw data.
+    # @param raw_data Data frame that contains raw data. Must have a column
+    #   \code{date} of class \code{Date}.
     setRaw = function(raw_data) {
       # TODO Allow data.table input and key off date for faster subsetting.
       if (!is.data.frame(raw_data)) {
@@ -101,9 +99,9 @@ CrossSection <-  R6Class(
       invisible(self)
     },
     
-    #' @description Get raw data for a given date.
-    #' @param date Date for which we want data.
-    #' @return A data frame of data for \code{date}.
+    # @description Get raw data for a given date.
+    # @param date Date for which we want data.
+    # @return A data frame of data for \code{date}.
     getRaw = function(date) {
       if (is.null(private$raw_data)) {
         stop("No raw data present. Provide with setRaw().")
@@ -112,14 +110,14 @@ CrossSection <-  R6Class(
       filter(private$raw_data, .data$date %in% !!date)
     },
     
-    #' @description Get cross-section data for a given date.
-    #' @param date Date for which we want data.
-    #' @return A data frame of data for \code{date} that includes, if
-    #'   \code{carry_forward} was set to \code{TRUE} when creating the object,
-    #'   any data that has been carried-forward from previous periods. The
-    #'   records carried forward have default values as configured by calls to
-    #'   \code{setCarryForwardValue()}. In addition, NA values are replaced
-    #'   according the values passed to \code{setNAReplaceValue()}.
+    # @description Get cross-section data for a given date.
+    # @param date Date for which we want data.
+    # @return A data frame of data for \code{date} that includes, if
+    #   \code{carry_forward} was set to \code{TRUE} when creating the object,
+    #   any data that has been carried-forward from previous periods. The
+    #   records carried forward have default values as configured by calls to
+    #   \code{setCarryForwardValue()}. In addition, NA values are replaced
+    #   according the values passed to \code{setNAReplaceValue()}.
     get = function(date) {
       new_data <- self$getRaw(date)
       
@@ -186,10 +184,10 @@ CrossSection <-  R6Class(
       invisible(private$current_data)
     },
     
-    #' @description Get overall statistics for the period's data and statistics
-    #'   on specific columns (e.g., number of missing values, day-over-day
-    #'   correlations, etc.).
-    #' @param columns Columns for which to return statistics.
+    # @description Get overall statistics for the period's data and statistics
+    #   on specific columns (e.g., number of missing values, day-over-day
+    #   correlations, etc.).
+    # @param columns Columns for which to return statistics.
     periodStats = function(columns = NULL) {
       
       # Calculate basic summary stats and record as metadata
@@ -227,7 +225,7 @@ CrossSection <-  R6Class(
       invisible(this_meta)
     },
     
-    #' @description Print the cross-section object.
+    # @description Print the cross-section object.
     print = function() {
       cat("CrossSection:\n",
           "Number of raw records: ", nrow(private$raw_data), "\n", sep = "")

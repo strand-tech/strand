@@ -1,21 +1,19 @@
-#' Portfolio class
-#'
-#' @description
-#' The portfolio class represents a collection of positions.
-#'
-#' @details This class wraps a tabular data structure that contains position
-#' information. Methods are available for returning this information in long or
-#' wide format.
-#'
-#' @export
+# Portfolio class
+#
+# @description
+# The portfolio class represents a collection of positions.
+#
+# @details This class wraps a tabular data structure that contains position
+# information. Methods are available for returning this information in long or
+# wide format.
 Portfolio <- R6Class(
   "Portfolio",
   public = list(
     
-    #' @description Create a new \code{Portfolio} object.
-    #' @param strategy_names An object of class character that contains the
-    #'   strategy names for this portfolio object.
-    #' @return A new \code{Portfolio} object.
+    # @description Create a new \code{Portfolio} object.
+    # @param strategy_names An object of class character that contains the
+    #   strategy names for this portfolio object.
+    # @return A new \code{Portfolio} object.
     initialize = function(strategy_names) {
       private$strategy_names <- strategy_names
       private$positions <-
@@ -27,25 +25,25 @@ Portfolio <- R6Class(
       invisible(self)
     },
     
-    #' @description Position access.
-    #' @return A data frame that contains the raw position information for this
-    #'   portfolio. The data frame contains the following columns: id
-    #'   (character), strategy (character), int_shares (integer) for the number
-    #'   of shares that net down with shares in other strategies, and
-    #'   ext_shares (integer) for the number of shares that do not net down with
-    #'   any other strategy's positions. The sum of the values in the ext_share
-    #'   column represent the number of shares held at the joint level (i.e.,
-    #'   that don't cancel out with other positions).
+    # @description Position access.
+    # @return A data frame that contains the raw position information for this
+    #   portfolio. The data frame contains the following columns: id
+    #   (character), strategy (character), int_shares (integer) for the number
+    #   of shares that net down with shares in other strategies, and
+    #   ext_shares (integer) for the number of shares that do not net down with
+    #   any other strategy's positions. The sum of the values in the ext_share
+    #   column represent the number of shares held at the joint level (i.e.,
+    #   that don't cancel out with other positions).
     getPositions = function() {
       invisible(private$positions)  
     },
     
-    #' @description Replace this portfolio's position information.
-    #' @param positions_df Data frame that contains the portfolio's low-level
-    #'   position information. The data frame must contain the following
-    #'   columns: id (character), strategy (character), int_shares (integer),
-    #'   ext_shares (integer). No NAs are allowed. All values in the strategy
-    #'   column must be one of the strategy names for this portfolio.
+    # @description Replace this portfolio's position information.
+    # @param positions_df Data frame that contains the portfolio's low-level
+    #   position information. The data frame must contain the following
+    #   columns: id (character), strategy (character), int_shares (integer),
+    #   ext_shares (integer). No NAs are allowed. All values in the strategy
+    #   column must be one of the strategy names for this portfolio.
     setPositions = function(positions_df) {
       stopifnot(isTRUE(all.equal(names(positions_df),
                                  c("id", "strategy", "int_shares", "ext_shares"))),
@@ -59,20 +57,20 @@ Portfolio <- R6Class(
       invisible(self)
     },
     
-    #' @description Remove positions from the portfolio
-    #' @param ids Character vector that contains the security ids to remove.
-    #'   Positions in all strategies for the supplied ids are removed from the
-    #'   portfolio.
+    # @description Remove positions from the portfolio
+    # @param ids Character vector that contains the security ids to remove.
+    #   Positions in all strategies for the supplied ids are removed from the
+    #   portfolio.
     removePositions = function(ids) {
       private$positions <- 
         filter(private$positions, !.data$id %in% ids)
       invisible(self)
     },
 
-    #' @description Access to positions in consolidated wide format.
-    #' @return A data frame of consolidated (external + internal) share values
-    #'   in wide format. The columns in the data frame returned by this method
-    #'   are id, strategy, and shares_{s} for each strategy s.
+    # @description Access to positions in consolidated wide format.
+    # @return A data frame of consolidated (external + internal) share values
+    #   in wide format. The columns in the data frame returned by this method
+    #   are id, strategy, and shares_{s} for each strategy s.
     getConsolidatedPositions = function() {
       
       pos <- private$positions %>%
@@ -101,21 +99,21 @@ Portfolio <- R6Class(
       
     },
     
-    #' @description Helper for extracting strategy share columns.
-    #' @return A vector of column names that matches the strategy columns in the
-    #'   data frame returned by \code{getConsolidatedPositions}.
+    # @description Helper for extracting strategy share columns.
+    # @return A vector of column names that matches the strategy columns in the
+    #   data frame returned by \code{getConsolidatedPositions}.
     getShareColumns = function() {
       paste0("shares_", private$strategy_names)
     },
     
-    #' @description Adjust portfolio share values by an adjustment ratio. The
-    #'   adjustment ratio is the number of old shares per new share. So for a
-    #'   2:1 split, the adjustment ratio is 0.5.
-    #' @param adjustment_df Data frame that contains adjustment ratios to apply.
-    #'   The data frame must include two columns: id (character) and
-    #'   adjustment_ratio (numeric). There must be an entry in adjustment_df for
-    #'   each security in the portfolio (this requirement will likely be
-    #'   loosened in future versions).
+    # @description Adjust portfolio share values by an adjustment ratio. The
+    #   adjustment ratio is the number of old shares per new share. So for a
+    #   2:1 split, the adjustment ratio is 0.5.
+    # @param adjustment_df Data frame that contains adjustment ratios to apply.
+    #   The data frame must include two columns: id (character) and
+    #   adjustment_ratio (numeric). There must be an entry in adjustment_df for
+    #   each security in the portfolio (this requirement will likely be
+    #   loosened in future versions).
     applyAdjustmentRatio = function(adjustment_df) {
       stopifnot(is.data.frame(adjustment_df),
                 isTRUE(all.equal(names(adjustment_df), c("id", "adjustment_ratio"))),

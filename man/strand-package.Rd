@@ -4,7 +4,7 @@
 \name{strand-package}
 \alias{strand-package}
 \alias{strand}
-\title{strand: a framework for testing systematic trading strategies}
+\title{strand: a framework for investment strategy simulation}
 \description{
 For an introduction to strand see the package vignette:
 \code{vignette("strand", package = "strand")}

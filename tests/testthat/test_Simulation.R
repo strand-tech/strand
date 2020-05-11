@@ -6,9 +6,9 @@ library(dplyr)
 test_that("simulation produces expected results", {
   
   sim <- Simulation$new("data/test_Simulation.yaml")
-  res <- sim$run()
+  sim$run()
   
-  test_summary <- filter(res$getSimSummary(), .data$strategy %in% "joint")
+  test_summary <- filter(sim$getSimSummary(), .data$strategy %in% "joint")
   
   # truth_summary <- test_summary
   # save(truth_summary, file = "data/test_Simulation.RData")
@@ -52,8 +52,8 @@ test_that("simulation produces same result when data supplied as objects", {
                         raw_input_data = test_input_data,
                         raw_pricing_data = test_pricing_data,
                         security_reference_data = test_secref_data)
-  res <- sim$run()
-  test_summary <- filter(res$getSimSummary(), .data$strategy %in% "joint")
+  sim$run()
+  test_summary <- filter(sim$getSimSummary(), .data$strategy %in% "joint")
 
   load("data/test_Simulation.RData")
   expect_equal(as.data.frame(test_summary),
@@ -93,9 +93,9 @@ test_that("simple long-only simulation with two assets trades properly", {
                         raw_pricing_data = simple_pricing_data,
                         security_reference_data = simple_secref_data)
   # sim$setVerbose(TRUE)
-  res <- sim$run()
-  id_101 <- res$getSimDetail(strategy_name = "joint", security_id = "101")
-  id_102 <- res$getSimDetail(strategy_name = "joint", security_id = "102")
+  sim$run()
+  id_101 <- sim$getSimDetail(strategy_name = "joint", security_id = "101")
+  id_102 <- sim$getSimDetail(strategy_name = "joint", security_id = "102")
 
   # 101 trades into a full position for day 1, but then on day 2 we swap a full
   # position in 102 for the full position in 101 (due to the alpha change).
@@ -116,9 +116,9 @@ test_that("alphas are carried forward when missing in simple long-only sim", {
                         raw_pricing_data = simple_pricing_data,
                         security_reference_data = simple_secref_data)
   # sim$setVerbose(TRUE)
-  res <- sim$run()
-  id_101 <- res$getSimDetail(strategy_name = "joint", security_id = "101")
-  id_102 <- res$getSimDetail(strategy_name = "joint", security_id = "102")
+  sim$run()
+  id_101 <- sim$getSimDetail(strategy_name = "joint", security_id = "101")
+  id_102 <- sim$getSimDetail(strategy_name = "joint", security_id = "102")
   
   # 101 trades into a full position for day 1, but then on day 2 we swap a full
   # position in 102 for the full position in 101 (due to the alpha change).
@@ -170,15 +170,15 @@ test_that("fill_rate_pct limits order filling", {
                         raw_pricing_data = simple_pricing_data,
                         security_reference_data = simple_secref_data)
   # sim$setVerbose(TRUE)
-  res <- sim$run()
-  id_101 <- res$getSimDetail(strategy_name = "joint", security_id = "101")
-  id_102 <- res$getSimDetail(strategy_name = "joint", security_id = "102")
+  sim$run()
+  id_101 <- sim$getSimDetail(strategy_name = "joint", security_id = "101")
+  id_102 <- sim$getSimDetail(strategy_name = "joint", security_id = "102")
   
   expect_equal(id_101$end_shares, c(50))
   expect_equal(id_102$end_shares, c(-40))
   
   # Fill rate, percentange of filled GMV, is 250 + 400 / 1000 = 65%
-  summary_df <- res$getSimSummary() %>% filter(strategy %in% "joint")
+  summary_df <- sim$getSimSummary() %>% filter(strategy %in% "joint")
   expect_equal(summary_df$fill_rate_pct, 65)
   
 })
