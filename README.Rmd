@@ -36,30 +36,31 @@ Four ingredients are required to run a simulation using `strand`:
 
 1. *Pricing data*. Daily prices, dividends, and trading volume for computing market values and filling orders. Unadjusted prices and accompanying adjustment ratios may be used.
 
-Here is how we would run the simulation discussed in the package vignette:
-
-1. Clone the repository and extract the sample data.
-```console
-$ git clone git@github.com:strand-tech/strand.git
-$ cd strand
-$ tar zxf sample_data.tar.gz
-```
-
-2. With the same working directory in R, create a simulation object configured using the vignette example's yaml file:
 ```{r}
 library(strand)
-sim <- Simulation$new("vignettes/sample.yaml")
-```
 
-3. Run and summarize:
-```{r}
+# Load up sample data
+data(sample_secref)
+data(sample_pricing)
+data(sample_inputs)
+
+# Load sample configuration file
+config_file <- system.file("application/strategy_config.yaml", package = "strand")
+
+# Create the Simulation object and run
+sim <- Simulation$new(config_file,
+                      raw_input_data = sample_inputs,
+                      raw_pricing_data = sample_pricing,
+                      security_reference_data = sample_secref)
 sim$run()
+
+# Print overall statistics
 sim$overallStatsDf()
 ```
 
 ### Docker demo
 
-If you have `docker` and `docker-compose` installed, you can run a sample strand shiny application by cloning the repository and running the following commands from the top-level directory:
+If you have `docker` and `docker-compose` installed, you can run a sample strand shiny application by cloning the [github repository](https://github.com/strand-tech/strand) and running the following commands from the top-level directory:
 
 ```console
 $ docker-compose build

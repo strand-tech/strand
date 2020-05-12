@@ -48,55 +48,48 @@ Four ingredients are required to run a simulation using `strand`:
     computing market values and filling orders. Unadjusted prices and
     accompanying adjustment ratios may be used.
 
-Here is how we would run the simulation discussed in the package
-vignette:
-
-1.  Clone the repository and extract the sample data.
-
-<!-- end list -->
-
-``` console
-$ git clone git@github.com:strand-tech/strand.git
-$ cd strand
-$ tar zxf sample_data.tar.gz
-```
-
-2.  With the same working directory in R, create a simulation object
-    configured using the vignette example’s yaml file:
-
 <!-- end list -->
 
 ``` r
 library(strand)
-sim <- Simulation$new("vignettes/sample.yaml")
-```
 
-3.  Run and summarize:
+# Load up sample data
+data(sample_secref)
+data(sample_pricing)
+data(sample_inputs)
 
-<!-- end list -->
+# Load sample configuration file
+config_file <- system.file("application/strategy_config.yaml", package = "strand")
 
-``` r
+# Create the Simulation object and run
+sim <- Simulation$new(config_file,
+                      raw_input_data = sample_inputs,
+                      raw_pricing_data = sample_pricing,
+                      security_reference_data = sample_secref)
 sim$run()
+
+# Print overall statistics
 sim$overallStatsDf()
 ```
 
-    ##                            Item  Gross       Net
-    ## 1                     Total P&L -8,773   -35,912
-    ## 2       Total Return on GMV (%)   -0.4      -1.9
-    ## 3  Annualized Return on GMV (%)   -0.4      -1.8
-    ## 4            Annualized Vol (%)    0.6       0.6
-    ## 5             Annualized Sharpe  -0.71     -2.97
-    ## 6                       Avg GMV        1,992,131
-    ## 7                       Avg NMV              -94
-    ## 8                     Avg Count              387
-    ## 9            Avg Daily Turnover           27,092
-    ## 10      Holding Period (months)              7.0
+    ##                            Item Gross       Net
+    ## 1                     Total P&L   913    -3,177
+    ## 2       Total Return on GMV (%)   0.0      -0.2
+    ## 3  Annualized Return on GMV (%)   0.5      -1.8
+    ## 4            Annualized Vol (%)   0.5       0.6
+    ## 5             Annualized Sharpe  1.10     -3.15
+    ## 6                       Avg GMV       1,999,714
+    ## 7                       Avg NMV              55
+    ## 8                     Avg Count             402
+    ## 9            Avg Daily Turnover         112,711
+    ## 10      Holding Period (months)             1.7
 
 ### Docker demo
 
 If you have `docker` and `docker-compose` installed, you can run a
-sample strand shiny application by cloning the repository and running
-the following commands from the top-level directory:
+sample strand shiny application by cloning the [github
+repository](https://github.com/strand-tech/strand) and running the
+following commands from the top-level directory:
 
 ``` console
 $ docker-compose build

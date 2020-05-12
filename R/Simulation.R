@@ -16,13 +16,9 @@
 #' 
 #' # Load sample configuration file
 #' config_file <- system.file("application/strategy_config.yaml", package = "strand")
-#' config_list <- yaml::yaml.load_file(config_file)
-#' 
-#' # Adjust config so that we run a one-month-long simulation
-#' config_list$to <- as.Date("2019-01-31")
-#' 
-#' # Create the Simulation object and run
-#' sim <- Simulation$new(config_list,
+#'
+#' Create the Simulation object and run
+#' sim <- Simulation$new(config_file,
 #'                       raw_input_data = sample_inputs,
 #'                       raw_pricing_data = sample_pricing,
 #'                       security_reference_data = sample_secref)

@@ -9,5 +9,4 @@
 ^vignettes/sample_data$
 ^sample_data.tar.gz$
 ^LICENSE$
-^README.md$
 ^README.Rmd$

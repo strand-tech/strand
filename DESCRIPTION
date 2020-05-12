@@ -2,7 +2,7 @@ Package: strand
 Type: Package
 Title: A Framework for Investment Strategy Simulation
 Version: 0.1.1
-Date: 2020-05-11
+Date: 2020-05-12
 Authors@R:
     c(person(given = "Jeff",
              family ="Enos",
