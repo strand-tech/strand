@@ -15,9 +15,9 @@
 #' data(sample_inputs)
 #' 
 #' # Load sample configuration file
-#' config_file <- system.file("application/strategy_config.yaml", package = "strand")
+#' config_file <- system.file("application/strategy_config_obj.yaml", package = "strand")
 #'
-#' Create the Simulation object and run
+#' # Create the Simulation object and run
 #' sim <- Simulation$new(config_file,
 #'                       raw_input_data = sample_inputs,
 #'                       raw_pricing_data = sample_pricing,

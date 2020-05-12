@@ -59,7 +59,7 @@ data(sample_pricing)
 data(sample_inputs)
 
 # Load sample configuration file
-config_file <- system.file("application/strategy_config.yaml", package = "strand")
+config_file <- system.file("application/strategy_config_obj.yaml", package = "strand")
 
 # Create the Simulation object and run
 sim <- Simulation$new(config_file,
@@ -73,16 +73,16 @@ sim$overallStatsDf()
 ```
 
     ##                            Item Gross       Net
-    ## 1                     Total P&L   913    -3,177
-    ## 2       Total Return on GMV (%)   0.0      -0.2
-    ## 3  Annualized Return on GMV (%)   0.5      -1.8
-    ## 4            Annualized Vol (%)   0.5       0.6
-    ## 5             Annualized Sharpe  1.10     -3.15
-    ## 6                       Avg GMV       1,999,714
-    ## 7                       Avg NMV              55
-    ## 8                     Avg Count             402
-    ## 9            Avg Daily Turnover         112,711
-    ## 10      Holding Period (months)             1.7
+    ## 1                     Total P&L   419    -2,507
+    ## 2       Total Return on GMV (%)   0.0      -0.1
+    ## 3  Annualized Return on GMV (%)   0.5      -3.2
+    ## 4            Annualized Vol (%)   0.5       0.7
+    ## 5             Annualized Sharpe  1.12     -4.61
+    ## 6                       Avg GMV       1,999,350
+    ## 7                       Avg NMV              73
+    ## 8                     Avg Count             403
+    ## 9            Avg Daily Turnover         220,439
+    ## 10      Holding Period (months)             0.9
 
 ### Docker demo
 
