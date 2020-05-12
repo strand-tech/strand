@@ -6,8 +6,13 @@
 \alias{strand}
 \title{strand: a framework for investment strategy simulation}
 \description{
-For an introduction to strand see the package vignette:
-\code{vignette("strand", package = "strand")}
+The strand package provides a framework for performing discrete (share-level)
+simulations of investment strategies. Simulated portfolios optimize exposure
+to an input signal subject to constraints such as position size and factor
+exposure.
+
+For an introduction to running simulations using the package, see
+\code{vignette("strand")} and the documentation for the \code{\link{Simulation}} class.
 }
 \author{
 Jeff Enos \email{jeff@strand.tech} and David Kane \email{david@strand.tech}

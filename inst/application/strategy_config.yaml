@@ -1,3 +1,5 @@
+from: 2019-01-02
+to: 2019-03-29 
 name: shiny_sim
 turnover_limit: 25e3
 solver: glpk

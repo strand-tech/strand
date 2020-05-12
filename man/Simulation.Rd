@@ -10,8 +10,50 @@ Class for running a simulation and getting results.
 The \code{Simulation} class is used to set up and run a daily
   simulation over a particular period. Portfolio construction parameters and
   other simulator settings can be configured in a yaml file that is passed to
-  the object's constructor. See the package vignette for information on
+  the object's constructor. See \code{vignette("strand")} for information on
   configuration file setup.
+}
+\examples{
+
+# Load up sample data
+data(sample_secref)
+data(sample_pricing)
+data(sample_inputs)
+
+# Load sample configuration file
+config_file <- system.file("application/strategy_config.yaml", package = "strand")
+config_list <- yaml::yaml.load_file(config_file)
+
+# Adjust config so that we run a one-month-long simulation
+config_list$to <- as.Date("2019-01-31")
+
+# Create the Simulation object and run
+sim <- Simulation$new(config_list,
+                      raw_input_data = sample_inputs,
+                      raw_pricing_data = sample_pricing,
+                      security_reference_data = sample_secref)
+sim$run()
+
+# Print overall statistics
+sim$overallStatsDf()
+
+# Access tabular result data
+head(sim$getSimSummary())
+head(sim$getSimDetail())
+head(sim$getPositionSummary())
+head(sim$getInputStats())
+head(sim$getOptimizationSummary())
+head(sim$getExposures())
+
+# Plot results
+\dontrun{
+sim$plotPerformance()
+sim$plotMarketValue()
+sim$plotCategoryExposure("category_1") 
+sim$plotFactorExposure(c("factor_1", "factor_2", "factor_3"))
+sim$plotNumPositions()
+}
+
 }
 \section{Methods}{
 \subsection{Public methods}{
@@ -115,6 +157,9 @@ Set the verbose flag to control info output.
 }
 \if{html}{\out{</div>}}
 }
+\subsection{Returns}{
+No return value, called for side effects.
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-setShinyCallback"></a>}}
@@ -136,6 +181,9 @@ progress bar.}
 }
 \if{html}{\out{</div>}}
 }
+\subsection{Returns}{
+No return value, called for side effects.
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-getSecurityReference"></a>}}
@@ -147,7 +195,8 @@ Get security reference information.
 }
 
 \subsection{Returns}{
-The security reference data frame for the object.
+An object of class \code{data.frame} that contains the security
+  reference data for the simulation.
 }
 }
 \if{html}{\out{<hr>}}
@@ -160,7 +209,7 @@ Run the simulation.
 }
 
 \subsection{Returns}{
-An object of class \code{SimResult} that contains the results of the simulation.
+No return value, called for side effects.
 }
 }
 \if{html}{\out{<hr>}}
@@ -173,7 +222,8 @@ Get a list of all date for the simulation.
 }
 
 \subsection{Returns}{
-A vector of dates over which the simulation currently iterates: all
+A vector of class \code{Date} over which the simulation currently iterates: all
+weekdays between the 'from' and 'to' dates in the simulation's config.
 }
 }
 \if{html}{\out{<hr>}}
@@ -186,7 +236,60 @@ Get summary information.
 }
 
 \subsection{Returns}{
-A data frame that contains all summary data.
+An object of class \code{data.frame} that contains summary data
+  for the simulation, by period, at the joint and strategy level. The data
+  frame contains the following columns:
+  \describe{
+    \item{strategy}{Strategy name, or 'joint' for the aggregate strategy.}
+    \item{sim_date}{Date of the summary data.}
+    \item{market_fill_nmv}{Total net market value of fills that do not
+    net down across strategies.}
+    \item{transfer_fill_nmv}{Total net market value of fills that
+    represent "internal transfers", i.e., fills in one strategy that net
+    down with fills in another. Note that at the joint level this column
+    by definition is 0.}
+    \item{market_order_gmv}{Total gross market value of orders that do not
+    net down across strategies.}
+    \item{market_fill_gmv}{Total gross market value of fills that do not
+    net down across strategies.}
+    \item{transfer_fill_gmv}{Total gross market value of fills that
+    represent "internal transfers", i.e., fills in one strategy that net
+    down with fills in another.}
+    \item{start_nmv}{Total net market value of all positions at the start
+    of the period.}
+    \item{start_lmv}{Total net market value of all long positions at the
+    start of the period.}
+    \item{start_smv}{Total net market value of all short positions at the
+    start of the period.}
+    \item{end_nmv}{Total net market value of all positions at the end of
+    the period.}
+    \item{end_gmv}{Total gross market value of all positions at the end
+    of the period.}
+    \item{end_lmv}{Total net market value of all long positions at the
+    end of the period.}
+    \item{end_smv}{Total net market value of all short positions at the
+    end of the period.}
+    \item{end_num}{Total number of positions at the end of the period.}
+    \item{end_num_long}{Total number of long positions at the end of the
+    period.}
+    \item{end_num_short}{Total number of short positions at the end of
+    the period.}
+    \item{position_pnl}{The total difference between the end and start
+    market value of positions.}
+    \item{trading_pnl}{The total difference between the market value of
+    trades at the benchmark price and at the end price. Note: currently
+    assuming benchmark price is the closing price, so trading P&L is
+    zero.}
+    \item{gross_pnl}{Total P&L gross of costs, calculated as position_pnl
+    + trading_pnl.}
+    \item{trade_costs}{Total trade costs (slippage).}
+    \item{financing_costs}{Total financing/borrow costs.}
+    \item{net_pnl}{Total P&L net of costs, calculated as gross_pnl -
+    trade_costs - financing_costs.}
+    \item{fill_rate_pct}{Total fill rate across all market orders,
+    calculated as 100 * market_fill_gmv / market_order_gmv.}
+    
+  }
 }
 }
 \if{html}{\out{<hr>}}
@@ -207,11 +310,7 @@ Get detail information.
 \describe{
 \item{\code{sim_date}}{Vector of length 1 of class Date or character that
 specifies the period for which to get detail information. If
-\code{NULL} then data from all periods is returned. Note that as
-opposed to filtering on a date column in the detail data itself, the
-period index (i.e., the list element name) is used when extracting data
-for a single period. This is the same value that is supplied as the
-\code{period} parameter when calling \code{saveSimDetail()}. Defaults
+\code{NULL} then data from all periods is returned. Defaults
 to \code{NULL}.}
 
 \item{\code{strategy_name}}{Character vector of length 1 that specifies the
@@ -225,7 +324,76 @@ securities is returned. Defaults to \code{NULL}.}
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-A data frame that contains detail data.
+An object of class \code{data.frame} that contains detail data
+  for the simulation at the joint and strategy level. Detail data is at
+  the security level. The data frame contains the following columns:
+  \describe{
+    \item{id}{Security identifier.}
+    \item{strategy}{Strategy name, or 'joint' for the aggregate strategy.}
+    \item{sim_date}{Date to which the data pertains.}
+    \item{shares}{Shares at the start of the period.}
+    \item{int_shares}{Shares at the start of the period that net down
+    with positions in other strategies.}
+    \item{ext_shares}{Shares at the start of the period that do not net
+    down with positions in other strategies.}
+    \item{order_shares}{Order, in shares.}
+    \item{market_order_shares}{Order that does not net down with orders
+    in other strategies, in shares.}
+    \item{transfer_order_shares}{Order that nets down with orders in
+    other strategies, in shares.}
+    \item{fill_shares}{Fill, in shares.}
+    \item{market_fill_shares}{Fill that does not net down with fills in
+    other strategies, in shares.}
+    \item{transfer_fill_shares}{Fill that nets down with fills in other
+    strategies, in shares.}
+    \item{end_shares}{Shares at the end of the period.}
+    \item{end_int_shares}{Shares at the end of the period that net down
+    with positions in other strategies.}
+    \item{end_ext_shares}{Shares at the end of the period that do not net
+    down with positions in other strategies.}
+    \item{start_price}{Price for the security at the beginning of the
+    period.}
+    \item{end_price}{Price for the security at the end of the period.}
+    \item{dividend}{Dividend for the security, if any, for the
+    period.}
+    \item{distribution}{Distribution (e.g., spin-off) for the security, if
+    any, for the period.}
+    \item{position_pnl}{Position P&L, calculated as shares * (end_price +
+    dividend + distribution - start_price)}
+    \item{trading_pnl}{The difference between the market value of
+    trades at the benchmark price and at the end price. Note: currently
+    assuming benchmark price is the closing price, so trading P&L is
+    zero.}
+    \item{trade_costs}{Trade costs, calculated as a fixed percentage (set
+    in the simulation configuration) of the notional of the market trade
+    (valued at the close).}
+    \item{financing_costs}{Financing cost for the position, calculated as
+    a fixed percentage (set in the simulation configuration) of the
+    notional of the starting value of the portfolio's external positions.
+    External positions are positions held on the street and are recorded
+    in the ext_shares column.}
+    \item{gross_pnl}{Gross P&L, calculated as position_pnl + trading_pnl.}
+    \item{net_pnl}{Net P&L, calculated as gross_pnl - trade_costs -
+    financing_costs.}
+    \item{market_order_nmv}{Net market value of the order that does not
+    net down with orders in other strategies.}
+    \item{market_fill_gmv}{Gross market value of the order that does not
+    net down with orders in other strategies.}
+    \item{market_fill_nmv}{Net market value of the fill that does not net
+    down with orders in other strategies.}
+    \item{market_fill_gmv}{Gross market value of the fill that does not
+    net down with orders in other strategies.}
+    \item{transfer_fill_nmv}{Net market value of the fill that nets down
+    with fills in other strategies.}
+    \item{transfer_fill_gmv}{Gross market value of the fill that nets down
+    with fills in other strategies.}
+    \item{start_nmv}{Net market value of the position at the start of the
+    period.}
+    \item{end_nmv}{Net market value of the position at the end of the
+    period.}
+    \item{end_gmv}{Gross market value of the position at the end of the
+    period.}
+  }
 }
 }
 \if{html}{\out{<hr>}}
@@ -249,7 +417,29 @@ strategies is returned. Defaults to \code{NULL}.}
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-A data frame of summary information aggregated by security.
+An object of class \code{data.frame} that contains summary
+  information aggregated by security. The data frame contains the
+  following columns:
+  \describe{
+    \item{id}{Security identifier.}
+    \item{strategy}{Strategy name, or 'joint' for the aggregate
+    strategy.}
+    \item{gross_pnl}{Gross P&L for the position over the entire
+    simulation.}
+    \item{gross_pnl}{Net P&L for the position over the entire
+    simulation.}
+    \item{average_market_value}{Average net market value of the
+    position over days in the simulation where the position was not
+    flat.}
+    \item{total_trading}{Total gross market value of trades for the
+    security.}
+    \item{trade_costs}{Total cost of trades for the security over the
+    entire simulation.}
+    \item{trade_costs}{Total cost of financing for the position over the
+    entire simulation.}
+    \item{days_in_portfolio}{Total number of days there was a position in
+    the security in the portfolio over the entire simulation.}
+  }
 }
 }
 \if{html}{\out{<hr>}}
@@ -262,7 +452,22 @@ Get input statistics.
 }
 
 \subsection{Returns}{
-A data frame that contains all input statistics.
+An object of class \code{data.frame} that contains statistics on
+  select columns of input data. Statistics are tracked for the columns
+  listed in the configuration variable
+  \code{simulator/input_data/track_metadata}. The data frame contains the
+  following columns:
+  \describe{
+    \item{period}{Period to which statistics pertain.}
+    \item{input_rows}{Total number of rows of input data, including
+    rows carried forward from the previous period.}
+    \item{cf_rows}{Total number of rows carried forward from the previous
+    period.}
+    \item{num_na_\emph{column}}{Number of NA values in \emph{column}.  This
+    measure appears for each element of \code{track_metadata}.}
+    \item{cor_\emph{column}}{Period-over-period correlation for \emph{column}.
+    This measure appears for each element of \code{track_metadata}.}
+ }
 }
 }
 \if{html}{\out{<hr>}}
@@ -275,7 +480,17 @@ Get loosening information.
 }
 
 \subsection{Returns}{
-A data frame that contains all loosening information.
+An object of class \code{data.frame} that contains, for each
+  period, which constraints were loosened in order to solve the portfolio
+  optimization problem, if any. The data frame contains the
+  following columns:
+  \describe{
+    \item{date}{Date for which the constraint was loosened.}
+    \item{constraint_name}{Name of the constraint that was loosened.}
+    \item{pct_loosened}{Percentage by which the constraint was loosened,
+    where 100 means loosened fully (i.e., the constraint is effectively
+    removed).}
+  }
 }
 }
 \if{html}{\out{<hr>}}
@@ -288,20 +503,54 @@ Get optimization summary information.
 }
 
 \subsection{Returns}{
-A data frame that contains all optimization summary information.
+An object of class \code{data.frame} that contains optimization
+  summary information, such as starting and ending factor constraint
+  values, at the strategy and joint level. The data frame contains the
+  following columns:
+  \describe{
+    \item{strategy}{Strategy name, or 'joint' for the aggregate strategy.}
+    \item{sim_date}{Date to which the data pertains.}
+    \item{order_gmv}{Total gross market value of orders generated by the
+    optimization.}
+    \item{start_smv}{Total net market value of short positions at the
+    start of the optimization.}
+    \item{start_lmv}{Total net market value of long positions at the
+    start of the optimization.}
+    \item{end_smv}{Total net market value of short positions at the end
+    of the optimization.}
+    \item{end_lmv}{Total net market value of long positions at the end of
+    the optimization.}
+    \item{start_\emph{factor}}{Total net exposure to \emph{factor} at the
+    start of the optimization, for each factor constraint.}
+    \item{end_\emph{factor}}{Total net exposure to \emph{factor} at the
+    start of the optimization, for each factor constraint.}
+  }
 }
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-getExposures"></a>}}
 \if{latex}{\out{\hypertarget{method-getExposures}{}}}
 \subsection{Method \code{getExposures()}}{
-Get exposure information.
+Get end-of-period exposure information.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Simulation$getExposures()}\if{html}{\out{</div>}}
 }
 
 \subsection{Returns}{
-A data frame that contains all exposure information.
+An object of class \code{data.frame} that contains end-of-period
+  exposure information for the simulation portfolio. The units of the
+  exposures are portfolio weight relative to strategy_captial (i.e., net
+  market value of exposure divided by strategy capital). The data frame
+  contains the following columns:
+  \describe{
+    \item{strategy}{Strategy name, or 'joint' for the aggregate strategy.}
+    \item{sim_date}{Date of the exposure data.}
+    \item{\emph{category}_\emph{level}}{Exposure to \emph{level}
+    within \emph{category}, for all levels of all category constraints, at the end
+    of the period.}
+    \item{\emph{factor}}{Exposure to \emph{factor}, for all factor
+    constraints, at the end of the period.}
+  }
 }
 }
 \if{html}{\out{<hr>}}
@@ -314,7 +563,10 @@ Get information on positions removed due to delisting.
 }
 
 \subsection{Returns}{
-A data frame that contains all delisting information.
+An object of class \code{data.frame} that contains a row for each
+  position that is removed from the simulation portfolio due to a
+  delisting. Each row contains the size of the position on the day on
+  which it was removed from the portfolio.
 }
 }
 \if{html}{\out{<hr>}}
@@ -347,7 +599,7 @@ A data frame that contains summary information for the desired
 \if{html}{\out{<a id="method-plotPerformance"></a>}}
 \if{latex}{\out{\hypertarget{method-plotPerformance}{}}}
 \subsection{Method \code{plotPerformance()}}{
-Plot cumulative gross and net return by date.
+Draw a plot of cumulative gross and net return by date.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Simulation$plotPerformance()}\if{html}{\out{</div>}}
 }
@@ -357,7 +609,7 @@ Plot cumulative gross and net return by date.
 \if{html}{\out{<a id="method-plotMarketValue"></a>}}
 \if{latex}{\out{\hypertarget{method-plotMarketValue}{}}}
 \subsection{Method \code{plotMarketValue()}}{
-Plot total gross, long, short, and net market value by date.
+Draw a plot of total gross, long, short, and net market value by date.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Simulation$plotMarketValue()}\if{html}{\out{</div>}}
 }
@@ -367,7 +619,7 @@ Plot total gross, long, short, and net market value by date.
 \if{html}{\out{<a id="method-plotCategoryExposure"></a>}}
 \if{latex}{\out{\hypertarget{method-plotCategoryExposure}{}}}
 \subsection{Method \code{plotCategoryExposure()}}{
-Plot exposure to all levels in a category by date.
+Draw a plot of exposure to all levels in a category by date.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Simulation$plotCategoryExposure(in_var)}\if{html}{\out{</div>}}
 }
@@ -384,7 +636,7 @@ Plot exposure to all levels in a category by date.
 \if{html}{\out{<a id="method-plotFactorExposure"></a>}}
 \if{latex}{\out{\hypertarget{method-plotFactorExposure}{}}}
 \subsection{Method \code{plotFactorExposure()}}{
-Plot exposure to factors by date.
+Draw a plot of exposure to factors by date.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Simulation$plotFactorExposure(in_var)}\if{html}{\out{</div>}}
 }
@@ -401,7 +653,7 @@ Plot exposure to factors by date.
 \if{html}{\out{<a id="method-plotNumPositions"></a>}}
 \if{latex}{\out{\hypertarget{method-plotNumPositions}{}}}
 \subsection{Method \code{plotNumPositions()}}{
-Plot number of long and short positions by date.
+Draw a plot of number of long and short positions by date.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Simulation$plotNumPositions()}\if{html}{\out{</div>}}
 }
@@ -448,6 +700,9 @@ Write the data in the object to feather files.
 }
 \if{html}{\out{</div>}}
 }
+\subsection{Returns}{
+No return value, called for side effects.
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-readFeather"></a>}}
@@ -467,6 +722,9 @@ Load files created with \code{writeFeather} into the object.
 \item{\code{in_loc}}{Directory that contains files to be loaded.}
 }
 \if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+No return value, called for side effects.
 }
 }
 \if{html}{\out{<hr>}}

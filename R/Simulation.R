@@ -5,9 +5,49 @@
 #' @details The \code{Simulation} class is used to set up and run a daily
 #'   simulation over a particular period. Portfolio construction parameters and
 #'   other simulator settings can be configured in a yaml file that is passed to
-#'   the object's constructor. See the package vignette for information on
+#'   the object's constructor. See \code{vignette("strand")} for information on
 #'   configuration file setup.
-#'
+#' @examples
+#' 
+#' # Load up sample data
+#' data(sample_secref)
+#' data(sample_pricing)
+#' data(sample_inputs)
+#' 
+#' # Load sample configuration file
+#' config_file <- system.file("application/strategy_config.yaml", package = "strand")
+#' config_list <- yaml::yaml.load_file(config_file)
+#' 
+#' # Adjust config so that we run a one-month-long simulation
+#' config_list$to <- as.Date("2019-01-31")
+#' 
+#' # Create the Simulation object and run
+#' sim <- Simulation$new(config_list,
+#'                       raw_input_data = sample_inputs,
+#'                       raw_pricing_data = sample_pricing,
+#'                       security_reference_data = sample_secref)
+#' sim$run()
+#' 
+#' # Print overall statistics
+#' sim$overallStatsDf()
+#' 
+#' # Access tabular result data
+#' head(sim$getSimSummary())
+#' head(sim$getSimDetail())
+#' head(sim$getPositionSummary())
+#' head(sim$getInputStats())
+#' head(sim$getOptimizationSummary())
+#' head(sim$getExposures())
+#' 
+#' # Plot results
+#' \dontrun{
+#' sim$plotPerformance()
+#' sim$plotMarketValue()
+#' sim$plotCategoryExposure("category_1") 
+#' sim$plotFactorExposure(c("factor_1", "factor_2", "factor_3"))
+#' sim$plotNumPositions()
+#' }
+#' 
 #' @export
 Simulation <- R6Class(
   "Simulation",
@@ -122,6 +162,7 @@ Simulation <- R6Class(
     
     #' @description Set the verbose flag to control info output.
     #' @param verbose Logical flag indicating whether to be verbose or not.
+    #' @return No return value, called for side effects.
     setVerbose = function(verbose) {
       stopifnot(is.logical(verbose),
                 length(verbose) %in% 1)
@@ -135,6 +176,7 @@ Simulation <- R6Class(
     #'   It must have two parameters: \code{value}, indicating the progress
     #'   amount, and detail, and \code{detail}, a text string for display on the
     #'   progress bar.
+    #' @return No return value, called for side effects.
     setShinyCallback = function(callback) {
       if (!is.function(callback)) {
         stop("callback must be a function")
@@ -144,13 +186,14 @@ Simulation <- R6Class(
     },
     
     #' @description Get security reference information.
-    #' @return The security reference data frame for the object.
+    #' @return An object of class \code{data.frame} that contains the security
+    #'   reference data for the simulation.
     getSecurityReference = function() {
       invisible(private$security_reference)
     },
   
     #' @description Run the simulation.
-    #' @return An object of class \code{SimResult} that contains the results of the simulation.  
+    #' @return No return value, called for side effects.
     run = function() {
 
       # Grab simulator section of config
@@ -523,10 +566,11 @@ Simulation <- R6Class(
             position_pnl = .data$shares * 
               (.data$end_price + .data$dividend + .data$distribution - .data$start_price),
             
-            # Trading P&L is computed by comparing the end price to a benchmark
+            # Trading P&L is computed by comparing the end price to the benchmark
             # price.
             #
-            # Temporarily: assuming trading at the close, so trading P&L is zero.
+            # Temporarily: assuming trading at the close, so trading P&L is
+            # zero.
             trading_pnl = 0,
             
             # Apply trade costs
@@ -539,7 +583,7 @@ Simulation <- R6Class(
             
             # Apply financing costs
             #
-            # Temporarily: financing costs are 100bps of the notional of the
+            # Temporarily: financing costs are a fixed percentage of the notional of the
             # starting value of the portfolio's external positions. External
             # positions are positions held on the street and are recorded in the
             # ext_shares column.
@@ -600,11 +644,11 @@ Simulation <- R6Class(
         # Update positions
         portfolio$setPositions(
           filter(res, !.data$strategy %in% "joint") %>%
-          select("id",
-                        "strategy",
-                        "int_shares" = "end_int_shares",
-                        "ext_shares" = "end_ext_shares"))
-
+           select("id",
+                  "strategy",
+                  "int_shares" = "end_int_shares",
+                  "ext_shares" = "end_ext_shares"))
+        
         # Calculate EOD exposures.
         #
         # First prepare data. Columns for category grouping are static and live
@@ -645,8 +689,8 @@ Simulation <- R6Class(
     },
     
     #' @description Get a list of all date for the simulation.
-    #' @return A vector of dates over which the simulation currently iterates: all
-    # weekdays between the 'from' and 'to' dates in the simulation's config.
+    #' @return A vector of class \code{Date} over which the simulation currently iterates: all
+    #' weekdays between the 'from' and 'to' dates in the simulation's config.
     getSimDates = function() {
       from <- as.Date(private$config$getConfig("from"))
       to <- as.Date(private$config$getConfig("to"))
@@ -671,7 +715,61 @@ Simulation <- R6Class(
     },
     
     #' @description Get summary information.
-    #' @return A data frame that contains all summary data.
+    #' @return An object of class \code{data.frame} that contains summary data
+    #'   for the simulation, by period, at the joint and strategy level. The data
+    #'   frame contains the following columns:
+    #'   \describe{
+    #'     \item{strategy}{Strategy name, or 'joint' for the aggregate strategy.}
+    #'     \item{sim_date}{Date of the summary data.}
+    #'     \item{market_fill_nmv}{Total net market value of fills that do not
+    #'     net down across strategies.}
+    #'     \item{transfer_fill_nmv}{Total net market value of fills that
+    #'     represent "internal transfers", i.e., fills in one strategy that net
+    #'     down with fills in another. Note that at the joint level this column
+    #'     by definition is 0.}
+    #'     \item{market_order_gmv}{Total gross market value of orders that do not
+    #'     net down across strategies.}
+    #'     \item{market_fill_gmv}{Total gross market value of fills that do not
+    #'     net down across strategies.}
+    #'     \item{transfer_fill_gmv}{Total gross market value of fills that
+    #'     represent "internal transfers", i.e., fills in one strategy that net
+    #'     down with fills in another.}
+    #'     \item{start_nmv}{Total net market value of all positions at the start
+    #'     of the period.}
+    #'     \item{start_lmv}{Total net market value of all long positions at the
+    #'     start of the period.}
+    #'     \item{start_smv}{Total net market value of all short positions at the
+    #'     start of the period.}
+    #'     \item{end_nmv}{Total net market value of all positions at the end of
+    #'     the period.}
+    #'     \item{end_gmv}{Total gross market value of all positions at the end
+    #'     of the period.}
+    #'     \item{end_lmv}{Total net market value of all long positions at the
+    #'     end of the period.}
+    #'     \item{end_smv}{Total net market value of all short positions at the
+    #'     end of the period.}
+    #'     \item{end_num}{Total number of positions at the end of the period.}
+    #'     \item{end_num_long}{Total number of long positions at the end of the
+    #'     period.}
+    #'     \item{end_num_short}{Total number of short positions at the end of
+    #'     the period.}
+    #'     \item{position_pnl}{The total difference between the end and start
+    #'     market value of positions.}
+    #'     \item{trading_pnl}{The total difference between the market value of
+    #'     trades at the benchmark price and at the end price. Note: currently
+    #'     assuming benchmark price is the closing price, so trading P&L is
+    #'     zero.}
+    #'     \item{gross_pnl}{Total P&L gross of costs, calculated as position_pnl
+    #'     + trading_pnl.}
+    #'     \item{trade_costs}{Total trade costs (slippage).}
+    #'     \item{financing_costs}{Total financing/borrow costs.}
+    #'     \item{net_pnl}{Total P&L net of costs, calculated as gross_pnl -
+    #'     trade_costs - financing_costs.}
+    #'     \item{fill_rate_pct}{Total fill rate across all market orders,
+    #'     calculated as 100 * market_fill_gmv / market_order_gmv.}
+    #'     
+    #'   }
+    #'   
     getSimSummary = function() {
       invisible(bind_rows(private$sim_summary_list))
     },
@@ -679,11 +777,7 @@ Simulation <- R6Class(
     #' @description Get detail information.
     #' @param sim_date Vector of length 1 of class Date or character that
     #'   specifies the period for which to get detail information. If
-    #'   \code{NULL} then data from all periods is returned. Note that as
-    #'   opposed to filtering on a date column in the detail data itself, the
-    #'   period index (i.e., the list element name) is used when extracting data
-    #'   for a single period. This is the same value that is supplied as the
-    #'   \code{period} parameter when calling \code{saveSimDetail()}. Defaults
+    #'   \code{NULL} then data from all periods is returned. Defaults
     #'   to \code{NULL}.
     #' @param strategy_name Character vector of length 1 that specifies the
     #'   strategy for which to get detail data. If \code{NULL} data for all
@@ -691,7 +785,76 @@ Simulation <- R6Class(
     #' @param security_id Character vector of length 1 that specifies the
     #'   security for which to get detail data. If \code{NULL} data for all
     #'   securities is returned. Defaults to \code{NULL}.
-    #' @return A data frame that contains detail data.
+    #' @return An object of class \code{data.frame} that contains detail data
+    #'   for the simulation at the joint and strategy level. Detail data is at
+    #'   the security level. The data frame contains the following columns:
+    #'   \describe{
+    #'     \item{id}{Security identifier.}
+    #'     \item{strategy}{Strategy name, or 'joint' for the aggregate strategy.}
+    #'     \item{sim_date}{Date to which the data pertains.}
+    #'     \item{shares}{Shares at the start of the period.}
+    #'     \item{int_shares}{Shares at the start of the period that net down
+    #'     with positions in other strategies.}
+    #'     \item{ext_shares}{Shares at the start of the period that do not net
+    #'     down with positions in other strategies.}
+    #'     \item{order_shares}{Order, in shares.}
+    #'     \item{market_order_shares}{Order that does not net down with orders
+    #'     in other strategies, in shares.}
+    #'     \item{transfer_order_shares}{Order that nets down with orders in
+    #'     other strategies, in shares.}
+    #'     \item{fill_shares}{Fill, in shares.}
+    #'     \item{market_fill_shares}{Fill that does not net down with fills in
+    #'     other strategies, in shares.}
+    #'     \item{transfer_fill_shares}{Fill that nets down with fills in other
+    #'     strategies, in shares.}
+    #'     \item{end_shares}{Shares at the end of the period.}
+    #'     \item{end_int_shares}{Shares at the end of the period that net down
+    #'     with positions in other strategies.}
+    #'     \item{end_ext_shares}{Shares at the end of the period that do not net
+    #'     down with positions in other strategies.}
+    #'     \item{start_price}{Price for the security at the beginning of the
+    #'     period.}
+    #'     \item{end_price}{Price for the security at the end of the period.}
+    #'     \item{dividend}{Dividend for the security, if any, for the
+    #'     period.}
+    #'     \item{distribution}{Distribution (e.g., spin-off) for the security, if
+    #'     any, for the period.}
+    #'     \item{position_pnl}{Position P&L, calculated as shares * (end_price +
+    #'     dividend + distribution - start_price)}
+    #'     \item{trading_pnl}{The difference between the market value of
+    #'     trades at the benchmark price and at the end price. Note: currently
+    #'     assuming benchmark price is the closing price, so trading P&L is
+    #'     zero.}
+    #'     \item{trade_costs}{Trade costs, calculated as a fixed percentage (set
+    #'     in the simulation configuration) of the notional of the market trade
+    #'     (valued at the close).}
+    #'     \item{financing_costs}{Financing cost for the position, calculated as
+    #'     a fixed percentage (set in the simulation configuration) of the
+    #'     notional of the starting value of the portfolio's external positions.
+    #'     External positions are positions held on the street and are recorded
+    #'     in the ext_shares column.}
+    #'     \item{gross_pnl}{Gross P&L, calculated as position_pnl + trading_pnl.}
+    #'     \item{net_pnl}{Net P&L, calculated as gross_pnl - trade_costs -
+    #'     financing_costs.}
+    #'     \item{market_order_nmv}{Net market value of the order that does not
+    #'     net down with orders in other strategies.}
+    #'     \item{market_fill_gmv}{Gross market value of the order that does not
+    #'     net down with orders in other strategies.}
+    #'     \item{market_fill_nmv}{Net market value of the fill that does not net
+    #'     down with orders in other strategies.}
+    #'     \item{market_fill_gmv}{Gross market value of the fill that does not
+    #'     net down with orders in other strategies.}
+    #'     \item{transfer_fill_nmv}{Net market value of the fill that nets down
+    #'     with fills in other strategies.}
+    #'     \item{transfer_fill_gmv}{Gross market value of the fill that nets down
+    #'     with fills in other strategies.}
+    #'     \item{start_nmv}{Net market value of the position at the start of the
+    #'     period.}
+    #'     \item{end_nmv}{Net market value of the position at the end of the
+    #'     period.}
+    #'     \item{end_gmv}{Gross market value of the position at the end of the
+    #'     period.}
+    #'   }
     getSimDetail = function(sim_date = NULL, strategy_name = NULL, security_id = NULL) {
       if (!is.null(sim_date)) {
         detail_data <- private$sim_detail_list[[sim_date]]
@@ -716,7 +879,29 @@ Simulation <- R6Class(
     #' @param strategy_name Character vector of length 1 that specifies the
     #'   strategy for which to get detail data. If \code{NULL} data for all
     #'   strategies is returned. Defaults to \code{NULL}.
-    #' @return A data frame of summary information aggregated by security.
+    #' @return An object of class \code{data.frame} that contains summary
+    #'   information aggregated by security. The data frame contains the
+    #'   following columns:
+    #'   \describe{
+    #'     \item{id}{Security identifier.}
+    #'     \item{strategy}{Strategy name, or 'joint' for the aggregate
+    #'     strategy.}
+    #'     \item{gross_pnl}{Gross P&L for the position over the entire
+    #'     simulation.}
+    #'     \item{gross_pnl}{Net P&L for the position over the entire
+    #'     simulation.}
+    #'     \item{average_market_value}{Average net market value of the
+    #'     position over days in the simulation where the position was not
+    #'     flat.}
+    #'     \item{total_trading}{Total gross market value of trades for the
+    #'     security.}
+    #'     \item{trade_costs}{Total cost of trades for the security over the
+    #'     entire simulation.}
+    #'     \item{trade_costs}{Total cost of financing for the position over the
+    #'     entire simulation.}
+    #'     \item{days_in_portfolio}{Total number of days there was a position in
+    #'     the security in the portfolio over the entire simulation.}
+    #'   }
     getPositionSummary = function(strategy_name = NULL) {
       detail_data <- bind_rows(private$sim_detail_list)
       
@@ -726,7 +911,7 @@ Simulation <- R6Class(
       
       detail_data %>%
         group_by(.data$id, .data$strategy) %>%
-        summarize(gross_pnl = round(sum(gross_pnl)),
+        summarise(gross_pnl = round(sum(gross_pnl)),
                   net_pnl = round(sum(net_pnl)),
                   average_market_value = round(mean(end_nmv[end_shares != 0])),
                   total_trading = round(sum(market_fill_gmv)),
@@ -737,31 +922,93 @@ Simulation <- R6Class(
     },
     
     #' @description Get input statistics.
-    #' @return A data frame that contains all input statistics.
+    #' @return An object of class \code{data.frame} that contains statistics on
+    #'   select columns of input data. Statistics are tracked for the columns
+    #'   listed in the configuration variable
+    #'   \code{simulator/input_data/track_metadata}. The data frame contains the
+    #'   following columns:
+    #'   \describe{
+    #'     \item{period}{Period to which statistics pertain.}
+    #'     \item{input_rows}{Total number of rows of input data, including
+    #'     rows carried forward from the previous period.}
+    #'     \item{cf_rows}{Total number of rows carried forward from the previous
+    #'     period.}
+    #'     \item{num_na_\emph{column}}{Number of NA values in \emph{column}.  This
+    #'     measure appears for each element of \code{track_metadata}.}
+    #'     \item{cor_\emph{column}}{Period-over-period correlation for \emph{column}.
+    #'     This measure appears for each element of \code{track_metadata}.}
+    #'  }
     getInputStats = function() {
       invisible(bind_rows(private$input_stats_list))
     },
     
     #' @description Get loosening information.
-    #' @return A data frame that contains all loosening information.
+    #' @return An object of class \code{data.frame} that contains, for each
+    #'   period, which constraints were loosened in order to solve the portfolio
+    #'   optimization problem, if any. The data frame contains the
+    #'   following columns:
+    #'   \describe{
+    #'     \item{date}{Date for which the constraint was loosened.}
+    #'     \item{constraint_name}{Name of the constraint that was loosened.}
+    #'     \item{pct_loosened}{Percentage by which the constraint was loosened,
+    #'     where 100 means loosened fully (i.e., the constraint is effectively
+    #'     removed).}
+    #'   }
     getLooseningInfo = function() {
       invisible(bind_rows(private$loosening_info_list))
     },
     
     #' @description Get optimization summary information.
-    #' @return A data frame that contains all optimization summary information.
+    #' @return An object of class \code{data.frame} that contains optimization
+    #'   summary information, such as starting and ending factor constraint
+    #'   values, at the strategy and joint level. The data frame contains the
+    #'   following columns:
+    #'   \describe{
+    #'     \item{strategy}{Strategy name, or 'joint' for the aggregate strategy.}
+    #'     \item{sim_date}{Date to which the data pertains.}
+    #'     \item{order_gmv}{Total gross market value of orders generated by the
+    #'     optimization.}
+    #'     \item{start_smv}{Total net market value of short positions at the
+    #'     start of the optimization.}
+    #'     \item{start_lmv}{Total net market value of long positions at the
+    #'     start of the optimization.}
+    #'     \item{end_smv}{Total net market value of short positions at the end
+    #'     of the optimization.}
+    #'     \item{end_lmv}{Total net market value of long positions at the end of
+    #'     the optimization.}
+    #'     \item{start_\emph{factor}}{Total net exposure to \emph{factor} at the
+    #'     start of the optimization, for each factor constraint.}
+    #'     \item{end_\emph{factor}}{Total net exposure to \emph{factor} at the
+    #'     start of the optimization, for each factor constraint.}
+    #'   }
     getOptimizationSummary = function() {
       invisible(bind_rows(private$optimization_summary_list))
     },
     
-    #' @description Get exposure information.
-    #' @return A data frame that contains all exposure information.
+    #' @description Get end-of-period exposure information.
+    #' @return An object of class \code{data.frame} that contains end-of-period
+    #'   exposure information for the simulation portfolio. The units of the
+    #'   exposures are portfolio weight relative to strategy_captial (i.e., net
+    #'   market value of exposure divided by strategy capital). The data frame
+    #'   contains the following columns:
+    #'   \describe{
+    #'     \item{strategy}{Strategy name, or 'joint' for the aggregate strategy.}
+    #'     \item{sim_date}{Date of the exposure data.}
+    #'     \item{\emph{category}_\emph{level}}{Exposure to \emph{level}
+    #'     within \emph{category}, for all levels of all category constraints, at the end
+    #'     of the period.}
+    #'     \item{\emph{factor}}{Exposure to \emph{factor}, for all factor
+    #'     constraints, at the end of the period.}
+    #'   }
     getExposures = function() {
       invisible(bind_rows(private$exposures_list))
     },
     
     #' @description Get information on positions removed due to delisting.
-    #' @return A data frame that contains all delisting information.
+    #' @return An object of class \code{data.frame} that contains a row for each
+    #'   position that is removed from the simulation portfolio due to a
+    #'   delisting. Each row contains the size of the position on the day on
+    #'   which it was removed from the portfolio.
     getDelistings = function() {
       invisible(bind_rows(private$delistings_list))
     },
@@ -790,7 +1037,7 @@ Simulation <- R6Class(
              gross_cum_ret = cumsum(ifelse(end_gmv %in% 0, 0, .data$gross_pnl / .data$end_gmv)))
     },
     
-    #' @description Plot cumulative gross and net return by date.
+    #' @description Draw a plot of cumulative gross and net return by date.
     plotPerformance = function() {
       
       self$getSingleStrategySummaryDf("joint") %>%
@@ -818,7 +1065,7 @@ Simulation <- R6Class(
       
     },
     
-    #' @description Plot total gross, long, short, and net market value by date.
+    #' @description Draw a plot of total gross, long, short, and net market value by date.
     plotMarketValue = function() {
       
       mv_plot_df <- select(self$getSingleStrategySummaryDf("joint"),
@@ -844,7 +1091,7 @@ Simulation <- R6Class(
       
     },
     
-    #' @description Plot exposure to all levels in a category by date.
+    #' @description Draw a plot of exposure to all levels in a category by date.
     #' @param in_var Category for which exposures are plotted.
     plotCategoryExposure = function(in_var) {
       exposures <- self$getExposures() %>% filter(strategy %in% "joint")
@@ -870,7 +1117,7 @@ Simulation <- R6Class(
           legend.title = element_blank())
     },
     
-    #' @description Plot exposure to factors by date.
+    #' @description Draw a plot of exposure to factors by date.
     #' @param in_var Factors for which exposures are plotted.
     plotFactorExposure = function(in_var) {
       exposures <- self$getExposures() %>% filter(strategy %in% "joint")
@@ -894,7 +1141,7 @@ Simulation <- R6Class(
           legend.title = element_blank())
     },
     
-    #' @description Plot number of long and short positions by date.
+    #' @description Draw a plot of number of long and short positions by date.
     plotNumPositions = function() {
       self$getSingleStrategySummaryDf("joint") %>%
         select("sim_date", "end_num_long", "end_num_short") %>%
@@ -967,6 +1214,7 @@ Simulation <- R6Class(
     
     #' @description Write the data in the object to feather files.
     #' @param out_loc Directory in which output files should be created.
+    #' @return No return value, called for side effects.
     writeFeather = function(out_loc) {
       
       # TODO Add getter and setter for raw config data in the Config class.
@@ -988,6 +1236,7 @@ Simulation <- R6Class(
     #'   possible to use the \code{sim_date} parameter when calling
     #'   \code{getSimDetail} on the populated object.
     #' @param in_loc Directory that contains files to be loaded.
+    #' @return No return value, called for side effects.
     readFeather = function(in_loc) {
       
       # TODO Check to see if this object is empty before loading up data.
