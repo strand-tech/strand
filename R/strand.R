@@ -17,7 +17,10 @@
 #' @import R6
 #' @import ggplot2
 #' @importFrom dplyr %>% select mutate mutate_at mutate_if filter inner_join left_join vars group_by summarise summarise_all rename contains matches bind_rows ungroup arrange
-#' @importFrom tidyr replace_na starts_with ends_with one_of pivot_longer pivot_wider gather
+#' @import flextable
+#' @importFrom tibble enframe
+#' @importFrom officer fp_border
+#' @importFrom tidyr replace_na starts_with ends_with one_of pivot_longer pivot_wider gather unnest_wider
 #' @importFrom Matrix Matrix Diagonal
 #' @importFrom Rglpk Rglpk_solve_LP
 #' @importFrom yaml yaml.load_file

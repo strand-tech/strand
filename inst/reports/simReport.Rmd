@@ -1,0 +1,58 @@
+---
+title: "Simulation Results"
+date: "`r Sys.Date()`"
+params:
+   res: NULL
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+# Overview
+
+```{r}  
+res$plotPerformance()
+```
+
+```{r, ft.align = 'left'}
+res$showTable("overallStatsDf")
+```
+
+# Setup
+
+```{r, ft.align = 'left'}
+res$showTable(table = "strategy")
+```
+
+```{r, ft.align = 'left'}
+res$showTable(table = "constraints")
+```
+
+# Exposures
+
+### Market Value
+
+```{r}
+res$plotMarketValue()
+```
+
+### Category Exposure
+
+```{r}
+res$plotCategoryExposure("category_1")
+```
+
+### Factor Exposure
+
+```{r}
+res$plotFactorExposure(c("factor_1", "factor_2"))
+```
+
+### Number of Positions
+
+```{r}
+res$plotNumPositions()
+```

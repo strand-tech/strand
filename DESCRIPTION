@@ -31,7 +31,10 @@ Imports:
     lubridate,
     rlang,
     yaml,
-    ggplot2
+    ggplot2,
+    officer,
+    flextable,
+    tibble
 Suggests:
     testthat,
     knitr,

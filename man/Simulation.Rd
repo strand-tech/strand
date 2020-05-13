@@ -40,6 +40,8 @@ The \code{Simulation} class is used to set up and run a daily
 \item \href{#method-print}{\code{Simulation$print()}}
 \item \href{#method-writeFeather}{\code{Simulation$writeFeather()}}
 \item \href{#method-readFeather}{\code{Simulation$readFeather()}}
+\item \href{#method-showTable}{\code{Simulation$showTable()}}
+\item \href{#method-writeReport}{\code{Simulation$writeReport()}}
 \item \href{#method-clone}{\code{Simulation$clone()}}
 }
 }
@@ -693,6 +695,52 @@ Load files created with \code{writeFeather} into the object.
 }
 \subsection{Returns}{
 No return value, called for side effects.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-showTable"></a>}}
+\if{latex}{\out{\hypertarget{method-showTable}{}}}
+\subsection{Method \code{showTable()}}{
+Show simulation output with a flextable
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Simulation$showTable(table = "strategy")}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{table}}{Which table to show, "strategy", "constraints", 
+or "overallStatsDf"}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A flextable object with the requested table
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-writeReport"></a>}}
+\if{latex}{\out{\hypertarget{method-writeReport}{}}}
+\subsection{Method \code{writeReport()}}{
+Write an html document of simulation results.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Simulation$writeReport(out_dir, out_file, out_fmt = "html")}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{out_dir}}{Directory in which output files should be created}
+
+\item{\code{out_file}}{File name for output}
+
+\item{\code{out_fmt}}{Format in which output files should be created. The 
+default is html and that is currently the only option.}
+
+\item{\code{res}}{The object of class 'Simulation' which we want to write the 
+report about.}
+}
+\if{html}{\out{</div>}}
 }
 }
 \if{html}{\out{<hr>}}

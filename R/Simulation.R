@@ -1235,6 +1235,64 @@ Simulation <- R6Class(
       warning("It will not be possible to use the sim_date parameter of getSimDetail on this object to filter detail records by period")
       
       invisible(self)
+    },
+    
+    #' @description Show simulation output with a flextable
+    #' @param table Which table to show, "strategy", "constraints", 
+    #'   or "overallStatsDf"
+    #' @return A flextable object with the requested table 
+    showTable = function(table = "strategy") {
+      # This currently only works with one strategy
+      small_border <- fp_border(color = "black", width = 1)
+      if (table == "overallStatsDf") {
+        self$overallStatsDf() %>%
+          make_ft(title = "Overall Statistics", hlines = c(2, 5, 7, 10)) %>%
+          autofit()
+      } else {
+        strategy_configs <- private$config$getConfig("strategies") %>%
+          enframe() %>%
+          unnest_wider(value)
+        if (table == "strategy") {
+          strategy_configs %>%
+            select(-constraints) %>%
+            make_ft(title = "Strategy Configuration",
+                    col_names = c("Name", "in_var","Strategy\nCapital", 
+                                  "Ideal\nLong\nWeight", "Ideal\nShort\nWeight",
+                                  "Position\nLimit\n(% LMV)", 
+                                  "Position\nLimit\n(% SMV)",
+                                  "Position\nLimit\n(% ADV)", 
+                                  "Trading\nLimit\n(% ADV)"))
+        } else if (table == "constraints") {
+          strategy_configs$constraints %>%
+            unlist(recursive = FALSE) %>%
+            enframe() %>%
+            unnest_wider(value) %>%
+            make_ft(title = "Strategy Risk Constraints",
+                    col_names = c("Name", "Type", "in_var", "Upper\nBound",
+                                  "Lower\nBound")) %>%
+            autofit()
+        } else {
+          stop("Argument 'table' must be either 'overallStatsDf', 'strategy' or
+               'constraints'")  
+        }
+      }
+    },
+    
+    #' @description Write an html document of simulation results.
+    #' @param res The object of class 'Simulation' which we want to write the 
+    #' report about.
+    #' @param out_dir Directory in which output files should be created
+    #' @param out_file File name for output 
+    #' @param out_fmt Format in which output files should be created. The 
+    #' default is html and that is currently the only option.
+    writeReport = function(out_dir, out_file, out_fmt="html") {
+      rmarkdown::render(input = system.file("reports/simReport.Rmd", 
+                                            package = "strand"),
+                        output_format = paste0(out_fmt, "_document"),
+                        output_file = out_file,
+                        output_dir = out_dir,
+                        params = list(res = self), 
+                        quiet = TRUE)
     }
   ),
   
