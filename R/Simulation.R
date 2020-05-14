@@ -1246,7 +1246,7 @@ Simulation <- R6Class(
       private$exposures_list <- list(read_feather(paste0(in_loc, "/exposures.feather")))
       private$delistings_list <- list(read_feather(paste0(in_loc, "/delistings.feather")))
       
-      warning("It will not be possible to use the sim_date parameter of getSimData on this object to filter detail records by period")
+      warning("It will not be possible to use the sim_date parameter of getSimDetail on this object to filter detail records by period")
       
       invisible(self)
     }
