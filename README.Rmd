@@ -4,6 +4,7 @@ output: github_document
 
 # strand: A framework for investment strategy simulation
 
+[![CRAN status](https://www.r-pkg.org/badges/version/strand)](https://cran.r-project.org/package=strand)
 [![Build Status](https://travis-ci.org/strand-tech/strand.svg?branch=master)](https://travis-ci.org/strand-tech/strand)
 [![codecov](https://codecov.io/gh/strand-tech/strand/branch/master/graph/badge.svg)](https://codecov.io/gh/strand-tech/strand)
 
@@ -11,8 +12,19 @@ output: github_document
 
 `strand` provides a framework for performing discrete (share-level) simulations of investment strategies. Simulated portfolios optimize exposure to an input signal subject to constraints such as position size and factor exposure.
 
-The package vignette provides an in-depth discussion of setup and usage. See `vignette("strand")`.
+The [package vignette](https://cran.r-project.org/web/packages/strand/vignettes/strand.html) provides an in-depth discussion of setup and usage. See `vignette("strand")`.
 
+## Features
+
+* Straightforward data interfaces.
+* Option to load daily data from binary (feather) files for fast access and low memory footprint.
+* Share-level bookkeeping.
+* YAML-based configuration.
+* Position sizing based on portfolio weight and percentage of expected volume.
+* Trade sizing based on percentage of expected volume.
+* Ability to specify constraints on factor exposure, category exposure, and turnover.
+* Automatic loosening of factor and category exposure constraints if no solution is found.
+* Realistic trade filling based on percentage of actual volume.
 
 ## Installation
 
