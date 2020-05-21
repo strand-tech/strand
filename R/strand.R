@@ -19,7 +19,6 @@
 #' @importFrom tidyr replace_na starts_with ends_with one_of pivot_longer pivot_wider gather
 #' @importFrom Matrix Matrix Diagonal
 #' @importFrom Rglpk Rglpk_solve_LP
-#' @importFrom Rsymphony Rsymphony_solve_LP
 #' @importFrom yaml yaml.load_file
 #' @importFrom rlang .data
 #' @importFrom feather read_feather write_feather

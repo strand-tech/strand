@@ -227,7 +227,7 @@ PortOpt <- R6Class(
 
         if (solver %in% "symphony") {
           
-          res <- Rsymphony_solve_LP(
+          res <- Rsymphony::Rsymphony_solve_LP(
             obj = private$objective_function,
             mat = self$getConstraintMatrix(),
             dir = private$dir,
