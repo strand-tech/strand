@@ -50,35 +50,45 @@ Simulation <- R6Class(
   public = list(
 
     #' @description Create a new \code{Simulation} object.
-    #' @param config An object of class \code{list} or \code{character}. If the
-    #'   value passed is a character vector, it should be of length 1 and
-    #'   specify the path to a yaml configuration file that contains the
-    #'   object's configuration info. If the value passed is of class list(),
-    #'   the list should contain the object's configuration info in list form
-    #'   (e.g, the return value of calling \code{yaml.load_file} on the
-    #'   configuration file).
+    #' @param config An object of class \code{list} or \code{character}, or
+    #'   \code{NULL}. If the value passed is a character vector, it should be of
+    #'   length 1 and specify the path to a yaml configuration file that
+    #'   contains the object's configuration info. If the value passed is of
+    #'   class list(), the list should contain the object's configuration info
+    #'   in list form (e.g, the return value of calling \code{yaml.load_file} on
+    #'   the configuration file). If the value passed is \code{NULL}, then there
+    #'   will be no configuration information associated with the simulation and
+    #'   it will not possible to call the \code{run} method. Setting
+    #'   \code{config = NULL} is useful when creating simulation objects into
+    #'   which results will be loaded with \code{readFeather}.
     #' @param raw_input_data A data frame that contains all of the input data
     #'   (for all periods) for the simulation. The data frame must have a
-    #'   \code{date} column. If \code{NULL}, input data will taken from daily
-    #'   files specified in \code{config}. Defaults to \code{NULL}.
+    #'   \code{date} column. Data supplied using this parameter will only be
+    #'   used if the configuration option \code{simulator/input_data/type} is
+    #'   set to \code{object}. Defaults to \code{NULL}.
     #' @param raw_pricing_data A data frame that contains all of the input data
     #'   (for all periods) for the simulation. The data frame must have a
-    #'   \code{date} column. If \code{NULL}, pricing data will taken from daily
-    #'   files specified in \code{config}. Defaults to \code{NULL}.
+    #'   \code{date} column. Data supplied using this parameter will only be
+    #'   used if the configuration option \code{simulator/pricing_data/type} is
+    #'   set to \code{object}. Defaults to \code{NULL}.
     #' @param security_reference_data A data frame that contains reference data
     #'   on the securities in the simulation, including any categories that are
     #'   used in portfolio construction constraints. Note that the simulator
     #'   will throw an error if there are input data records for which there is
-    #'   no entry in the security reference.
+    #'   no entry in the security reference. Data supplied using this parameter
+    #'   will only be used if the configuration option
+    #'   \code{simulator/secref_data/type} is set to \code{object}. Defaults to
+    #'   \code{NULL}.
     #' @param delisting_dates_data A data frame that contains the dates on which
     #'   securities are delisted. It must contain two columns: id (character)
     #'   and delisting_date (Date). The date in the delisting_date column means
     #'   the day on which a stock will be removed from the simulation portfolio,
-    #'   at the beginning of the day, due to delisting. If \code{NULL},
-    #'   delisting data will taken from a file specified in \code{config}.
-    #'   Defaults to \code{NULL}.
+    #'   at the beginning of the day, due to delisting. Data supplied using this
+    #'   parameter will only be used if the configuration option
+    #'   \code{simulator/delisting_data/type} is set to \code{object}. Defaults to
+    #'   \code{NULL}.
     #' @return A new \code{Simulation} object.
-    initialize = function(config,
+    initialize = function(config = NULL,
                           raw_input_data = NULL,
                           raw_pricing_data = NULL,
                           security_reference_data = NULL,
@@ -89,10 +99,10 @@ Simulation <- R6Class(
         private$config <- StrategyConfig$new(config)
       } else if (is.list(config)) {
         private$config <- StrategyConfig$new(config)
-      } else if (is(config, "StrategyConfig")) {
-        private$config <- config
+      } else if (is.null(config)) {
+        return(self)
       } else {
-        stop("config must be of class list, character, or StrategyConfig")
+        stop("config must be of class list or character, or NULL")
       }
       
       # Set security_reference field
@@ -192,6 +202,10 @@ Simulation <- R6Class(
     #' @return No return value, called for side effects.
     run = function() {
 
+      if (is.null(private$config)) {
+        stop("Can not run simulation: no configuration defined.")  
+      }
+      
       # Grab simulator section of config
       simulator_config <- private$config$getConfig("simulator")
 
@@ -1205,7 +1219,12 @@ Simulation <- R6Class(
     
     #' @description Print overall simulation statistics.
     print = function() {
-      print(self$overallStatsDf())
+      if (is.null(private$sim_summary_list)) {
+        print("Simulation object with no result data.")
+      } else {
+        print(self$overallStatsDf())  
+      }
+      invisible()
     },
     
     #' @description Write the data in the object to feather files.
