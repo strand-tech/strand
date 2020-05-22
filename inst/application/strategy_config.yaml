@@ -1,6 +1,6 @@
 from: 2019-01-02
-to: 2019-01-31
-name: shiny_sim
+to: 2019-01-15
+name: example_sim
 turnover_limit: 25e3
 solver: glpk
 strategies:
@@ -47,14 +47,10 @@ simulator:
     category_vars: category_1
     factor_vars: [factor_1, factor_2, factor_3, factor_4]
   input_data:
-    type: file
-    directory: sample_data/inputs
-    prefix: inputs
+    type: object
     track_metadata: [factor_1, factor_2, factor_3, factor_4]
   pricing_data:
-    type: file
-    directory: sample_data/pricing
-    prefix: pricing
+    type: object
     columns:
       close_price: price_unadj
       prior_close_price: prior_close_unadj
@@ -63,5 +59,4 @@ simulator:
       dividend: dividend_unadj
       distribution: distribution_unadj
   secref_data:
-    type: file
-    filename: sample_data/secref.feather
+    type: object

@@ -130,7 +130,14 @@ server <- function(input, output, session) {
     # Create and run the sim
     tryCatch({
       
-      sim <- Simulation$new(config)
+      data(sample_inputs)
+      data(sample_pricing)
+      data(sample_secref)
+      
+      sim <- Simulation$new(config,
+                            raw_input_data = sample_inputs,
+                            raw_pricing_data = sample_pricing,
+                            security_reference_data = sample_secref)
       sim$setShinyCallback(updateProgress)
       res <- sim$run()
 
