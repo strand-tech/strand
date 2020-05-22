@@ -15,7 +15,7 @@ exposure to an input signal subject to constraints such as position size
 and factor exposure.
 
 The [package
-vignette](https://cran.r-project.org/web/packages/strand/vignettes/strand.html)
+vignette](https://cran.r-project.org/package=strand/vignettes/strand.html)
 provides an in-depth discussion of setup and usage. See
 `vignette("strand")`.
 
@@ -41,9 +41,23 @@ provides an in-depth discussion of setup and usage. See
 # Install the latest version from CRAN:
 install.packages("strand")
 
-# Install development version from GitHub using devtools:
-devtools::install_github("strand-tech/strand")
+# Install development version from GitHub using remotes:
+install.packages("remotes")
+remotes::install_github("strand-tech/strand")
 ```
+
+### Note on solvers
+
+The `strand` package uses [GLPK](https://www.gnu.org/software/glpk/) as
+the default solver for portfolio optimization. As a result, it depends
+on package `Rglpk`.
+
+It is possible to use [SYMPHONY](https://github.com/coin-or/SYMPHONY)
+instead, by setting `solver: symphony` in the simulation’s configuration
+file and installing the `Rsymphony` package. Note that you will need to
+install SYMPHONY on your system first, and [on OS X perform a few extra
+steps](https://cran.r-project.org/package=TestDesign/vignettes/rsymphony.html)
+to install `Rsymphony`.
 
 ## Usage
 
@@ -79,10 +93,10 @@ data(sample_pricing)
 data(sample_inputs)
 
 # Load sample configuration file
-config_file <- system.file("application/strategy_config_obj.yaml", package = "strand")
+config <- example_strategy_config()
 
 # Create the Simulation object and run
-sim <- Simulation$new(config_file,
+sim <- Simulation$new(config,
                       raw_input_data = sample_inputs,
                       raw_pricing_data = sample_pricing,
                       security_reference_data = sample_secref)
@@ -104,10 +118,20 @@ sim$overallStatsDf()
     ## 9            Avg Daily Turnover         220,439
     ## 10      Holding Period (months)             0.9
 
-### Docker demo
+### Example shiny application (local)
 
-If you have `docker` and `docker-compose` installed, you can run a
-sample strand shiny application by cloning the [github
+To run an example shiny application that allows interactively
+configuring and running a simulation:
+
+``` r
+library(strand)
+example_shiny_app()
+```
+
+### Example shiny application (docker)
+
+If you have `docker` and `docker-compose` installed, you can run the
+example shiny application by cloning the [github
 repository](https://github.com/strand-tech/strand) and running the
 following commands from the top-level directory:
 
