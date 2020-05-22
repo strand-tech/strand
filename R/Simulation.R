@@ -14,11 +14,11 @@
 #' data(sample_pricing)
 #' data(sample_inputs)
 #' 
-#' # Load sample configuration file
-#' config_file <- system.file("application/strategy_config_obj.yaml", package = "strand")
+#' # Load sample configuration
+#' config <- example_strategy_config()
 #'
 #' # Create the Simulation object and run
-#' sim <- Simulation$new(config_file,
+#' sim <- Simulation$new(config,
 #'                       raw_input_data = sample_inputs,
 #'                       raw_pricing_data = sample_pricing,
 #'                       security_reference_data = sample_secref)
