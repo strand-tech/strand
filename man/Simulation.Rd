@@ -20,11 +20,11 @@ data(sample_secref)
 data(sample_pricing)
 data(sample_inputs)
 
-# Load sample configuration file
-config_file <- system.file("application/strategy_config_obj.yaml", package = "strand")
+# Load sample configuration
+config <- example_strategy_config()
 
 # Create the Simulation object and run
-sim <- Simulation$new(config_file,
+sim <- Simulation$new(config,
                       raw_input_data = sample_inputs,
                       raw_pricing_data = sample_pricing,
                       security_reference_data = sample_secref)
@@ -88,7 +88,7 @@ sim$plotNumPositions()
 Create a new \code{Simulation} object.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Simulation$new(
-  config,
+  config = NULL,
   raw_input_data = NULL,
   raw_pricing_data = NULL,
   security_reference_data = NULL,
@@ -99,37 +99,47 @@ Create a new \code{Simulation} object.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{config}}{An object of class \code{list} or \code{character}. If the
-value passed is a character vector, it should be of length 1 and
-specify the path to a yaml configuration file that contains the
-object's configuration info. If the value passed is of class list(),
-the list should contain the object's configuration info in list form
-(e.g, the return value of calling \code{yaml.load_file} on the
-configuration file).}
+\item{\code{config}}{An object of class \code{list} or \code{character}, or
+\code{NULL}. If the value passed is a character vector, it should be of
+length 1 and specify the path to a yaml configuration file that
+contains the object's configuration info. If the value passed is of
+class list(), the list should contain the object's configuration info
+in list form (e.g, the return value of calling \code{yaml.load_file} on
+the configuration file). If the value passed is \code{NULL}, then there
+will be no configuration information associated with the simulation and
+it will not possible to call the \code{run} method. Setting
+\code{config = NULL} is useful when creating simulation objects into
+which results will be loaded with \code{readFeather}.}
 
 \item{\code{raw_input_data}}{A data frame that contains all of the input data
 (for all periods) for the simulation. The data frame must have a
-\code{date} column. If \code{NULL}, input data will taken from daily
-files specified in \code{config}. Defaults to \code{NULL}.}
+\code{date} column. Data supplied using this parameter will only be
+used if the configuration option \code{simulator/input_data/type} is
+set to \code{object}. Defaults to \code{NULL}.}
 
 \item{\code{raw_pricing_data}}{A data frame that contains all of the input data
 (for all periods) for the simulation. The data frame must have a
-\code{date} column. If \code{NULL}, pricing data will taken from daily
-files specified in \code{config}. Defaults to \code{NULL}.}
+\code{date} column. Data supplied using this parameter will only be
+used if the configuration option \code{simulator/pricing_data/type} is
+set to \code{object}. Defaults to \code{NULL}.}
 
 \item{\code{security_reference_data}}{A data frame that contains reference data
 on the securities in the simulation, including any categories that are
 used in portfolio construction constraints. Note that the simulator
 will throw an error if there are input data records for which there is
-no entry in the security reference.}
+no entry in the security reference. Data supplied using this parameter
+will only be used if the configuration option
+\code{simulator/secref_data/type} is set to \code{object}. Defaults to
+\code{NULL}.}
 
 \item{\code{delisting_dates_data}}{A data frame that contains the dates on which
 securities are delisted. It must contain two columns: id (character)
 and delisting_date (Date). The date in the delisting_date column means
 the day on which a stock will be removed from the simulation portfolio,
-at the beginning of the day, due to delisting. If \code{NULL},
-delisting data will taken from a file specified in \code{config}.
-Defaults to \code{NULL}.}
+at the beginning of the day, due to delisting. Data supplied using this
+parameter will only be used if the configuration option
+\code{simulator/delisting_data/type} is set to \code{object}. Defaults to
+\code{NULL}.}
 }
 \if{html}{\out{</div>}}
 }
