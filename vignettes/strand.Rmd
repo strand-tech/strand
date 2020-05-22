@@ -119,7 +119,7 @@ The `/simulator/input_data/directory` and `/simulator/input_data/prefix` configu
 ```
 simulator:
   input_data:
-    file:
+    type: file
     directory: sample_data/inputs
     prefix: inputs
 ```
