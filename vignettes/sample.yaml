@@ -1,5 +1,5 @@
 from: 2019-01-02
-to: 2019-12-31
+to: 2019-03-29
 solver: glpk
 strategies:
   strategy_1:
@@ -37,13 +37,9 @@ simulator:
     category_vars: category_1
     factor_vars: [factor_1, factor_2]
   input_data:
-    type: file
-    directory: sample_data/inputs
-    prefix: inputs
+    type: object
   pricing_data:
-    type: file
-    directory: sample_data/pricing
-    prefix: pricing
+    type: object
     columns:
       close_price: price_unadj
       prior_close_price: prior_close_unadj
@@ -52,5 +48,4 @@ simulator:
       dividend: dividend_unadj
       distribution: distribution_unadj
   secref_data:
-    type: file
-    filename: sample_data/secref.feather
+    type: object

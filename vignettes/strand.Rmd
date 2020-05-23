@@ -21,16 +21,10 @@ vignette: >
 
 knitr::opts_chunk$set(collapse = T, comment = "#>", fig.width = 7, fig.height = 4)
 
-# Compile vignette if the COMPILE_STRAND_VIGNETTE env var is set.
-knitr::opts_chunk$set(eval = nzchar(Sys.getenv("COMPILE_STRAND_VIGNETTE")))
-
 # Set default values so that errors are not thrown for inline chunks if the above env var is set.
 overall_stats <- list()
 
 options(tibble.print_min = 4L, tibble.print_max = 4L, tibble.width = Inf)
-library(feather)
-library(dplyr)
-library(strand)
 ```
 
 ## Introduction
@@ -67,7 +61,7 @@ Running a backtest in `strand` follows the same process. First, data is prepared
 
 ## Configuration
 
-All setup and configuration in `strand` is accomplished by filling in a yaml-format configuration file. The backtest in this vignette, for example, will use the file `vignettes/sample.yaml`. The configuration file contains two major sections. The `strategies` section contains entries for the strategy's alpha, any portfolio construction constraints, position size constraints, etc. (Note that it is possible to operate multiple strategies in the same simulation, but this vignette will only cover a simulation with one strategy.) The `simulator` section contains the location of input files, input file column mappings, and simulator options. There are also several top-level settings that control aspects of the simulation.
+All setup and configuration in `strand` is accomplished by filling in a yaml-format configuration file. The backtest in this vignette, for example, will use the file `vignettes/sample.yaml`. The configuration file contains two major sections. The `strategies` section contains entries for the strategy's alpha, any portfolio construction constraints, position size constraints, etc. (Note that it is possible to operate multiple strategies in the same simulation, but this vignette will only cover a simulation with one strategy.) The `simulator` section contains the location of input data, input data column mappings, and simulator options. There are also several top-level settings that control aspects of the simulation.
 
 ## Preparing input data
 
@@ -77,7 +71,16 @@ Three types of input data are needed to run a `strand` simulation:
 2. Daily alpha and factor inputs for each stock in the universe.
 3. Daily market data for each stock in the universe.
 
-This data can be provided to the simulator directly using objects stored in memory, or the simulator can read the data from binary files stored in feather format on disk. An example of setting up a simulation using in-memory objects as input can be found in the package documentation examples (see `?Simulation`). In this vignette we'll be using a set of (fake) sample data, in binary file format, available in `strand`'s GitHub repository. We assume that [sample_data.tar.gz](https://github.com/strand-tech/strand/raw/master/sample_data.tar.gz) has been extracted in the `vignettes` directory of the package.
+This data can be provided to the simulator directly using objects stored in memory, or the simulator can read the data from binary files stored in `feather` format on disk. In this vignette we will use the package's sample (fake) data sets as input and supply them as objects in memory. For a discussion of how to use files for input data, see [Appendix: file-based inputs].
+
+### Loading required packages
+
+Two packages are required to work through the code in this vignette: `strand` and `dplyr`:
+
+```{r, message = FALSE}
+library(strand)
+library(dplyr)
+```
 
 ### Security reference
 
@@ -87,60 +90,60 @@ The security reference specifies static information about each security in the b
 * `symbol` for reporting.
 * One column for each category used in an exposure constraint.
 
-Below is a listing of a few rows and columns from the `secref.feather` file included in the sample dataset:
+Below is a listing of a few rows and columns from the `sample_secref` data set included with the package:
 
 ```{r}
-read_feather("sample_data/secref.feather") %>%
+data(sample_secref)
+
+sample_secref %>%
   select("id", "symbol", "category_1")
 ```
 
-Shown are three columns, all of class `character`: `id`, `symbol`, and one category column `category_1`. To configure the location of the security reference input file, set the value of `/simulator/secref_data`:
+Shown are three columns, all of class `character`: `id`, `symbol`, and one category column `category_1`. In `sample.yaml` we indicate that this data will be passed to the simulator as an object by configuring `/simulator/secref_data` as follows:
 
 ```
 simulator:
   secref_data:
-    type: file
-    filename: sample_data/secref.feather
+    type: object
 ```
-
-The `type` field specifies that secref information should come from a file and not be passed to the simulator as a constructor parameter. The `filename` field gives the location of the file.
 
 ### Alpha and factor inputs
 
-Alpha and factor inputs are used in the daily portfolio construction process. Each data file for alpha and factor inputs must contain at least the following columns:
+Alpha and factor inputs are used in the daily portfolio construction process. Alpha and factor inputs for each day must contain at least the following columns:
 
+* `date`: the date for which the information should be used to create orders.
 * `id`: the security identifier. The identifier must appear in the security reference discussed above.
 * `average_volume`: an estimate of the amount of volume, in shares, that we expect to see for one day, on average. This measure of volume is used in the portfolio optimization step to ensure that our order sizes are in line with the amount we expect to be able to trade in the market. It is also used in the optimization's liquidity constraint on position size.
 * One column for each alpha variable used in the simulation.
 * One column for each numeric factor variable used in an exposure constraint.
 
-The `/simulator/input_data/directory` and `/simulator/input_data/prefix` configuration options specify where the system should find these inputs.  Below is the pertinent section from `sample.yaml`:
+The `/simulator/input_data` section in `sample.yaml` indicates that, like security reference data, alpha and factor inputs will be supplied to the simulation as an object:
 
 ```
 simulator:
   input_data:
-    type: file
-    directory: sample_data/inputs
-    prefix: inputs
+    type: object
 ```
 
-This entry indicates that inputs files can be found in `sample_data/inputs`. By convention the data for each day has its own file with file name `prefix_YYYYmmdd.feather`. Therefore the file `inputs_20190715.feather` contains the alpha and risk values that will be used for trading on 2019-07-15.
-
-> *Note regarding date semantics for inputs files:* The data in `inputs_20190715.feather` is used for constructing the portfolio and generating orders for trading on 2019-07-15. As a result, it is assumed that this data is known *before* trading begins on 2019-07-15. Suppose that in production, for example, trades are generated in the morning before trading begins. In our simulation, data in `inputs_20190715.feather` would contain values calculated using data through the close of trading on the previous day, 2019-07-12. How the strategy operates and any expectations around the timeliness of data delivery should dictate the contents of the inputs file for a given date.
-
-Below are the key columns from one of the inputs files included in the sample data set:
+We will be using the `sample_inputs` data set included with the package as the alpha and factor input for our simulation:
 
 ```{r}
-read_feather("sample_data/inputs/inputs_20190715.feather") %>%
-  select("id", "average_volume", "alpha_1", "factor_1",  "factor_2")
+data(sample_inputs)
+
+sample_inputs %>%
+  filter(date %in% as.Date("2019-01-04")) %>%
+  select("date", "id", "average_volume", "alpha_1", "factor_1",  "factor_2")
 ```
 
-The first and second columns are the `id` and `average_volume` measures described above. The column `alpha_1` is a numeric column that serves as the signal for the backtest run in this vignette. Columns `factor_1` and `factor_2` are numeric values that are used in factor constraints.
+The first column, `date`, contains the date for which the data should be used to generate orders in the simulation. The second and third columns are the `id` and `average_volume` columns described above. The column `alpha_1` is a numeric column that serves as the signal for the backtest run in this vignette. Columns `factor_1` and `factor_2` are numeric values that are used in factor constraints.
+
+> *Note regarding date semantics for inputs data:* The data for 2019-01-04 is used for constructing the portfolio and generating orders for trading on that day. As a result, it is assumed that this data is known *before* trading begins on 2019-01-04 (e.g., data as-of the close on 2019-01-03). How the strategy operates and any expectations around the timeliness of data delivery should dictate what is used as inputs for a given date.
 
 ### Market data
 
-Market data is used to value positions, calculate portfolio performance, and simulate trade fills in the backtest. In the current version of the package, all prices and market values are assumed to be in a single reference currency. Each data file for market data must contain at least the following columns:
+Market data is used to value positions, calculate portfolio performance, and simulate trade fills in the backtest. In the current version of the package, all prices and market values are assumed to be in a single reference currency. Market data for each date must contain at least the following columns:
 
+* `date`: as-of date for the pricing data.
 * `id`: the security identifier. The identifier must appear in the security reference discussed above.
 * `close_price`: the unadjusted closing price for the security
 * `prior_close_price`: the unadjusted closing price for the security on the previous day
@@ -154,9 +157,7 @@ Below is the `/simulator/pricing_data` section of the `sample.yaml` configuratio
 ```
 simulator:
   pricing_data:
-    type: file
-    directory: sample_data/pricing
-    prefix: pricing
+    type: object
     columns:
       close_price: price_unadj
       prior_close_price: prior_close_unadj
@@ -166,21 +167,31 @@ simulator:
       distribution: distribution_unadj
 ```
 
-The `/simulator/pricing_data/directory` value specifies the file system location for the market data files. The value of `/simulator/input_data/prefix` indicates the prefix for each file name. So in our example, the market data for 2019-07-15 will be found in `sample_data/pricing/pricing_20190715.feather`.
+As with security and inputs data, the entry `type: object` indicates that pricing data will be supplied to the simulation as an object.
 
-The `/simulator/pricing_data/columns` section allows us to map columns in our data file to columns the backtester expects to find in the data. For example, the entry `columns/close_price=price_unadj` indicates that there is a column `price_unadj` in the data file that should be treated by the system as the required `close_price` column.
+The `/simulator/pricing_data/columns` section allows us to map columns in our pricing data to columns the backtester expects to be present. For example, the entry
 
-A few rows of the market data file in the sample data are shown below:
+```
+    columns:
+      close_price: price_unadj
+```
+
+indicates that there is a column `price_unadj` in the data that should be treated by the system as the required `close_price` column.
+
+We will be using the `sample_pricing` data set included with the package as the pricing data for our simulation. Below are a few rows of this dataset:
 
 ```{r}
-read_feather("sample_data/pricing/pricing_20190715.feather") %>%
-  select("id", "price_unadj", "prior_close_unadj", "adjustment_ratio",
+data(sample_pricing)
+
+sample_pricing %>%
+  filter(date %in% as.Date("2019-01-04")) %>%
+  select("date", "id", "price_unadj", "prior_close_unadj", "adjustment_ratio",
          "volume", "dividend_unadj", "distribution_unadj")
 ```
 
-As per the configuration file, the `price_unadj`, `prior_close_unadj`, `dividend_unadj`, and `distribution_unadj` columns are treated by the simulator as the `close_price`, `prior_close_price`, `dividend`, and `distrubtion` columns, respectively. There are no dividends or distributions for the securities shown, so these values are `NA`. Neither are there any splits or other changes to the securities' adjustment basis, so all `adjustment_ratio` values are 1.
+As per the configuration file, the `price_unadj`, `prior_close_unadj`, `dividend_unadj`, and `distribution_unadj` columns will be treated by the simulator as the `close_price`, `prior_close_price`, `dividend`, and `distrubtion` columns, respectively. There are no dividends or distributions for the securities shown, so these values are `NA`. There are no splits or other changes to the securities' adjustment basis, so all `adjustment_ratio` values are 1.
 
-> *Note regarding date semantics for market data files:* The data in `pricing_20190715.feather` is data *as-of* 2019-07-15. Therefore, some of the data could not have been known until the end of that day. For example, the `close_price` and `volume` data items are measured at the end of the trading day on 2019-07-15. Note that these semantics are in contrast with the inputs data file date semantics, where all data is assumed to have been known *before* trading beings on the date indicated in the file name.
+> *Note regarding date semantics for pricing/market data:* The pricing data for date 2019-01-04 in the simulator is data *as-of* 2019-01-04. Therefore, some of the data could not have been known until the end of that day. For example, the `close_price` and `volume` data items are measured at the end of the trading day on 2019-01-04. Note that these semantics are in contrast with the date semantics for alpha/factor input data, where all data is assumed to have been known *before* trading beings on the data date.
 
 ## Strategy specification
 
@@ -262,7 +273,7 @@ These parameters express limits on the size of positions as a percentage of the 
 
 There are two ways in which the `average_volume` measure in our inputs data is used to impose liquidity constraints on our portfolio construction process.
 
-First, the `position_limit_pct_adv` parameter is used to impose a position size constraint in addition to the constraints discussed in the previous section.  This parameter limits the position size, in absolute value, to a percentage of the `average_volume` measure in the current day's inputs data file. In `sample.yaml` we have:
+First, the `position_limit_pct_adv` parameter is used to impose a position size constraint in addition to the constraints discussed in the previous section.  This parameter limits the position size, in absolute value, to a percentage of the `average_volume` measure in the current day's input data. In `sample.yaml` we have:
 
 ```
 strategies:
@@ -307,7 +318,7 @@ strategies:
 Recall that both `factor_1` and `factor_2` must be columns present in the daily inputs data. Each constraint is configured in a separate entry in the `constraints` section that contains the following key/value pairs:
 
 * `type`: in this case `factor` because we are constraining exposure to a numeric value.
-* `in_var`: the name of the column in the inputs data file that contains the numeric value.
+* `in_var`: the name of the column in the input data that contains the numeric value.
 * `upper_bound`: the upper bound on exposure to `in_var`.
 * `lower_bound`: the lower bound on exposure to `in_var`.
 
@@ -338,8 +349,8 @@ Here, `category_1` must be a column that appears in the security reference. As w
 There are 6 levels in `category_1` in our security reference:
 
 ```{r}
-security_reference <- read_feather("sample_data/secref.feather")
-table(security_reference[["category_1"]])
+data(sample_secref)
+table(sample_secref$category_1)
 ```
 
 The constraint above indicates that in our optimization we may have no more than +/-2% of exposure in any one of these levels.
@@ -370,10 +381,10 @@ The top-level items `from` and `to` control the starting and ending dates for th
 
 ```
 from: 2019-01-02
-to: 2019-12-31
+to: 2019-03-29
 ```
 
-In this vignette we will run a simulation over 1 year of daily data, beginning on January 2, 2019 and ending on December 31, 2019.
+In this vignette we will run a simulation over 3 months of daily data, beginning on January 2, 2019 and ending on March 29, 2019.
 
 ### Solver
 
@@ -422,10 +433,18 @@ For example, if we have a position in ABC valued at \$100,000 at the beginning o
 
 At this point we have covered all of the setup required to run the backtest. We have prepared our data, including the security master and daily inputs and market data. We have filled in the configuration file to specify the strategy and control different aspects of the simulator. We are ready to run the backtest.
 
-The `strand` package is implemented using the `R6` OOP system. To run the backtest, we create a `Simulation` object by passing the path to the yaml configuration file to the constructor. Then we call the method `run()`:
+The `strand` package is implemented using the `R6` OOP system. To run the backtest, we create a `Simulation` object by passing the path to the yaml configuration file and the three data sets discussed above to the constructor. Then we call the method `run()`:
 
 ```{r}
-sim <- Simulation$new("sample.yaml")
+data(sample_inputs)
+data(sample_pricing)
+data(sample_secref)
+
+sim <- Simulation$new(config = "sample.yaml",
+                      raw_input_data = sample_inputs,
+                      raw_pricing_data = sample_pricing,
+                      security_reference_data = sample_secref)
+                      
 sim$run()
 
 ```
@@ -433,10 +452,6 @@ sim$run()
 ### Viewing summary statistics
 
 When the backtest is finished, we can call methods to summarize and plot the results. For example, the `overallStatsDf()` method returns a data frame of key statistics:
-
-```{r, echo = FALSE}
-overall_stats <- sim$overallStatsDf()
-```
 
 ```{r}
 sim$overallStatsDf()
@@ -488,3 +503,51 @@ sim$plotFactorExposure(c("factor_1", "factor_2"))
 ```
 
 Here we can also see spikes of exposure outside the constrained range +/-1\%. As discussed in the previous section, price movement, lack of liquidity and constraint loosening are possible explanations for these spikes in end-of-day exposure. In the case of factor constraints, another possible explanation is a significant day-over-day change in factor values. Again, exploring these scenarios is possible by diving more deeply into the backtest's result data, but is outside the scope of this document.
+
+## Appendix: file-based inputs
+
+The first part of the vignette showed how to run a simulation where all data is supplied using objects in memory. In this appendix we discuss setting up a simulation where all data comes from binary `feather` files stored on disk. This approach is useful for running simulations over many periods with a small memory footprint.
+
+In this section we assume we have a directory called `sample_data` in the vignettes directory that contains security reference, pricing, and alpha/factor input data in `feather` format. An archive of sample data that matches the configuration below is [available for download](https://github.com/strand-tech/strand/raw/master/sample_data.tar.gz) from the package's GitHub repository for experimentation.
+
+### Security reference
+
+The simulation's configuration file should be set as follows for file-based security reference input:
+
+```
+simulator:
+  secref_data:
+    type: file
+    filename: sample_data/secref.feather
+```
+
+
+The `type` field specifies that secref information should come from a file and not be passed to the simulator as a constructor parameter. The `filename` field gives the location of the file.
+
+### Alpha and factor inputs
+
+When using file-based data, `strand` expects alpha and factor input data for each day to be stored in its own file. The `/simulator/input_data/directory` and `/simulator/input_data/prefix` configuration options specify where the system should find these files:
+
+```
+simulator:
+  input_data:
+    type: file
+    directory: sample_data/inputs
+    prefix: inputs
+```
+
+This entry indicates that the input data should be retrieved from files located in `sample_data/inputs` with filename prefix `inputs`. By convention the data for YYYYmmdd should have filename `prefix_YYYYmmdd.feather`. Therefore the file `sample_data/inputs/inputs_20190104.feather` contains the alpha and risk values that will be used for trading on 2019-01-04.
+
+### Market data
+
+Like alpha and factor inputs, `strand` expects pricing data for each day to be stored in its own file. The `/simulator/pricing_data/directory` and `/simulator/pricing_data/prefix` configuration options specify where the system should find these files:
+
+```
+simulator:
+  pricing_data:
+    type: file
+    directory: sample_data/pricing
+    prefix: pricing
+```
+
+The `/simulator/pricing_data/directory` value specifies the file system location for the market data files. The value of `/simulator/pricing_data/prefix` indicates the prefix for each file name. So in our example, the market data for 2019-01-04 will be found in `sample_data/pricing/pricing_20190104.feather`.
