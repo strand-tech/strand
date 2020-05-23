@@ -14,6 +14,42 @@ exposure.
 For an introduction to running simulations using the package, see
 \code{vignette("strand")} and the documentation for the \code{\link{Simulation}} class.
 }
+\examples{
+# Load up sample data
+data(sample_secref)
+data(sample_pricing)
+data(sample_inputs)
+
+# Load sample configuration
+config <- example_strategy_config()
+
+# Create the Simulation object and run
+sim <- Simulation$new(config,
+                      raw_input_data = sample_inputs,
+                      raw_pricing_data = sample_pricing,
+                      security_reference_data = sample_secref)
+sim$run()
+
+# Print overall statistics
+sim$overallStatsDf()
+
+# Access tabular result data
+head(sim$getSimSummary())
+head(sim$getSimDetail())
+head(sim$getPositionSummary())
+head(sim$getInputStats())
+head(sim$getOptimizationSummary())
+head(sim$getExposures())
+
+# Plot results
+\dontrun{
+sim$plotPerformance()
+sim$plotMarketValue()
+sim$plotCategoryExposure("category_1") 
+sim$plotFactorExposure(c("factor_1", "factor_2", "factor_3"))
+sim$plotNumPositions()
+}
+}
 \author{
 Jeff Enos \email{jeff@strand.tech} and David Kane \email{david@strand.tech}
 }
