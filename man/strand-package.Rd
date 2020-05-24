@@ -12,7 +12,8 @@ to an input signal subject to constraints such as position size and factor
 exposure.
 
 For an introduction to running simulations using the package, see
-\code{vignette("strand")} and the documentation for the \code{\link{Simulation}} class.
+\code{vignette("strand")}. For details on available methods see the
+documentation for the \code{\link{Simulation}} class.
 }
 \examples{
 # Load up sample data
