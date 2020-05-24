@@ -466,3 +466,21 @@ adjust <- function(x, in_var, adj_var, loops = NULL){
   
   return(normalize(residuals(lm(form, data = y, na.action = "na.exclude"))))
 }
+
+# Maximum drawdown
+#
+# Calculate the largest drawdown in a series of returns.
+#
+# @param x A vector of returns
+drawdown <- function(x) {
+  
+  x_cumulative <- cumsum(x)
+  y <- cummax(x_cumulative) - x_cumulative
+  
+  # Future versions will report start and end date, so go through the trouble of
+  # computing the start and end indexes.
+  dd_end_idx <- max(which.max(y), length(y) - which.max(rev(y)) + 1)
+  dd_start_idx <- max(which(y == 0 & seq(y) < dd_end_idx))
+  
+  x_cumulative[dd_end_idx] - x_cumulative[dd_start_idx]
+}

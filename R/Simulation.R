@@ -1153,6 +1153,7 @@ Simulation <- R6Class(
           "Annualized Return on GMV (%)",
           "Annualized Vol (%)",
           "Annualized Sharpe",
+          "Max Drawdown (%)",
           "Avg GMV",
           "Avg NMV",
           "Avg Count",
@@ -1165,6 +1166,7 @@ Simulation <- R6Class(
           sprintf("%0.1f", mean(res$gross_pnl / res$end_gmv) * 100 * 252),
           sprintf("%0.1f", sd(res$gross_pnl / res$end_gmv) * 100 * sqrt(252)),
           sprintf("%0.2f", mean(res$gross_pnl / res$end_gmv) / sd(res$gross_pnl / res$end_gmv) * sqrt(252)),
+          sprintf("%0.1f", drawdown(res$gross_pnl / res$end_gmv) * 100),
           rep("", 5)
         ),
         Net = c(
@@ -1173,6 +1175,7 @@ Simulation <- R6Class(
           sprintf("%0.1f", mean(res$net_pnl / res$end_gmv) * 100 * 252),
           sprintf("%0.1f", sd(res$net_pnl / res$end_gmv) * 100 * sqrt(252)),
           sprintf("%0.2f", mean(res$net_pnl / res$end_gmv) / sd(res$net_pnl / res$end_gmv) * sqrt(252)),
+          sprintf("%0.1f", drawdown(res$net_pnl / res$end_gmv) * 100),
           formatC(mean(res$end_gmv), big.mark = ",", digit = 0, format = "f"),
           formatC(mean(res$end_nmv), big.mark = ",", digit = 0, format = "f"),
           formatC(mean(res$end_num), big.mark = ",", digit = 0, format = "f"),
