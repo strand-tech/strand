@@ -112,11 +112,12 @@ sim$overallStatsDf()
     ## 3  Annualized Return on GMV (%)   0.5      -3.2
     ## 4            Annualized Vol (%)   0.5       0.7
     ## 5             Annualized Sharpe  1.12     -4.61
-    ## 6                       Avg GMV       1,999,350
-    ## 7                       Avg NMV              73
-    ## 8                     Avg Count             403
-    ## 9            Avg Daily Turnover         220,439
-    ## 10      Holding Period (months)             0.9
+    ## 6              Max Drawdown (%)  -0.1      -0.1
+    ## 7                       Avg GMV       1,999,350
+    ## 8                       Avg NMV              73
+    ## 9                     Avg Count             403
+    ## 10           Avg Daily Turnover         220,439
+    ## 11      Holding Period (months)             0.9
 
 ### Example shiny application (local)
 
