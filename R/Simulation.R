@@ -1246,7 +1246,7 @@ Simulation <- R6Class(
       small_border <- fp_border(color = "black", width = 1)
       if (table == "overallStatsDf") {
         self$overallStatsDf() %>%
-          make_ft(title = "Overall Statistics", hlines = c(2, 5, 7, 10)) %>%
+          make_ft(title = "Overall Statistics", hlines = c(2, 5, 6, 8)) %>%
           autofit()
       } else {
         strategy_configs <- private$config$getConfig("strategies") %>%

@@ -16,6 +16,7 @@ make_ft = function(x,
   # Create reused values
   brdr <- fp_border(color = "black", width = 1)
   numcols <- ncol(x)
+  numrows <- nrow(x)
   
   # set_header_labels takes a named vector
   if (!is.null(col_names)) names(col_names) <- colnames(x)
@@ -27,6 +28,7 @@ make_ft = function(x,
     vline(j = 1:(numcols-1), border = brdr, part = "body") %>%
     align(align = "center", part = "header") %>%
     bold(part = "header")
+
   
   # Add horizontal lines
   if (is.numeric(hlines)) {
@@ -45,6 +47,7 @@ make_ft = function(x,
       fontsize(i = 1, size = 24, part = "header") %>%
       padding(padding = 20, i = 1, part = "header")
   }
-  
+  ft <- border(ft, i = numrows, border.bottom = fp_border(color = "black", 
+                                                          width = 2))
   return(ft)
 }
