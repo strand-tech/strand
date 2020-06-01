@@ -1254,7 +1254,10 @@ Simulation <- R6Class(
           unnest_wider(value)
         if (table == "strategy") {
           strategy_configs %>%
-            select(-constraints) %>%
+            select(name, in_var, strategy_capital, ideal_long_weight,
+                   ideal_short_weight, position_limit_pct_lmv, 
+                   position_limit_pct_smv, position_limit_pct_adv, 
+                   trading_limit_pct_adv) %>%
             make_ft(title = "Strategy Configuration",
                     col_names = c("Name", "in_var","Strategy\nCapital", 
                                   "Ideal\nLong\nWeight", "Ideal\nShort\nWeight",
@@ -1263,14 +1266,18 @@ Simulation <- R6Class(
                                   "Position\nLimit\n(% ADV)", 
                                   "Trading\nLimit\n(% ADV)"))
         } else if (table == "constraints") {
-          strategy_configs$constraints %>%
-            unlist(recursive = FALSE) %>%
-            enframe() %>%
-            unnest_wider(value) %>%
-            make_ft(title = "Strategy Risk Constraints",
-                    col_names = c("Name", "Type", "in_var", "Upper\nBound",
-                                  "Lower\nBound")) %>%
-            autofit()
+          # do nothing in case where strategy_configs$constraints is missing
+          # using is.null() here gives a warning in the rmd
+          if (has_name(strategy_configs, "constraints")) {
+            strategy_configs$constraints %>%
+              unlist(recursive = FALSE) %>%
+              enframe() %>%
+              unnest_wider(value) %>%
+              make_ft(title = "Strategy Risk Constraints",
+                      col_names = c("Name", "Type", "in_var", "Upper\nBound",
+                                    "Lower\nBound")) %>%
+              autofit()
+          }
         } else {
           stop("Argument 'table' must be either 'overallStatsDf', 'strategy' or
                'constraints'")  
