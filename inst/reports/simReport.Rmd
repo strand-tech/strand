@@ -14,12 +14,12 @@ res <- params$res
 
 # Overview
 
-```{r}  
-res$plotPerformance()
-```
-
 ```{r, ft.align = 'left'}
 res$showTable("overallStatsDf")
+```
+
+```{r}  
+res$plotPerformance()
 ```
 
 # Setup
