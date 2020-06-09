@@ -391,9 +391,13 @@ PortOpt <- R6Class(
       price_var <- private$config$getConfig("price_var")
       all_strategies <- private$config$getStrategyNames()
 
-      # Grab a list of all numeric factors used in constraints.
+      # Grab a list of all numeric columns used as in_vars and in constraints.
       factor_vars <- c()
       for (strategy in all_strategies) {
+        
+        this_in_var <- private$config$getStrategyConfig(strategy, "in_var")
+        factor_vars <- c(factor_vars, this_in_var)
+        
         constraint_config <- private$config$getStrategyConfig(strategy, "constraints")
         factor_vars <- c(factor_vars,
                          sapply(constraint_config, function(x) {
