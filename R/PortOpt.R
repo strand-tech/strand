@@ -24,7 +24,33 @@ PortOpt <- R6Class(
     #'   configuration file).
     #' @param input_data A \code{data.frame} that contains all necessary input
     #'   for the optimization.
+    #'   
+    #'   If the top-level configuration item \code{price_var} is not set, prices will be expected
+    #'   in the \code{ref_price} column of \code{input_data}.
     #' @return A new \code{PortOpt} object.
+    #' @examples
+    #' library(dplyr)
+    #' data(sample_secref)
+    #' data(sample_inputs)
+    #' data(sample_pricing)
+    #'
+    #' # Construct optimization input for one day from sample data. The columns
+    #' # of the input data must match the input configuration.
+    #' optim_input <-
+    #'   dplyr::inner_join(sample_inputs, sample_pricing,
+    #'                     by = c("id", "date")) %>%
+    #'   dplyr::left_join(sample_secref, by = "id") %>%
+    #'   dplyr::filter(date %in% as.Date("2019-01-02")) %>%
+    #'   dplyr::mutate(ref_price = price_unadj,
+    #'                 shares_strategy_1 = 0)
+    #'
+    #' opt <-
+    #'   PortOpt$new(config = example_strategy_config(),
+    #'               input_data = optim_input)
+    #'
+    #' # The problem is not solved until the \code{solve} method is called
+    #' # explicitly.
+    #' opt$solve()
     initialize = function(config, input_data) {
       
       if (is.character(config)) {
@@ -509,11 +535,17 @@ PortOpt <- R6Class(
       validateInputData = function() {
         
         # Checks need to be expanded
-        stopifnot(all(c("id",
-                        "investable",
-                        private$config$getConfig("vol_var"),
-                        private$config$getConfig("price_var")) %in%
-                        names(private$input_data)))
+        required_columns <- c("id",
+                              "investable",
+                              private$config$getConfig("vol_var"),
+                              private$config$getConfig("price_var"))
+        
+        missing_columns <- required_columns[!required_columns %in%
+                                              names(private$input_data)]
+        if (length(missing_columns) > 0) {
+          stop(paste0("Must have the following columns in input_data: ",
+                      paste0(missing_columns, collapse = ", ")))
+        }
         
         stopifnot(all(!is.na(private$input_data$id)),
                   sum(duplicated(private$id)) %in% 0)

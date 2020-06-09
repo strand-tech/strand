@@ -14,6 +14,35 @@ A \code{PortOpt} object is configured in the same way as a
   retrieving information about the optimization setup and results. See the
   package vignette for information on configuration file setup.
 }
+\examples{
+
+## ------------------------------------------------
+## Method `PortOpt$new`
+## ------------------------------------------------
+
+library(dplyr)
+data(sample_secref)
+data(sample_inputs)
+data(sample_pricing)
+
+# Construct optimization input for one day from sample data. The columns
+# of the input data must match the input configuration.
+optim_input <-
+  dplyr::inner_join(sample_inputs, sample_pricing,
+                    by = c("id", "date")) \%>\%
+  dplyr::left_join(sample_secref, by = "id") \%>\%
+  dplyr::filter(date \%in\% as.Date("2019-01-02")) \%>\%
+  dplyr::mutate(ref_price = price_unadj,
+                shares_strategy_1 = 0)
+
+opt <-
+  PortOpt$new(config = example_strategy_config(),
+              input_data = optim_input)
+
+# The problem is not solved until the \code{solve} method is called
+# explicitly.
+opt$solve()
+}
 \section{Methods}{
 \subsection{Public methods}{
 \itemize{
@@ -50,13 +79,45 @@ the list should contain the object's configuration info in list form
 configuration file).}
 
 \item{\code{input_data}}{A \code{data.frame} that contains all necessary input
-for the optimization.}
+for the optimization.
+
+If the top-level configuration item \code{price_var} is not set, prices will be expected
+in the \code{ref_price} column of \code{input_data}.}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
 A new \code{PortOpt} object.
 }
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{library(dplyr)
+data(sample_secref)
+data(sample_inputs)
+data(sample_pricing)
+
+# Construct optimization input for one day from sample data. The columns
+# of the input data must match the input configuration.
+optim_input <-
+  dplyr::inner_join(sample_inputs, sample_pricing,
+                    by = c("id", "date")) \%>\%
+  dplyr::left_join(sample_secref, by = "id") \%>\%
+  dplyr::filter(date \%in\% as.Date("2019-01-02")) \%>\%
+  dplyr::mutate(ref_price = price_unadj,
+                shares_strategy_1 = 0)
+
+opt <-
+  PortOpt$new(config = example_strategy_config(),
+              input_data = optim_input)
+
+# The problem is not solved until the \code{solve} method is called
+# explicitly.
+opt$solve()
+}
+\if{html}{\out{</div>}}
+
+}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-setVerbose"></a>}}
