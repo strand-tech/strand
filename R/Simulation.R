@@ -1237,53 +1237,13 @@ Simulation <- R6Class(
       invisible(self)
     },
     
-    #' @description Show simulation output with a flextable
-    #' @param table Which table to show, "strategy", "constraints", 
-    #'   or "overallStatsDf"
-    #' @return A flextable object with the requested table 
-    showTable = function(table = "strategy") {
-      # This currently only works with one strategy
-      small_border <- fp_border(color = "black", width = 1)
-      if (table == "overallStatsDf") {
-        self$overallStatsDf() %>%
-          make_ft(title = "Overall Statistics", hlines = c(2, 5, 6, 8)) %>%
-          autofit()
-      } else {
-        strategy_configs <- private$config$getConfig("strategies") %>%
-          enframe() %>%
-          unnest_wider(value)
-        if (table == "strategy") {
-          strategy_configs %>%
-            select(name, in_var, strategy_capital, ideal_long_weight,
-                   ideal_short_weight, position_limit_pct_lmv, 
-                   position_limit_pct_smv, position_limit_pct_adv, 
-                   trading_limit_pct_adv) %>%
-            make_ft(title = "Strategy Configuration",
-                    col_names = c("Name", "in_var","Strategy\nCapital", 
-                                  "Ideal\nLong\nWeight", "Ideal\nShort\nWeight",
-                                  "Position\nLimit\n(% LMV)", 
-                                  "Position\nLimit\n(% SMV)",
-                                  "Position\nLimit\n(% ADV)", 
-                                  "Trading\nLimit\n(% ADV)"))
-        } else if (table == "constraints") {
-          # do nothing in case where strategy_configs$constraints is missing
-          # using is.null() here gives a warning in the rmd
-          if (has_name(strategy_configs, "constraints")) {
-            strategy_configs$constraints %>%
-              unlist(recursive = FALSE) %>%
-              enframe() %>%
-              unnest_wider(value) %>%
-              make_ft(title = "Strategy Risk Constraints",
-                      col_names = c("Name", "Type", "in_var", "Upper\nBound",
-                                    "Lower\nBound")) %>%
-              autofit()
-          }
-        } else {
-          stop("Argument 'table' must be either 'overallStatsDf', 'strategy' or
-               'constraints'")  
-        }
-      }
+    #' @description Get the object's configuration information.
+    #' @return Object of class \code{list} that contains the simulation's
+    #'   configuration information.
+    getConfig = function() {
+      invisible(private$config)
     },
+    
     
     #' @description Write an html document of simulation results.
     #' @param res The object of class 'Simulation' which we want to write the 

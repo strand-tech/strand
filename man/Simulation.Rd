@@ -40,7 +40,7 @@ The \code{Simulation} class is used to set up and run a daily
 \item \href{#method-print}{\code{Simulation$print()}}
 \item \href{#method-writeFeather}{\code{Simulation$writeFeather()}}
 \item \href{#method-readFeather}{\code{Simulation$readFeather()}}
-\item \href{#method-showTable}{\code{Simulation$showTable()}}
+\item \href{#method-getConfig}{\code{Simulation$getConfig()}}
 \item \href{#method-writeReport}{\code{Simulation$writeReport()}}
 \item \href{#method-clone}{\code{Simulation$clone()}}
 }
@@ -698,24 +698,17 @@ No return value, called for side effects.
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-showTable"></a>}}
-\if{latex}{\out{\hypertarget{method-showTable}{}}}
-\subsection{Method \code{showTable()}}{
-Show simulation output with a flextable
+\if{html}{\out{<a id="method-getConfig"></a>}}
+\if{latex}{\out{\hypertarget{method-getConfig}{}}}
+\subsection{Method \code{getConfig()}}{
+Get the object's configuration information.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Simulation$showTable(table = "strategy")}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Simulation$getConfig()}\if{html}{\out{</div>}}
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{table}}{Which table to show, "strategy", "constraints", 
-or "overallStatsDf"}
-}
-\if{html}{\out{</div>}}
-}
 \subsection{Returns}{
-A flextable object with the requested table
+Object of class \code{list} that contains the simulation's
+  configuration information.
 }
 }
 \if{html}{\out{<hr>}}

@@ -12,25 +12,33 @@ knitr::opts_chunk$set(echo = FALSE)
 res <- params$res
 ```
 
+# Setup
+
+```{r, ft.align = 'left'}
+show_config(res)
+```
+
+```{r, ft.align = 'left'}
+show_constraints(res)
+```
+
 # Overview
 
 ```{r, ft.align = 'left'}
-res$showTable("overallStatsDf")
+show_stats(res)
 ```
+
+```{r, ft.align = 'left'}
+best_worst <- show_best_worst(res)
+best_worst[[1]]
+best_worst[[2]]
+```
+
 
 ```{r}  
 res$plotPerformance()
 ```
 
-# Setup
-
-```{r, ft.align = 'left'}
-res$showTable(table = "strategy")
-```
-
-```{r, ft.align = 'left'}
-res$showTable(table = "constraints")
-```
 
 # Exposures
 
