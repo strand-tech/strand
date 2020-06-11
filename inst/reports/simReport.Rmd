@@ -1,6 +1,6 @@
 ---
-title: "Simulation Results"
-date: "`r Sys.Date()`"
+title: "Simulation Results: `r params$res$getConfig()$getStrategyNames()`"
+date: "Report date: `r Sys.Date()`"
 params:
    res: NULL
 editor_options: 
