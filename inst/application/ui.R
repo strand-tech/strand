@@ -99,7 +99,19 @@ ui <- fluidPage(
               br(),
               dateInput("holdingsDate", label = "Date", value = "2019-01-02",
                         daysofweekdisabled = c(0,6)),
-              DT::dataTableOutput('holdingsTable')
+              DT::dataTableOutput('holdingsTable'),
+              br(),
+              #column(6,
+                textInput("secID", label = "Enter a holding to track", value = "N/A"),
+                #),
+              #column(6,
+              #selectInput("axis", label = "Choose a stat to track", 
+                         # list('gross_pnl','net_pnl', 'average_market_value',
+                              # 'total_trading', 'trade_costs', 'financing_cost', 
+                              # 'days_in_portfolio'))
+              #),
+              br(),
+              DT::dataTableOutput('holdings')
             )
           )
         )
