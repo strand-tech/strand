@@ -115,14 +115,11 @@ server <- function(input, output, session) {
   })
   
   
-  
-  
-  
-  #just trying to make a data table
+  #making the holdings data table
   output$holdings <- renderDT(
     
     
-    #uses similar logic to above datafra
+    #uses similar logic to above dataframe
     values$sim_result$getSimDetail(strategy_name = "joint", security_id = ID()$id)  %>%
       select("sim_date", "shares", "order_shares", "fill_shares", "end_shares", "end_nmv",
                  "gross_pnl", "trade_costs", "financing_costs") %>%
@@ -134,47 +131,6 @@ server <- function(input, output, session) {
   )
   
 
-  # output$holdings <- renderPlot({
-  #   
-  #   #this gets a list of all of the correct security symbols
-  #   SymbolList <- values$sim_obj$getSecurityReference() %>%
-  #     select(symbol)
-  #   
-  #   #this validates the users inputted symbol against the list
-  #   #caps do not matter
-    # validate(
-    #   need(input$secID, 'Select a holding'),
-    #   need(any(toupper(input$secID) == SymbolList), 'Please enter a valid holding'),
-    #   # need(input$axis == 'net_pnl', 'testing')
-    # )
-  #   
-  #   #this finds the symbol ID pair from the user
-  #   SymbolID <- values$sim_obj$getSecurityReference() %>%
-  #     Filter(symbol == input$SecID)
-  #   
-  #   'you got the right holding' 
-  #   
-  #   #creating a plot, there is definitly a cleaner way to do this
-  #   #what happens is p is the graph. Gets a DF with all dates for the symbol id
-  #   #select only the values we want and mutate to round them
-  #    p <- values$sim_result$getSimDetail(strategy_name = "joint", security_id = SymbolID$id) %>%
-  #       select("shares", "order_shares", "fill_shares", "end_shares", "end_nmv",
-  #            "gross_pnl", "trade_costs", "financing_costs", "sim_date") %>%
-  #       mutate(end_nmv = round(end_nmv),
-  #             gross_pnl = round(gross_pnl, digits = 2),
-  #             trade_costs = round(trade_costs, digits = 2),
-  #             financing_costs = round(financing_costs, digits = 2),
-  #             symbol = input$secID) %>%
-  #       ggplot(aes(x = sim_date, y = input$axis)) +
-  #               geom_line()
-  # 
-  #   print(p)
-  # })
-  
-
-  
-
-  
   observeEvent(input$runSim, {
     
     if (input$runSim %in% 0) {
