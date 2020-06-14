@@ -12,6 +12,7 @@ server <- function(input, output, session) {
   #adding a reactive value
   ID <- reactive({
     
+    #there has to be a nicer way to do this 
     pos_sum <- values$sim_result$getPositionSummary(strategy_name = "joint") %>%
       left_join(values$sim_obj$getSecurityReference()[c("id","symbol")], by = "id") %>%
       ungroup() %>%
@@ -22,7 +23,13 @@ server <- function(input, output, session) {
       arrange(.data$gross_pnl)
     
     #this gets the id list
-    pos_sum[input$positionSummaryTable_rows_selected, ] 
+    sym <- pos_sum[input$positionSummaryTable_rows_selected, 1] %>%
+      as.character()
+    
+    #gets the security info from the selected row
+    values$sim_obj$getSecurityReference() %>%
+      filter(symbol == sym) %>%
+      as.data.frame()
     
   })
  
@@ -119,7 +126,7 @@ server <- function(input, output, session) {
     
     
     #uses similar logic to above dataframe
-    values$sim_result$getSimDetail(strategy_name = "joint")  %>%
+    values$sim_result$getSimDetail(strategy_name = "joint", security_id  =  ID$id())  %>%
       select("symbol","sim_date", "shares", "order_shares", "fill_shares", "end_shares", "end_nmv",
                  "gross_pnl", "trade_costs", "financing_costs") %>%
       mutate(end_nmv = round(end_nmv),
@@ -131,7 +138,7 @@ server <- function(input, output, session) {
   
   output$selectedrow <- renderText({
     
-    ID()$symbol
+    ID$id()
     
   })
   
