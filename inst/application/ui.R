@@ -111,7 +111,7 @@ ui <- fluidPage(
           fluidRow(
             column(
               4,
-              #DT::dataTableOutput('symbolTable')
+              textOutput("selectedrow")
             ),
             column(
               8,
@@ -121,7 +121,7 @@ ui <- fluidPage(
           fluidRow(
             column(
               12,
-              textInput("secID", label = "Enter a holding to track", value = "N/A"),
+              #textInput("secID", label = "Enter a holding to track", value = "N/A"),
               br(),        
               DT::dataTableOutput('holdings')
              )

@@ -12,18 +12,8 @@ server <- function(input, output, session) {
   #adding a reactive value
   ID <- reactive({
     
-    #gets a list of all id symbols
-    SymbolList <- values$sim_obj$getSecurityReference() %>%
-      select(symbol)
-    
-    #makes sure the input symbol matches any symbol
-    validate(
-      need(any(toupper(input$secID) == SymbolList), 'Please enter a valid holding')
-    )
-    
-    #returns a datafram of the symbol with its id
-    values$sim_obj$getSecurityReference() %>%
-      filter(symbol == toupper(input$secID)) 
+    input$positionSummaryTable_rows_selected[1]
+      
     
   })
  
@@ -129,6 +119,13 @@ server <- function(input, output, session) {
       financing_costs = round(financing_costs, digits = 2),
       symbol = ID()$symbol) 
   )
+  
+  
+  output$selectedrow <- renderText({
+    
+    paste0(rownames())
+    
+  })
   
 
   observeEvent(input$runSim, {
