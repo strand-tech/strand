@@ -102,17 +102,29 @@ ui <- fluidPage(
               DT::dataTableOutput('holdingsTable'),
               br(),
               #column(6,
-                textInput("secID", label = "Enter a holding to track", value = "N/A"),
-                #),
-              #column(6,
-              #selectInput("axis", label = "Choose a stat to track", 
-                         # list('gross_pnl','net_pnl', 'average_market_value',
-                              # 'total_trading', 'trade_costs', 'financing_cost', 
-                              # 'days_in_portfolio'))
-              #),
-              br(),
-              DT::dataTableOutput('holdings')
+               
             )
+          )
+        ),
+        tabPanel(
+          "Individual Positions",
+          fluidRow(
+            column(
+              4,
+              #DT::dataTableOutput('symbolTable')
+            ),
+            column(
+              8,
+              
+            )
+          ),
+          fluidRow(
+            column(
+              12,
+              textInput("secID", label = "Enter a holding to track", value = "N/A"),
+              br(),        
+              DT::dataTableOutput('holdings')
+             )
           )
         )
       )

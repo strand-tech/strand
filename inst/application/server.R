@@ -92,7 +92,7 @@ server <- function(input, output, session) {
       arrange(.data$gross_pnl)
     
     output$positionSummaryTable <- renderDT(pos_summary,
-                                            rownames = FALSE)
+                                            rownames = FALSE, selection = 'single')
 
   })
   
