@@ -127,7 +127,7 @@ server <- function(input, output, session) {
     
     #uses similar logic to above dataframe
     values$sim_result$getSimDetail(strategy_name = "joint", security_id  =  ID()$id)  %>%
-      select("symbol","sim_date", "shares", "order_shares", "fill_shares", "end_shares", "end_nmv",
+      select("sim_date", "shares", "order_shares", "fill_shares", "end_shares", "end_nmv",
                  "gross_pnl", "trade_costs", "financing_costs") %>%
       mutate(end_nmv = round(end_nmv),
       gross_pnl = round(gross_pnl, digits = 2),
