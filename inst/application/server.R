@@ -12,8 +12,17 @@ server <- function(input, output, session) {
   #adding a reactive value
   ID <- reactive({
     
-    input$positionSummaryTable_rows_selected[1]
-      
+    pos_sum <- values$sim_result$getPositionSummary(strategy_name = "joint") %>%
+      left_join(values$sim_obj$getSecurityReference()[c("id","symbol")], by = "id") %>%
+      ungroup() %>%
+      select(.data$symbol, .data$gross_pnl, .data$net_pnl,
+             .data$average_market_value,
+             .data$total_trading, .data$trade_costs, .data$financing_costs,
+             .data$days_in_portfolio) %>%
+      arrange(.data$gross_pnl)
+    
+    #this gets the id list
+    pos_sum[input$positionSummaryTable_rows_selected, ] 
     
   })
  
@@ -110,20 +119,19 @@ server <- function(input, output, session) {
     
     
     #uses similar logic to above dataframe
-    values$sim_result$getSimDetail(strategy_name = "joint", security_id = ID()$id)  %>%
-      select("sim_date", "shares", "order_shares", "fill_shares", "end_shares", "end_nmv",
+    values$sim_result$getSimDetail(strategy_name = "joint")  %>%
+      select("symbol","sim_date", "shares", "order_shares", "fill_shares", "end_shares", "end_nmv",
                  "gross_pnl", "trade_costs", "financing_costs") %>%
       mutate(end_nmv = round(end_nmv),
       gross_pnl = round(gross_pnl, digits = 2),
       trade_costs = round(trade_costs, digits = 2),
-      financing_costs = round(financing_costs, digits = 2),
-      symbol = ID()$symbol) 
+      financing_costs = round(financing_costs, digits = 2))
   )
   
   
   output$selectedrow <- renderText({
     
-    paste0(rownames())
+    ID()$symbol
     
   })
   
