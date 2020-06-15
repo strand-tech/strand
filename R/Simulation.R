@@ -1310,8 +1310,8 @@ Simulation <- R6Class(
     
     # @description Calculate ending portfolio exposures relative to strategy
     #   capital, for factors and categories, for all strategies in a simulation
-    #   and for the joint strategy. This method is used to compute the
-    #   exposures that are saved in a simulation's \code{SimResult} object.
+    #   and for the joint strategy. This method is used to compute exposure
+    #   result data.
     # @return A data frame of exposure information.
     calculateExposures = function(detail_df, category_vars = NULL, factor_vars = NULL) {
       exp_res <- private$getStrategyCapital()
