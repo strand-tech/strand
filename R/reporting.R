@@ -14,7 +14,7 @@ make_ft = function(x,
                    col_names = NULL, 
                    hlines = "all") {
   # Create reused values
-  brdr <- fp_border(color = "black", width = 1)
+  brdr <- officer::fp_border(color = "black", width = 1)
   numcols <- ncol(x)
   numrows <- nrow(x)
   
@@ -23,18 +23,19 @@ make_ft = function(x,
   
   # Initiate basic flextable 
   ft <- x %>%
-    flextable() %>%
-    set_header_labels(values = col_names) %>%
-    vline(j = 1:(max(numcols-1, 1)), border = brdr, part = "body") %>%
-    align(align = "center", part = "header") %>%
-    bold(part = "header")
+    flextable::flextable() %>%
+    flextable::set_header_labels(values = col_names) %>%
+    flextable::vline(j = 1:(max(numcols-1, 1)), 
+                     border = brdr, part = "body") %>%
+    flextable::align(align = "center", part = "header") %>%
+    flextable::bold(part = "header")
   
   
   # Add horizontal lines
   if (is.numeric(hlines)) {
-    ft <- hline(ft, i = hlines, border = brdr, part = "body")
+    ft <- flextable::hline(ft, i = hlines, border = brdr, part = "body")
   } else if (hlines == "all") {
-    ft <- hline(ft, border = brdr, part = "body")
+    ft <- flextable::hline(ft, border = brdr, part = "body")
   } else if (hlines == "none") {
   } else {
     stop("hlines argument must be 'all', 'none', or a numeric vector")
@@ -43,13 +44,16 @@ make_ft = function(x,
   # add title
   if (!is.null(title)) {
     ft <- ft %>%
-      add_header_row(top = TRUE, values = title, colwidths = numcols) %>%
-      fontsize(i = 1, size = 24, part = "header") %>%
-      padding(padding = 20, i = 1, part = "header") %>%
-      padding(padding.left = 0, part = "header")
+      flextable::add_header_row(top = TRUE, 
+                                values = title, 
+                                colwidths = numcols) %>%
+      flextable::fontsize(i = 1, size = 24, part = "header") %>%
+      flextable::padding(padding = 20, i = 1, part = "header") %>%
+      flextable::padding(padding.left = 0, part = "header")
   }
-  ft <- border(ft, i = numrows, border.bottom = fp_border(color = "black", 
-                                                          width = 2))
+  ft <- flextable::border(ft, i = numrows, 
+                          border.bottom = officer::fp_border(color = "black",
+                                                             width = 2))
   return(ft)
 }
 
@@ -60,7 +64,7 @@ make_ft = function(x,
 show_stats = function(sim) {
   sim$overallStatsDf() %>%
     make_ft(hlines = c(2, 5, 6, 8)) %>%
-    autofit()
+    flextable::autofit()
 }
 
 #' Show Strategy Configuration
@@ -100,17 +104,19 @@ show_constraints = function(sim) {
       make_ft(title = "Strategy Risk Constraints",
               col_names = c("Name", "Type", "in_var", "Upper\nBound",
                             "Lower\nBound")) %>%
-      autofit()
+      flextable::autofit()
   } 
   else {
-    brdr <- fp_border(color = "black", width = 2)
+    brdr <- officer::fp_border(color = "black", width = 2)
     data.frame(x = "No Strategy Risk Constraints") %>%
       make_ft(title = "Strategy Risk Constraints",
               col_names = " ") %>%
-      align(align = "left") %>%
-      border_remove() %>%
-      border(part = "body", border.top = brdr, border.bottom = brdr) %>%
-      autofit()
+      flextable::align(align = "left") %>%
+      flextable::border_remove() %>%
+      flextable::border(part = "body", 
+                        border.top = brdr, 
+                        border.bottom = brdr) %>%
+      flextable::autofit()
   }
   
 }

@@ -32,8 +32,6 @@ Imports:
     rlang,
     yaml,
     ggplot2,
-    officer,
-    flextable,
     tibble
 Suggests:
     testthat,
@@ -41,7 +39,9 @@ Suggests:
     rmarkdown,
     shiny,
     DT,
-    Rsymphony
+    Rsymphony,
+    officer,
+    flextable
 Encoding: UTF-8
 LazyData: true
 VignetteBuilder: knitr

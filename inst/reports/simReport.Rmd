@@ -3,9 +3,14 @@ title: "Simulation Results: `r params$res$getConfig()$getStrategyNames()`"
 date: "Report date: `r Sys.Date()`"
 params:
    res: NULL
-editor_options: 
-  chunk_output_type: console
 ---
+
+```{css, echo=FALSE}
+h1, h2, h3, h4, h5 {
+  font-family: Arial, Helvetica, sans-serif;
+  font-weight: 500;
+}
+```
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
@@ -42,25 +47,17 @@ res$plotPerformance()
 
 # Exposures
 
-### Market Value
-
 ```{r}
 res$plotMarketValue()
 ```
-
-### Category Exposure
 
 ```{r}
 res$plotCategoryExposure("category_1")
 ```
 
-### Factor Exposure
-
 ```{r}
 res$plotFactorExposure(c("factor_1", "factor_2"))
 ```
-
-### Number of Positions
 
 ```{r}
 res$plotNumPositions()
