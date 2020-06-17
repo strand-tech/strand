@@ -29,7 +29,8 @@ server <- function(input, output, session) {
     #gets the security info from the selected row
     values$sim_obj$getSecurityReference() %>%
       as.data.frame() %>%
-      filter(symbol %in% sym$symbol) 
+      filter(symbol %in% sym$symbol) %>%
+      select("id", "symbol")
       
       # values$sim_obj$getSecurityReference() %>%
       # select(symbol)
@@ -155,7 +156,8 @@ server <- function(input, output, session) {
   
   output$selectedrow <- renderDT({
     
-    ID()
+    symbollist <- ID() %>%
+      select("symbol")
     
   })
   
