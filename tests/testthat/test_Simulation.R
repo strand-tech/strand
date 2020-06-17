@@ -9,12 +9,17 @@ test_that("simulation produces expected results", {
   sim$run()
   
   test_summary <- filter(sim$getSimSummary(), .data$strategy %in% "joint")
+  test_exposures <- filter(sim$getExposures(), .data$strategy %in% "joint")
   
   # truth_summary <- test_summary
-  # save(truth_summary, file = "data/test_Simulation.RData")
+  # truth_exposures <- test_exposures
+  # save(truth_summary, truth_exposures, file = "data/test_Simulation.RData")
   load("data/test_Simulation.RData")
   expect_equal(as.data.frame(test_summary),
                as.data.frame(truth_summary))
+  
+  expect_equal(as.data.frame(test_exposures),
+               as.data.frame(truth_exposures))
 })
 
 
