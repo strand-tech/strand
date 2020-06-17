@@ -111,19 +111,19 @@ ui <- fluidPage(
           fluidRow(
             column(
               4,
-              textOutput('selectedrow')
+              DT::dataTableOutput('selectedrow')
             ),
             column(
               8,
-              plotOutput('holdingsPlot')
+              # plotOutput('holdingsPlot')
             )
           ),
           fluidRow(
             column(
               12,
               #textInput("secID", label = "Enter a holding to track", value = "N/A"),
-              br(),        
-              DT::dataTableOutput('holdings')
+              # br(),        
+              # DT::dataTableOutput('holdings')
              )
           )
         )

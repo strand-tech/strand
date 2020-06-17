@@ -24,12 +24,15 @@ server <- function(input, output, session) {
     
     #this gets the id list
     sym <- pos_sum[input$positionSummaryTable_rows_selected, 1] %>%
-      as.character()
+      as.data.frame()
     
     #gets the security info from the selected row
     values$sim_obj$getSecurityReference() %>%
-      filter(symbol == sym) %>%
-      as.data.frame()
+      as.data.frame() %>%
+      filter(symbol %in% sym$symbol) 
+      
+      # values$sim_obj$getSecurityReference() %>%
+      # select(symbol)
     
   })
  
@@ -98,7 +101,7 @@ server <- function(input, output, session) {
       arrange(.data$gross_pnl)
     
     output$positionSummaryTable <- renderDT(pos_summary,
-                                            rownames = FALSE, selection = 'single')
+                                            rownames = FALSE)
 
   })
   
@@ -122,56 +125,56 @@ server <- function(input, output, session) {
   
   
   #making the holdings data table
-  output$holdings <- renderDT(
-    
-    # pos_summary <- values$sim_result$getPositionSummary(strategy_name = "joint") %>%
-    #   left_join(values$sim_obj$getSecurityReference()[c("id","symbol")], by = "id") %>%
-    #   ungroup() %>%
-    #   filter("symbol" == ID()$symbol) %>%
-    #   select(.data$symbol, .data$gross_pnl, .data$net_pnl,
-    #          .data$average_market_value,
-    #          .data$total_trading, .data$trade_costs, .data$financing_costs,
-    #          .data$days_in_portfolio) %>%
-    #   arrange(.data$gross_pnl)
-    
-    
-    #uses similar logic to above dataframe
-    values$sim_result$getSimDetail(strategy_name = "joint", security_id  =  ID()$id)  %>%
-      select("sim_date", "shares", "order_shares", "fill_shares", "end_shares", "end_nmv",
-                 "gross_pnl", "trade_costs", "financing_costs", "net_pnl") %>%
-      mutate(end_nmv = round(end_nmv),
-      gross_pnl = round(gross_pnl, digits = 2),
-      trade_costs = round(trade_costs, digits = 2),
-      financing_costs = round(financing_costs, digits = 2),
-      net_pnl = cumsum(net_pnl),
-      net_pnl = round(net_pnl, digits = 0))
-    #ask jeff to look at what us wrong with this
-    #how can I use the above function to iron things out
-  )
+  # output$holdings <- renderDT(
+  #   
+  #   # pos_summary <- values$sim_result$getPositionSummary(strategy_name = "joint") %>%
+  #   #   left_join(values$sim_obj$getSecurityReference()[c("id","symbol")], by = "id") %>%
+  #   #   ungroup() %>%
+  #   #   filter("symbol" == ID()$symbol) %>%
+  #   #   select(.data$symbol, .data$gross_pnl, .data$net_pnl,
+  #   #          .data$average_market_value,
+  #   #          .data$total_trading, .data$trade_costs, .data$financing_costs,
+  #   #          .data$days_in_portfolio) %>%
+  #   #   arrange(.data$gross_pnl)
+  #   
+  #   
+  #   #uses similar logic to above dataframe
+  #   values$sim_result$getSimDetail(strategy_name = "joint", security_id  =  ID()$id)  %>%
+  #     select("sim_date", "shares", "order_shares", "fill_shares", "end_shares", "end_nmv",
+  #                "gross_pnl", "trade_costs", "financing_costs", "net_pnl") %>%
+  #     mutate(end_nmv = round(end_nmv),
+  #     gross_pnl = round(gross_pnl, digits = 2),
+  #     trade_costs = round(trade_costs, digits = 2),
+  #     financing_costs = round(financing_costs, digits = 2),
+  #     net_pnl = cumsum(net_pnl),
+  #     net_pnl = round(net_pnl, digits = 0))
+  #   #ask jeff to look at what us wrong with this
+  #   #how can I use the above function to iron things out
+  # )
   
   
-  output$selectedrow <- renderText({
+  output$selectedrow <- renderDT({
     
-    ID()$symbol
+    ID()
     
   })
   
   
-  output$holdingsPlot <- renderPlot({
-
-  #   #I should make the above equation into a reactive thing so that I can stop writing
-  #
-     plot <- values$sim_result$getSimDetail(strategy_name = "joint", security_id  =  ID()$id)  %>%
-       select("sim_date", "net_pnl") %>%
-       mutate(net_pnl = cumsum(net_pnl),
-              net_pnl = round(net_pnl, digits = 0))
-    
-      ggplot(data = plot, aes(x = sim_date, y = net_pnl)) +
-      geom_line() +
-      geom_point() +
-        xlab("Date") + ylab("Net PnL") + ggtitle("Cumulative Profit and Loss")
-
-  })
+  # output$holdingsPlot <- renderPlot({
+  # 
+  # #   #I should make the above equation into a reactive thing so that I can stop writing
+  # #
+  #    plot <- values$sim_result$getSimDetail(strategy_name = "joint", security_id  =  ID()$id)  %>%
+  #      select("sim_date", "net_pnl") %>%
+  #      mutate(net_pnl = cumsum(net_pnl),
+  #             net_pnl = round(net_pnl, digits = 0))
+  #   
+  #     ggplot(data = plot, aes(x = sim_date, y = net_pnl)) +
+  #     geom_line() +
+  #     geom_point() +
+  #       xlab("Date") + ylab("Net PnL") + ggtitle("Cumulative Profit and Loss")
+  # 
+  # })
 
   observeEvent(input$runSim, {
     
