@@ -111,11 +111,11 @@ ui <- fluidPage(
           fluidRow(
             column(
               4,
-              textOutput("selectedrow")
+              textOutput('selectedrow')
             ),
             column(
               8,
-              
+              plotOutput('holdingsPlot')
             )
           ),
           fluidRow(
