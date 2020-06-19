@@ -16,15 +16,17 @@
 #' 
 #' @import R6
 #' @import ggplot2
-#' @importFrom dplyr %>% select mutate mutate_at mutate_if filter inner_join left_join vars group_by summarise summarise_all rename contains matches bind_rows ungroup arrange
-#' @importFrom tidyr replace_na starts_with ends_with one_of pivot_longer pivot_wider gather
+#' @importFrom dplyr %>% select mutate mutate_at mutate_if filter inner_join left_join vars group_by summarise summarise_all rename contains matches bind_rows ungroup arrange desc 
+#' @importFrom tibble enframe
+#' @importFrom tidyr replace_na starts_with ends_with one_of pivot_longer pivot_wider gather unnest unnest_wider
 #' @importFrom Matrix Matrix Diagonal
 #' @importFrom Rglpk Rglpk_solve_LP
 #' @importFrom yaml yaml.load_file
-#' @importFrom rlang .data
+#' @importFrom rlang .data has_name
 #' @importFrom feather read_feather write_feather
 #' @importFrom lubridate day month day<- month<-
 #' @importFrom stats cor qnorm sd as.formula residuals lm
+#' @importFrom utils head
 #' 
 #' @examples
 #' # Load up sample data

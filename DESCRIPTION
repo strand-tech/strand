@@ -32,14 +32,17 @@ Imports:
     lubridate,
     rlang,
     yaml,
-    ggplot2
+    ggplot2,
+    tibble
 Suggests:
     testthat,
     knitr,
     rmarkdown,
     shiny,
     DT,
-    Rsymphony
+    Rsymphony,
+    officer,
+    flextable
 Encoding: UTF-8
 LazyData: true
 VignetteBuilder: knitr

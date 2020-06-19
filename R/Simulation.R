@@ -1235,6 +1235,31 @@ Simulation <- R6Class(
       warning("It will not be possible to use the sim_date parameter of getSimDetail on this object to filter detail records by period")
       
       invisible(self)
+    },
+    
+    #' @description Get the object's configuration information.
+    #' @return Object of class \code{list} that contains the simulation's
+    #'   configuration information.
+    getConfig = function() {
+      invisible(private$config)
+    },
+    
+    
+    #' @description Write an html document of simulation results.
+    #' @param res The object of class 'Simulation' which we want to write the 
+    #' report about.
+    #' @param out_dir Directory in which output files should be created
+    #' @param out_file File name for output 
+    #' @param out_fmt Format in which output files should be created. The 
+    #' default is html and that is currently the only option.
+    writeReport = function(out_dir, out_file, out_fmt="html") {
+      rmarkdown::render(input = system.file("reports/simReport.Rmd", 
+                                            package = "strand"),
+                        output_format = paste0(out_fmt, "_document"),
+                        output_file = out_file,
+                        output_dir = out_dir,
+                        params = list(res = self), 
+                        quiet = TRUE)
     }
   ),
   
