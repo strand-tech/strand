@@ -121,7 +121,7 @@ server <- function(input, output, session) {
                  gross_pnl = round(gross_pnl, digits = 2),
                  trade_costs = round(trade_costs, digits = 2),
                  financing_costs = round(financing_costs, digits = 2))
-      )
+        )
     }
   })
   
@@ -151,7 +151,8 @@ server <- function(input, output, session) {
       trade_costs = round(trade_costs, digits = 2),
       financing_costs = round(financing_costs, digits = 2),
       net_pnl = cumsum(net_pnl),
-      net_pnl = round(net_pnl, digits = 0))
+      net_pnl = round(net_pnl, digits = 0)),
+    rownames = FALSE
   #   #ask jeff to look at what us wrong with this
   #   #how can I use the above function to iron things out
   )
@@ -181,25 +182,35 @@ server <- function(input, output, session) {
       group_by(symbol) %>%
       mutate(net_pnl = cumsum(net_pnl),
              net_pnl = round(net_pnl, digits = 0),
-             fill_shares = ifelse(fill_shares > 0, 1, 
-                                  ifelse(fill_shares < 0, -1, 0)))
+             buy_sell = ifelse(fill_shares > 0, 'Buy', 
+                                  ifelse(fill_shares < 0, 'Sell', 0)),
+             p_size = round(1 + log(abs(fill_shares), 10), digits = 0))
     #create a data subset similar to fill shares that you can remove 0 values from.
     #put that as the data for geom point, so it can get rid of 0 values
     
+    #for the dot plot dots
+    shapes <- c(24, 25)
+    names(shapes) <- c('Buy', 'Sell')
 
       ggplot(data = plot, aes(x = sim_date, y = net_pnl, group = symbol)) +
         geom_line(aes(color = symbol)) +
-        geom_point(aes(shape = factor(fill_shares))) +
-        scale_shape_manual(value = c(2)) +
+        geom_point(data = filter(plot, fill_shares !=  0),
+                   aes(shape = factor(buy_sell), fill = symbol, size = p_size)) +
+        scale_shape_manual(values = shapes) +
         xlab("Date") + ylab("Net PnL") + ggtitle("Cumulative Profit and Loss") +
         theme_light() + 
         theme(
           plot.background = element_rect(fill = NA, colour = NA),
           plot.title = element_text(size = 18),
-          
           axis.text = element_text(size = 10),
           axis.text.x = element_text(angle = 0),
-          legend.title = element_blank())
+          legend.position = "bottom",
+          legend.box = "horizontal") +
+        labs(shape = "Orders", color = "Symbol", size = "Fill Magnitude") + 
+        guides(fill =FALSE,
+               shape = guide_legend(order = 1),
+               color = guide_legend(order = 2),
+               size = guide_legend(order =3))
 
   })
 
