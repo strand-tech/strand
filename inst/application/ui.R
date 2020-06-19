@@ -97,33 +97,37 @@ ui <- fluidPage(
               12,
               DT::dataTableOutput('positionSummaryTable'),
               br(),
-              dateInput("holdingsDate", label = "Date", value = "2019-01-02",
-                        daysofweekdisabled = c(0,6)),
-              DT::dataTableOutput('holdingsTable'),
-              br(),
-              #column(6,
-               
-            )
-          )
-        ),
-        tabPanel(
-          "Individual Positions",
+            ),
           fluidRow(
             column(
-              4,
-              DT::dataTableOutput('selectedrow')
+              2,
             ),
             column(
-              8,
+              10,
               plotOutput('holdingsPlot')
-            )
+            ),
           ),
           fluidRow(
             column(
               12,
-              #textInput("secID", label = "Enter a holding to track", value = "N/A"),
-              # br(),        
               DT::dataTableOutput('holdings')
+              )
+            )
+          )
+        ),
+        tabPanel(
+          "Holdings by Date",
+          fluidRow(
+            column(
+              12,
+              dateInput("holdingsDate", label = "Date", value = "2019-01-02",
+                        daysofweekdisabled = c(0,6)),
+              DT::dataTableOutput('holdingsTable')
+            ) 
+          ),
+          fluidRow(
+            column(
+              12,
              )
           )
         )

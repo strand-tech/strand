@@ -145,6 +145,7 @@ server <- function(input, output, session) {
                 na.omit() %>%
       select("sim_date", "symbol" ,"shares", "order_shares", "fill_shares", "end_shares", "end_nmv",
                  "gross_pnl", "trade_costs", "financing_costs", "net_pnl") %>%
+      group_by(symbol) %>%
       mutate(end_nmv = round(end_nmv),
       gross_pnl = round(gross_pnl, digits = 2),
       trade_costs = round(trade_costs, digits = 2),
@@ -176,14 +177,29 @@ server <- function(input, output, session) {
     
     plot <- left_join(values$sim_result$getSimDetail(strategy_name = "joint"), ID(), by = "id")  %>%
       na.omit() %>%
-      select("sim_date", "symbol" ,"shares", "net_pnl") %>%
+      select("sim_date", "symbol" , "fill_shares", "net_pnl") %>%
+      group_by(symbol) %>%
       mutate(net_pnl = cumsum(net_pnl),
-             net_pnl = round(net_pnl, digits = 0))
+             net_pnl = round(net_pnl, digits = 0),
+             fill_shares = ifelse(fill_shares > 0, 1, 
+                                  ifelse(fill_shares < 0, -1, 0)))
+    #create a data subset similar to fill shares that you can remove 0 values from.
+    #put that as the data for geom point, so it can get rid of 0 values
+    
 
       ggplot(data = plot, aes(x = sim_date, y = net_pnl, group = symbol)) +
-      geom_line(aes(color = symbol)) +
-      geom_point() +
-        xlab("Date") + ylab("Net PnL") + ggtitle("Cumulative Profit and Loss")
+        geom_line(aes(color = symbol)) +
+        geom_point(aes(shape = factor(fill_shares))) +
+        scale_shape_manual(value = c(2)) +
+        xlab("Date") + ylab("Net PnL") + ggtitle("Cumulative Profit and Loss") +
+        theme_light() + 
+        theme(
+          plot.background = element_rect(fill = NA, colour = NA),
+          plot.title = element_text(size = 18),
+          
+          axis.text = element_text(size = 10),
+          axis.text.x = element_text(angle = 0),
+          legend.title = element_blank())
 
   })
 
