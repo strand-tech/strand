@@ -643,7 +643,11 @@ Simulation <- R6Class(
             left_join(select(input_data, "id", one_of(!!factor_vars)),
                              by = "id")
           
-          exposures <- private$calculateExposures(exposures_input, category_vars, factor_vars)
+          exposures <- private$calculateExposures(detail_df = exposures_input,
+                                                  in_var = "end_nmv",
+                                                  weight_divisor = private$getStrategyCapital(),
+                                                  category_vars = category_vars,
+                                                  factor_vars = factor_vars)
           private$saveExposures(current_date, exposures)
         }
         
@@ -1304,33 +1308,19 @@ Simulation <- R6Class(
     delistings_list = NULL,
     
     # @description Get the strategy capital levels for the strategy, based on
-    #   the simulator's config.
-    # @return A data frame with two columns: strategy (name of the strategy, or
-    #   'joint'), and strategy_capital (capital for the strategy).
+    #   the simulation's config.
+    # @return A list where the names are strategy names (or 'joint') and the
+    #   values are the capital levels for each strategy,
     getStrategyCapital = function() {
-      strategy_capital_df <- NULL
-      joint_capital <- 0
+      capital_list <- list(joint = 0)
       
       for (strategy_name in private$config$getStrategyNames()) {
-        
+          
         this_capital <- private$config$getStrategyConfig(strategy_name, "strategy_capital")
-        joint_capital <- joint_capital + this_capital
-        
-        strategy_capital_df <- rbind(
-          strategy_capital_df,
-          data.frame(
-            strategy = strategy_name,
-            strategy_capital = this_capital,
-            stringsAsFactors = FALSE)
-        )
+        capital_list[[strategy_name]] <- this_capital
+        capital_list[["joint"]] <- capital_list[["joint"]] + this_capital
       }
-      
-      rbind(strategy_capital_df,
-            data.frame(
-              strategy = "joint",
-              strategy_capital = joint_capital,
-              stringsAsFactors = FALSE)
-      )
+      capital_list
     },
     
     # @description Calculate ending portfolio exposures relative to strategy
@@ -1338,22 +1328,57 @@ Simulation <- R6Class(
     #   and for the joint strategy. This method is used to compute exposure
     #   result data.
     # @return A data frame of exposure information.
-    calculateExposures = function(detail_df, category_vars = NULL, factor_vars = NULL) {
-      exp_res <- private$getStrategyCapital()
+    calculateExposures = function(detail_df,
+                                  in_var = "end_nmv",
+                                  weight_divisor = 1,
+                                  category_vars = NULL,
+                                  factor_vars = NULL) {
+      
+      stopifnot(inherits(detail_df, "data.frame"),
+                all(c("strategy", category_vars, factor_vars) %in% names(detail_df)))
+      
+      # If weight_divisor is a list, the names of the list must match the set of
+      # strategies present in the strategies column of 'detail_df'.
+      if (is.list(weight_divisor)) {
+        stopifnot(setequal(names(weight_divisor), unique(detail_df$strategy)))
+      } else {
+        stopifnot(length(weight_divisor) %in% 1)
+      }
+      
+      # Construct a data frame of exposures.
+      #
+      # A data frame with two columns, strategy and weight divisor, serves as
+      # the starting point. Exposures will be left-joined to the the exp_res
+      # data frame and then returned. First set the strategy column:
+      exp_res <-
+        data.frame(strategy = unique(detail_df$strategy),
+                   stringsAsFactors = FALSE)
+      
+      # Next set the weight_divisor column. Handle cases where the
+      # weight_divisor parameter is a list or vector or length 1.
+      if (is.list(weight_divisor)) {
+        exp_res$weight_divisor <- unlist(weight_divisor[exp_res$strategy])
+      } else {
+        exp_res$weight_divisor <- weight_divisor
+      }
+
+      # A copy of the starting point, weight_divisor_df, is used in the exposure
+      # calculations.
+      weight_divisor_df <- exp_res
       
       for (cat_var in category_vars) {
         this_exposures <- 
           detail_df %>%
           group_by(.dots = c("strategy", cat_var)) %>%
-          summarise(exposure = sum(.data$end_nmv)) %>%
-          left_join(private$getStrategyCapital(),
+          summarise(exposure = sum(.data[[in_var]])) %>%
+          left_join(weight_divisor_df,
                     by = "strategy") %>%
-          mutate(exposure = .data$exposure / .data$strategy_capital) %>%
+          mutate(exposure = .data$exposure / .data$weight_divisor) %>%
           pivot_wider(
             names_from = cat_var,
             names_prefix = paste0(cat_var, "_"),
             values_from = "exposure") %>%
-          select(-"strategy_capital")
+          select(-"weight_divisor")
         
         exp_res <- left_join(exp_res, this_exposures, by = "strategy")    
       }
@@ -1362,11 +1387,11 @@ Simulation <- R6Class(
         this_exposures <- 
           detail_df %>%
           group_by(.data$strategy) %>%
-          summarise(!!fact_var := sum(.data$end_nmv * .data[[fact_var]])) %>%
-          left_join(private$getStrategyCapital(),
+          summarise(!!fact_var := sum(.data[[in_var]] * .data[[fact_var]])) %>%
+          left_join(weight_divisor_df,
                     by = "strategy") %>%
-          mutate(!!fact_var := .data[[fact_var]] / .data$strategy_capital) %>%
-          select(-"strategy_capital")
+          mutate(!!fact_var := .data[[fact_var]] / .data$weight_divisor) %>%
+          select(-"weight_divisor")
         
         exp_res <- left_join(exp_res, this_exposures, by = "strategy")    
       }

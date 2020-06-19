@@ -8,8 +8,8 @@ test_that("simulation produces expected results", {
   sim <- Simulation$new("data/test_Simulation.yaml")
   sim$run()
   
-  test_summary <- filter(sim$getSimSummary(), .data$strategy %in% "joint")
-  test_exposures <- filter(sim$getExposures(), .data$strategy %in% "joint")
+  test_summary <- filter(sim$getSimSummary())
+  test_exposures <- filter(sim$getExposures())
   
   # truth_summary <- test_summary
   # truth_exposures <- test_exposures
@@ -58,7 +58,7 @@ test_that("simulation produces same result when data supplied as objects", {
                         raw_pricing_data = test_pricing_data,
                         security_reference_data = test_secref_data)
   sim$run()
-  test_summary <- filter(sim$getSimSummary(), .data$strategy %in% "joint")
+  test_summary <- sim$getSimSummary()
 
   load("data/test_Simulation.RData")
   expect_equal(as.data.frame(test_summary),
