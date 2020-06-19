@@ -101,10 +101,11 @@ ui <- fluidPage(
           fluidRow(
             column(
               2,
+              verbatimTextOutput("info")
             ),
             column(
               10,
-              plotOutput('holdingsPlot')
+              plotOutput('holdingsPlot', click = "plot_click")
             ),
           ),
           fluidRow(

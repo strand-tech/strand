@@ -213,7 +213,26 @@ server <- function(input, output, session) {
                size = guide_legend(order =3))
 
   })
-
+  
+  output$info <- renderText({
+    #this is correct
+   # first_day <- input$startDate %>%
+   #   as.Date() %>%
+   #   + 1
+    
+    #ask jeff about this, why is the base date on the graph that?
+    x_click <- input$plot_click$x %>%
+      as.numeric() %>%
+      round(digits = 0) %>%
+      as.Date(origin = "1970-01-01")
+    
+    y_click <- input$plot_click$y %>%
+      as.numeric() %>%
+      round(digits = 0)
+    
+    paste0("Date=", x_click, "\nNet PnL=", y_click)
+  })
+  
   observeEvent(input$runSim, {
     
     if (input$runSim %in% 0) {
