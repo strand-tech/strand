@@ -13,36 +13,31 @@ server <- function(input, output, session) {
   ID <- reactive({
     
     #there has to be a nicer way to do this 
-    pos_sum <- values$sim_result$getPositionSummary(strategy_name = "joint") %>%
-      left_join(values$sim_obj$getSecurityReference()[c("id","symbol")], by = "id") %>%
-      ungroup() %>%
-      select(.data$symbol, .data$gross_pnl, .data$net_pnl,
-             .data$average_market_value,
-             .data$total_trading, .data$trade_costs, .data$financing_costs,
-             .data$days_in_portfolio) %>%
-      arrange(.data$gross_pnl)
+    # pos_sum <- values$sim_result$getPositionSummary(strategy_name = "joint") %>%
+    #   left_join(values$sim_obj$getSecurityReference()[c("id","symbol")], by = "id") %>%
+    #   ungroup() %>%
+    #   select(.data$symbol, .data$gross_pnl, .data$net_pnl,
+    #          .data$average_market_value,
+    #          .data$total_trading, .data$trade_costs, .data$financing_costs,
+    #          .data$days_in_portfolio) %>%
+    #   arrange(.data$gross_pnl)
     
     
-    #this gets the symbol list
-    sym <- pos_sum[input$positionSummaryTable_rows_selected, 1] %>%
+    #this gets the list of symbols from selected rows
+    symbols_selected <- positionSummaryTable[input$positionSummaryTable_rows_selected, 1] %>%
       as.data.frame()
     
-    #gets the security info from the selected row
-    sec_info <- values$sim_obj$getSecurityReference() %>%
+    #gets the security info (id) for the selected symbols
+    selected_sec_ref <- values$sim_obj$getSecurityReference() %>%
         as.data.frame() %>%
-        filter(symbol %in% sym$symbol) %>%
+        filter(symbol %in% symbols_selected$symbol) %>%
         select("id", "symbol") %>%
         as.data.frame()
       
-      # values$sim_obj$getSecurityReference() %>%
-      # select(symbol)
-    
     #so now I am adding the whole data, and filtering it by the selected positions
     #doing this here so I don't have to do it twice repetedly below in the holdingsPlot
     #and the holdings datatable
-    
-    
-    left_join(values$sim_result$getSimDetail(strategy_name = "joint"), sec_info, by = "id")  %>%
+    indiv_holdings <- left_join(values$sim_result$getSimDetail(strategy_name = "joint"), selected_sec_ref, by = "id")  %>%
       na.omit() %>%
       select("sim_date", "symbol" ,"shares", "order_shares", "fill_shares", "end_shares", "end_nmv",
              "gross_pnl", "trade_costs", "financing_costs", "net_pnl") %>%
@@ -52,7 +47,11 @@ server <- function(input, output, session) {
              trade_costs = round(trade_costs, digits = 2),
              financing_costs = round(financing_costs, digits = 2),
              net_pnl = cumsum(net_pnl),
-             net_pnl = round(net_pnl, digits = 0))
+             net_pnl = round(net_pnl, digits = 0),
+             gross_pnl = cumsum(gross_pnl),
+             gross_pnl = round(gross_pnl, digits = 0))
+    #reorders the columns
+    indiv_holdings <- indiv_holdings[c(1,2,11,3,4,5,6,7,8,9,10)]
     
   })
  
@@ -145,45 +144,33 @@ server <- function(input, output, session) {
   
   
   #making the holdings data table
-  output$holdings <- renderDT(
+  output$selectedHoldings <- renderDT(
     
-    ID()
+    ID(),
+    rownames = FALSE
     
   )
   
   
-  output$selectedrow <- renderDT({
-    
-    symbollist <- ID() %>%
-      select("symbol")
-    
-  })
-  
-  
   output$holdingsPlot <- renderPlot({
 
- 
-    
     plot <- ID() %>%
       select("sim_date", "symbol" , "fill_shares", "net_pnl") %>%
-      group_by(symbol) %>%
-      mutate(net_pnl = cumsum(net_pnl),
-             net_pnl = round(net_pnl, digits = 0),
-             buy_sell = ifelse(fill_shares > 0, 'Buy',
+      mutate(buy_sell = ifelse(fill_shares > 0, 'Buy',
                                   ifelse(fill_shares < 0, 'Sell', 0)),
-             p_size = round(1 + log(abs(fill_shares), 10), digits = 0))
+             order_size = round(1 + log(abs(fill_shares), 10), digits = 0))
     # create a data subset similar to fill shares that you can remove 0 values from.
     # put that as the data for geom point, so it can get rid of 0 values
     
     #for the dot plot dots
-    shapes <- c(24, 25)
-    names(shapes) <- c('Buy', 'Sell')
+    order_shapes <- c(24, 25)
+    names(order_shapes) <- c('Buy', 'Sell')
 
       ggplot(data = plot, aes(x = sim_date, y = net_pnl, group = symbol)) +
         geom_line(aes(color = symbol)) +
         geom_point(data = filter(plot, fill_shares !=  0),
-                   aes(shape = factor(buy_sell), fill = symbol, size = p_size)) +
-        scale_shape_manual(values = shapes) +
+                   aes(shape = factor(buy_sell), fill = symbol, size = order_size)) +
+        scale_shape_manual(values = order_shapes) +
         xlab("Date") + ylab("Net PnL") + ggtitle("Cumulative Profit and Loss") +
         theme_light() + 
         theme(
@@ -201,7 +188,7 @@ server <- function(input, output, session) {
 
   })
   
-  output$info <- renderText({
+  output$clickInfo <- renderText({
     #this is correct
    # first_day <- input$startDate %>%
    #   as.Date() %>%
@@ -221,14 +208,6 @@ server <- function(input, output, session) {
   })
   
   
-  #create a render UI that encapsulates the above functions
-  
-  output$selectText <- renderText({
-    text <- "Select rows for day by day information "
-    
-    text
-  })
-  
   
   output$plotAndTable <- renderUI({
     if(nrow(ID()) == 0){
@@ -237,26 +216,22 @@ server <- function(input, output, session) {
           8,
           align = "center",
           offset = 2,
-          textOutput("selectText")
+          p(strong("Select rows for day by day information"))
         )
       )
     } else {
       fluidRow(
         column(
           2,
-          verbatimTextOutput("info")
+          verbatimTextOutput("clickInfo")
         ),
         column(
           10,
           plotOutput('holdingsPlot', click = "plot_click")
         ),
+        br(),
+        DT::dataTableOutput('selectedHoldings')
       )
-     #  fluidRow(
-     #    column(
-     #     12,
-     #     DT::dataTableOutput('holdings')
-     #  )
-     # )
     }
   })
   
