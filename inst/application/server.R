@@ -13,18 +13,18 @@ server <- function(input, output, session) {
   ID <- reactive({
     
     #there has to be a nicer way to do this 
-    # pos_sum <- values$sim_result$getPositionSummary(strategy_name = "joint") %>%
-    #   left_join(values$sim_obj$getSecurityReference()[c("id","symbol")], by = "id") %>%
-    #   ungroup() %>%
-    #   select(.data$symbol, .data$gross_pnl, .data$net_pnl,
-    #          .data$average_market_value,
-    #          .data$total_trading, .data$trade_costs, .data$financing_costs,
-    #          .data$days_in_portfolio) %>%
-    #   arrange(.data$gross_pnl)
-    
+    pos_sum <- values$sim_result$getPositionSummary(strategy_name = "joint") %>%
+      left_join(values$sim_obj$getSecurityReference()[c("id","symbol")], by = "id") %>%
+      ungroup() %>%
+      select(.data$symbol, .data$gross_pnl, .data$net_pnl,
+             .data$average_market_value,
+             .data$total_trading, .data$trade_costs, .data$financing_costs,
+             .data$days_in_portfolio) %>%
+      arrange(.data$gross_pnl)
+
     
     #this gets the list of symbols from selected rows
-    symbols_selected <- positionSummaryTable[input$positionSummaryTable_rows_selected, 1] %>%
+    symbols_selected <- pos_sum[input$positionSummaryTable_rows_selected, 1] %>%
       as.data.frame()
     
     #gets the security info (id) for the selected symbols
