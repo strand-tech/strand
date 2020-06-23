@@ -233,6 +233,47 @@ server <- function(input, output, session) {
     paste0("Date=", x_click, "\nNet PnL=", y_click)
   })
   
+  
+  #create a render UI that encapsulates the above functions
+  
+  output$selectText <- renderText({
+    text <- "Select rows for day by day information "
+    
+    text
+  })
+  
+  
+  output$plotAndTable <- renderUI({
+    if(nrow(ID()) == 0){
+      fluidRow(
+        column(
+          8,
+          align = "center",
+          offset = 2,
+          textOutput("selectText")
+        )
+      )
+    } else {
+      fluidRow(
+        column(
+          2,
+          verbatimTextOutput("info")
+        ),
+        column(
+          10,
+          plotOutput('holdingsPlot', click = "plot_click")
+        ),
+      )
+      fluidRow(
+        column(
+         12,
+         DT::dataTableOutput('holdings')
+      )
+     )
+    }
+  })
+  
+  
   observeEvent(input$runSim, {
     
     if (input$runSim %in% 0) {

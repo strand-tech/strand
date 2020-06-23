@@ -96,25 +96,10 @@ ui <- fluidPage(
             column(
               12,
               DT::dataTableOutput('positionSummaryTable'),
-              br(),
-            ),
-          fluidRow(
-            column(
-              2,
-              verbatimTextOutput("info")
-            ),
-            column(
-              10,
-              plotOutput('holdingsPlot', click = "plot_click")
+              br()
             ),
           ),
-          fluidRow(
-            column(
-              12,
-              DT::dataTableOutput('holdings')
-              )
-            )
-          )
+         uiOutput("plotAndTable")
         ),
         tabPanel(
           "Holdings by Date",
@@ -125,11 +110,6 @@ ui <- fluidPage(
                         daysofweekdisabled = c(0,6)),
               DT::dataTableOutput('holdingsTable')
             ) 
-          ),
-          fluidRow(
-            column(
-              12,
-             )
           )
         )
       )
