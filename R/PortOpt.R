@@ -207,7 +207,9 @@ PortOpt <- R6Class(
       constr_meta$idx_end <- constr_meta$idx_start + constr_meta$rows - 1
       
       constr_meta <- filter(constr_meta,
-                            !.data$name %in% c("Net trade <=", "Net trade >=", "Turnover limit"))
+                            !.data$name %in% c("Net trade <=", "Net trade >=", "Turnover limit") &
+                            .data$idx_start == .data$idx_end)
+
       stopifnot(isTRUE(all.equal(constr_meta$idx_start, constr_meta$idx_end)))
 
       constr_meta$current_value <-
@@ -1129,7 +1131,7 @@ PortOpt <- R6Class(
         
         out_of_bounds <- filter(self$getConstraintMeta(),
                                 !.data$name %in% mkt_value_constr_names &
-                                  !.data$within_bounds)
+                                !.data$within_bounds)
         
         # For each constraint, set the constraint bound (rhs value) to be X%
         # closer to 0 where X = loosen_coef.
