@@ -57,8 +57,10 @@ server <- function(input, output, session) {
     #add in a leftjoin to add the symbol back
     
     #adding alpha_1 into the mix
+    #add that under simulatior
+    # save_detail_columns: alpha_1 
     indiv_holdings <- left_join(values$sim_result$getSimDetail(strategy_name = "joint", security_id = selected_sec_ref$id), selected_sec_ref, by = "id") %>%
-      select("sim_date", "symbol", "net_pnl", "shares", "order_shares", "fill_shares", "end_shares", "end_nmv",
+      select("sim_date", "symbol", "net_pnl", "shares", "alpha_1","order_shares", "fill_shares", "end_shares", "end_nmv",
              "gross_pnl", "trade_costs", "financing_costs") %>%
       group_by(symbol) %>%
       mutate(end_nmv = round(end_nmv),
@@ -68,7 +70,8 @@ server <- function(input, output, session) {
              net_pnl = cumsum(net_pnl),
              net_pnl = round(net_pnl, digits = 0),
              gross_pnl = cumsum(gross_pnl),
-             gross_pnl = round(gross_pnl, digits = 0))
+             gross_pnl = round(gross_pnl, digits = 0),
+             alpha_1 = round(alpha_1, digits = 2))
     
   })
  
@@ -172,7 +175,7 @@ server <- function(input, output, session) {
   output$selectedHoldingsPlot <- renderPlot({
 
     plot <- selectedHoldingRows() %>%
-      select("sim_date", "symbol" , "fill_shares", "net_pnl") %>%
+      select("sim_date", "symbol" , "fill_shares", "net_pnl", "alpha_1") %>%
       mutate(buy_sell = ifelse(fill_shares > 0, 'Buy',
                                   ifelse(fill_shares < 0, 'Sell', 0)),
              order_size = round(1 + log(abs(fill_shares), 10), digits = 0))
@@ -187,8 +190,16 @@ server <- function(input, output, session) {
         geom_line(aes(color = symbol)) +
         geom_point(data = filter(plot, fill_shares !=  0),
                    aes(shape = factor(buy_sell), fill = symbol, size = order_size)) +
+        geom_line(aes(y = (alpha_1 * 100), group = symbol)) +
         scale_shape_manual(values = order_shapes) +
-        xlab("Date") + ylab("Net PnL") + ggtitle("Cumulative Profit and Loss") +
+        scale_y_continuous(
+          
+          name = "Net PnL",
+          
+          sec.axis = sec_axis(trans=~.*(1/1000), name = "Alpha")
+          
+        ) +
+        xlab("Date") + ggtitle("Cumulative Profit and Loss") +
         theme_light() + 
         theme(
           plot.background = element_rect(fill = NA, colour = NA),
