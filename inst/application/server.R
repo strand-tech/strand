@@ -9,10 +9,11 @@ server <- function(input, output, session) {
   # Store the sim result data in a reactiveValues object.
   values <- reactiveValues()
   
-  #adding a reactive value
-  ID <- reactive({
+  
+  #reactive almost works, shows up with an error in positionSummary,
+  #selectedHoldingRows, and #plotAndTable
+  positionSummary <- eventReactive(values$sim_result, {
     
-    #there has to be a nicer way to do this 
     pos_sum <- values$sim_result$getPositionSummary(strategy_name = "joint") %>%
       left_join(values$sim_obj$getSecurityReference()[c("id","symbol")], by = "id") %>%
       ungroup() %>%
@@ -21,26 +22,44 @@ server <- function(input, output, session) {
              .data$total_trading, .data$trade_costs, .data$financing_costs,
              .data$days_in_portfolio) %>%
       arrange(.data$gross_pnl)
+    
+  })
+  
 
+
+  
+  #adding a reactive value
+  #commented out sections work, but the uncomment stuff is what would be faster
+  selectedHoldingRows <- reactive({
     
     #this gets the list of symbols from selected rows
-    symbols_selected <- pos_sum[input$positionSummaryTable_rows_selected, 1] %>%
+    selected_row_symbols <- positionSummary()[input$positionSummaryTable_rows_selected, 1] %>%
       as.data.frame()
-    
+
+
     #gets the security info (id) for the selected symbols
     selected_sec_ref <- values$sim_obj$getSecurityReference() %>%
-        as.data.frame() %>%
-        filter(symbol %in% symbols_selected$symbol) %>%
-        select("id", "symbol") %>%
-        as.data.frame()
-      
-    #so now I am adding the whole data, and filtering it by the selected positions
-    #doing this here so I don't have to do it twice repetedly below in the holdingsPlot
-    #and the holdings datatable
-    indiv_holdings <- left_join(values$sim_result$getSimDetail(strategy_name = "joint"), selected_sec_ref, by = "id")  %>%
-      na.omit() %>%
-      select("sim_date", "symbol" ,"shares", "order_shares", "fill_shares", "end_shares", "end_nmv",
-             "gross_pnl", "trade_costs", "financing_costs", "net_pnl") %>%
+      as.data.frame() %>%
+      filter(symbol %in% selected_row_symbols$symbol) %>%
+      select("id", "symbol") %>%
+      as.data.frame()
+    
+    #keep looking into this
+    
+    #gets the security info (id) for the selected symbols
+    # selected_sec_ref <- values$sim_obj$getSecurityReference() %>%
+    #   as.data.frame() %>%
+    #   filter(symbol %in% positionSummary()[input$positionSummaryTable_rows_selected, "symbol"]) %>%
+    #   select("id", "symbol") %>%
+    #   as.data.frame()
+    
+    
+    #add in a leftjoin to add the symbol back
+    
+    #adding alpha_1 into the mix
+    indiv_holdings <- left_join(values$sim_result$getSimDetail(strategy_name = "joint", security_id = selected_sec_ref$id), selected_sec_ref, by = "id") %>%
+      select("sim_date", "symbol", "net_pnl", "shares", "order_shares", "fill_shares", "end_shares", "end_nmv",
+             "gross_pnl", "trade_costs", "financing_costs") %>%
       group_by(symbol) %>%
       mutate(end_nmv = round(end_nmv),
              gross_pnl = round(gross_pnl, digits = 2),
@@ -50,8 +69,6 @@ server <- function(input, output, session) {
              net_pnl = round(net_pnl, digits = 0),
              gross_pnl = cumsum(gross_pnl),
              gross_pnl = round(gross_pnl, digits = 0))
-    #reorders the columns
-    indiv_holdings <- indiv_holdings[c(1,2,11,3,4,5,6,7,8,9,10)]
     
   })
  
@@ -110,16 +127,16 @@ server <- function(input, output, session) {
     output$marketValueTable <- renderDT(market_value_stats,
                                         rownames = FALSE)
 
-    pos_summary <- values$sim_result$getPositionSummary(strategy_name = "joint") %>%
-      left_join(values$sim_obj$getSecurityReference()[c("id","symbol")], by = "id") %>%
-      ungroup() %>%
-      select(.data$symbol, .data$gross_pnl, .data$net_pnl,
-             .data$average_market_value,
-             .data$total_trading, .data$trade_costs, .data$financing_costs,
-             .data$days_in_portfolio) %>%
-      arrange(.data$gross_pnl)
+    # pos_summary <- values$sim_result$getPositionSummary(strategy_name = "joint") %>%
+    #   left_join(values$sim_obj$getSecurityReference()[c("id","symbol")], by = "id") %>%
+    #   ungroup() %>%
+    #   select(.data$symbol, .data$gross_pnl, .data$net_pnl,
+    #          .data$average_market_value,
+    #          .data$total_trading, .data$trade_costs, .data$financing_costs,
+    #          .data$days_in_portfolio) %>%
+    #   arrange(.data$gross_pnl)
     
-    output$positionSummaryTable <- renderDT(pos_summary,
+    output$positionSummaryTable <- renderDT(positionSummary(),
                                             rownames = FALSE)
 
   })
@@ -146,15 +163,15 @@ server <- function(input, output, session) {
   #making the holdings data table
   output$selectedHoldings <- renderDT(
     
-    ID(),
+    selectedHoldingRows(),
     rownames = FALSE
     
   )
   
   
-  output$holdingsPlot <- renderPlot({
+  output$selectedHoldingsPlot <- renderPlot({
 
-    plot <- ID() %>%
+    plot <- selectedHoldingRows() %>%
       select("sim_date", "symbol" , "fill_shares", "net_pnl") %>%
       mutate(buy_sell = ifelse(fill_shares > 0, 'Buy',
                                   ifelse(fill_shares < 0, 'Sell', 0)),
@@ -188,13 +205,9 @@ server <- function(input, output, session) {
 
   })
   
+  
   output$clickInfo <- renderText({
-    #this is correct
-   # first_day <- input$startDate %>%
-   #   as.Date() %>%
-   #   + 1
-    
-    #ask jeff about this, why is the base date on the graph that?
+  
     x_click <- input$plot_click$x %>%
       as.numeric() %>%
       round(digits = 0) %>%
@@ -210,7 +223,7 @@ server <- function(input, output, session) {
   
   
   output$plotAndTable <- renderUI({
-    if(nrow(ID()) == 0){
+    if(nrow(selectedHoldingRows()) == 0){
       fluidRow(
         column(
           8,
@@ -227,7 +240,7 @@ server <- function(input, output, session) {
         ),
         column(
           10,
-          plotOutput('holdingsPlot', click = "plot_click")
+          plotOutput('selectedHoldingsPlot', click = "plot_click")
         ),
         br(),
         DT::dataTableOutput('selectedHoldings')
