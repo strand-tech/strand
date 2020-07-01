@@ -30,7 +30,7 @@ server <- function(input, output, session) {
   
   #adding a reactive value
   #commented out sections work, but the uncomment stuff is what would be faster
-  selectedHoldingRows <- reactive({
+  selectedHoldingRows <- eventReactive(input$positionSummaryTable_rows_selected, {
     
     #this gets the list of symbols from selected rows
     selected_row_symbols <- positionSummary()[input$positionSummaryTable_rows_selected, 1] %>%
@@ -72,7 +72,6 @@ server <- function(input, output, session) {
              gross_pnl = cumsum(gross_pnl),
              gross_pnl = round(gross_pnl, digits = 0),
              alpha_1 = round(alpha_1, digits = 2))
-    
   })
  
   observeEvent(values$sim_result, {
@@ -190,7 +189,7 @@ server <- function(input, output, session) {
         geom_line(aes(color = symbol)) +
         geom_point(data = filter(plot, fill_shares !=  0),
                    aes(shape = factor(buy_sell), fill = symbol, size = order_size)) +
-        geom_line(aes(y = (alpha_1 * 100), group = symbol)) +
+        geom_line(aes(y = (alpha_1 * 100), linetype = symbol)) +
         scale_shape_manual(values = order_shapes) +
         scale_y_continuous(
           
@@ -234,7 +233,9 @@ server <- function(input, output, session) {
   
   
   output$plotAndTable <- renderUI({
-    if(nrow(selectedHoldingRows()) == 0){
+    #got rid of nrow(selectedHoldingRows) == 0
+    
+    if(is.null(input$positionSummaryTable_rows_selected)){
       fluidRow(
         column(
           8,
