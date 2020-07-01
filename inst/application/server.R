@@ -196,7 +196,7 @@ server <- function(input, output, session) {
           
           name = "Net PnL",
           
-          sec.axis = sec_axis(trans=~.*(1/1000), name = "Alpha")
+          sec.axis = sec_axis(trans=~.*(1/100), name = "Alpha")
           
         ) +
         xlab("Date") + ggtitle("Cumulative Profit and Loss") +
