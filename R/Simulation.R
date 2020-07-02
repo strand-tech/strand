@@ -27,7 +27,7 @@ Simulation <- R6Class(
     #'   which results will be loaded with \code{readFeather}.
     #' @param raw_input_data A data frame that contains all of the input data
     #'   (for all periods) for the simulation. The data frame must have a
-    #'   \code{date} column. Data supplied using this parameter will only be
+    #'   \code{date} column. Data supplied using this parameter will be
     #'   used if the configuration option \code{simulator/input_data/type} is
     #'   set to \code{object}. Defaults to \code{NULL}.
     #' @param raw_pricing_data A data frame that contains all of the input data
@@ -59,6 +59,9 @@ Simulation <- R6Class(
                           delisting_dates_data = NULL) {
       
       if (is.character(config)) {
+        if (!file.exists(config)) {
+          stop(paste0("Config file not found: ", config))
+        }
         config <- yaml.load_file(config)
         private$config <- StrategyConfig$new(config)
       } else if (is.list(config)) {
@@ -635,21 +638,44 @@ Simulation <- R6Class(
         category_vars <- simulator_config$calculate_exposures$category_vars
         factor_vars <- simulator_config$calculate_exposures$factor_vars
         if (!is.null(category_vars) || !is.null(factor_vars)) {
-          
+
           exposures_input <-
             res %>%
             select("strategy", "id", "end_nmv") %>%
             left_join(select(private$security_reference, "id", one_of(!!category_vars)),
                              by = "id") %>%
             left_join(select(input_data, "id", one_of(!!factor_vars)),
-                             by = "id")
+                             by = "id") %>%
+            mutate(end_lmv = ifelse(end_nmv > 0, end_nmv, 0),
+                   end_smv = ifelse(end_nmv < 0, end_nmv, 0))
           
+          # Save net exposures
           exposures <- calculate_exposures(detail_df = exposures_input,
                                            in_var = "end_nmv",
                                            weight_divisor = private$getStrategyCapital(),
                                            category_vars = category_vars,
                                            factor_vars = factor_vars)
-          private$saveExposures(current_date, exposures)
+          
+          private$saveExposures(current_date, exposures, type = "net")
+          
+          # Save long exposures
+          exposures <- calculate_exposures(detail_df = exposures_input,
+                                           in_var = "end_lmv",
+                                           weight_divisor = private$getStrategyCapital(),
+                                           category_vars = category_vars,
+                                           factor_vars = factor_vars)
+          
+          private$saveExposures(current_date, exposures, type = "long")
+
+          # Save short exposures
+          exposures <- calculate_exposures(detail_df = exposures_input,
+                                           in_var = "end_smv",
+                                           weight_divisor = private$getStrategyCapital(),
+                                           category_vars = category_vars,
+                                           factor_vars = factor_vars)
+          
+          private$saveExposures(current_date, exposures, type = "short")
+          
         }
         
         # Save sim summary, sim detail, and optimization data.
@@ -995,8 +1021,9 @@ Simulation <- R6Class(
     #'     \item{\emph{factor}}{Exposure to \emph{factor}, for all factor
     #'     constraints, at the end of the period.}
     #'   }
-    getExposures = function() {
-      invisible(bind_rows(private$exposures_list))
+    getExposures = function(type = "net") {
+      stopifnot(type %in% c("net", "long", "short"))
+      invisible(bind_rows(private$exposures_list[[type]]))
     },
     
     #' @description Get information on positions removed due to delisting.
@@ -1399,8 +1426,9 @@ Simulation <- R6Class(
     # @description Save exposure information.
     # @param period Period to which the data pertains.
     # @param data_obj Data frame to save.
-    saveExposures = function(period, data_obj) {
-      private$exposures_list[[as.character(period)]] <-
+    saveExposures = function(period, data_obj, type = "net") {
+      stopifnot(type %in% c("net", "long", "short"))
+      private$exposures_list[[type]][[as.character(period)]] <-
         mutate(data_obj, sim_date = period)
       invisible(self)
     },
