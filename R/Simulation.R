@@ -1087,12 +1087,23 @@ Simulation <- R6Class(
     },
     
     #' @description Draw a plot of exposure to all levels in a category by date.
-    #' @param in_var Category for which exposures are plotted.
+    #' @param in_var Category for which exposures are plotted. In order to plot
+    #'   exposures for category \code{in_var}, we must have run the simulation
+    #'   with \code{in_var} in the config setting
+    #'   \code{simulator/calculate_exposures/category_vars}.
     plotCategoryExposure = function(in_var) {
-      exposures <- self$getExposures() %>% filter(strategy %in% "joint")
+      
+      exposures <- self$getExposures() %>% filter(strategy %in% "joint") %>%
+        select("sim_date", starts_with(in_var))
+
+      # Make sure that there is at least one level for in_var present in the
+      # object's exposure data. If only sim_date is present, then most likely
+      # exposure to in_var was not calculated by the simulation.
+      if (ncol(exposures) %in% 1) {
+        stop(paste0("No exposure data found for in_var: ", in_var))
+      }
       
       exposures %>%
-        select("sim_date", starts_with(in_var)) %>%
         pivot_longer(-"sim_date",
                      names_to = in_var,
                      names_prefix = paste0(in_var, "_"),
