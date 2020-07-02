@@ -531,6 +531,7 @@ Simulation <- R6Class(
 
         res <- res %>%
           inner_join(select(input_data, "id", "start_price", "end_price", "dividend", "distribution",
+                            "investable",
                             !!simulator_config$save_detail_columns),
                             by = "id") %>%
           mutate(
@@ -763,9 +764,12 @@ Simulation <- R6Class(
     #' @param security_id Character vector of length 1 that specifies the
     #'   security for which to get detail data. If \code{NULL} data for all
     #'   securities is returned. Defaults to \code{NULL}.
-    #' @return An object of class \code{data.frame} that contains detail data
-    #'   for the simulation at the joint and strategy level. Detail data is at
-    #'   the security level. The data frame contains the following columns:
+    #' @param columns Vector of class character specifying the columns to
+    #'   return. This parameter can be useful when dealing with very large
+    #'   detail datasets.
+    #' @return An object of class \code{data.frame} that contains security-level
+    #'   detail data for the simulation for the desired strategies, securities,
+    #'   dates, and columns. Available columns include:
     #'   \describe{
     #'     \item{id}{Security identifier.}
     #'     \item{strategy}{Strategy name, or 'joint' for the aggregate strategy.}
@@ -832,8 +836,17 @@ Simulation <- R6Class(
     #'     period.}
     #'     \item{end_gmv}{Gross market value of the position at the end of the
     #'     period.}
-    #'   }
-    getSimDetail = function(sim_date = NULL, strategy_name = NULL, security_id = NULL) {
+    #'     \item{investable}{Logical indicating whether the security is part of
+    #'     the investable universe. The value of the flag is set to TRUE if the
+    #'     security has not been delisted and satisfies the universe criterion
+    #'     provided (if any) in the \code{simulator/universe} configuration
+    #'     option.}
+    #'   
+    getSimDetail = function(sim_date = NULL,
+                            strategy_name = NULL,
+                            security_id = NULL,
+                            columns = NULL) {
+      
       if (!is.null(sim_date)) {
         detail_data <- private$sim_detail_list[[sim_date]]
       } else {
@@ -846,6 +859,10 @@ Simulation <- R6Class(
       
       if (!is.null(security_id)) {
         detail_data <- detail_data %>% filter(.data$id %in% !!security_id)
+      }
+      
+      if (!is.null(columns)) {
+        detail_data <- detail_data %>% select(!!columns)
       }
       
       invisible(detail_data)
