@@ -49,16 +49,16 @@ res$plotPerformance()
 
 ```{r}
 res$plotMarketValue()
-```
 
-```{r}
-res$plotCategoryExposure("category_1")
-```
+category_vars <- res$getConfig()$getConfig("simulator")$calculate_exposures$category_vars
+for (this_var in category_vars) {
+  print(res$plotCategoryExposure(this_var))
+}
 
-```{r}
-res$plotFactorExposure(c("factor_1", "factor_2"))
-```
+factor_vars <- res$getConfig()$getConfig("simulator")$calculate_exposures$factor_vars
+if (!is.null(factor_vars) && length(factor_vars) > 0) {
+  print(res$plotFactorExposure(factor_vars))
+}
 
-```{r}
 res$plotNumPositions()
 ```
