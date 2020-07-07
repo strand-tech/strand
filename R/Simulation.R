@@ -117,18 +117,36 @@ Simulation <- R6Class(
       # Set raw data from constuctor parameters.
       
       if (!is.null(raw_input_data)) {
+        if (private$config$getConfig("simulator")$input_data$type %in% "file") {
+          stop("Passing data via raw_input_data but configuration specifies file-based inputs")
+        }
         stopifnot("date" %in% names(raw_input_data))
         private$raw_input_data <- raw_input_data
+      } else {
+        if (private$config$getConfig("simulator")$input_data$type %in% "object") {
+          stop("raw_input_data is NULL but configuration specifies object-based inputs")
+        }
       }
       
       if (!is.null(raw_pricing_data)) {
+        if (private$config$getConfig("simulator")$pricing_data$type %in% "file") {
+          stop("Passing data via raw_pricing_data but configuration specifies file-based inputs")
+        }
         stopifnot("date" %in% names(raw_pricing_data))
         private$raw_pricing_data <- raw_pricing_data
+      } else {
+        if (private$config$getConfig("simulator")$pricing_data$type %in% "object") {
+          stop("raw_pricing_data is NULL but configuration specifies object-based inputs")
+        }
       }
       
       if (isTRUE(private$config$getConfig("simulator")$verbose)) {
         private$verbose <- TRUE
       }
+      
+      # Set dates
+      private$input_dates <- input_dates
+      # private$pricing_dates <- pricing_dates
       
       invisible(self)
     },
@@ -267,14 +285,21 @@ Simulation <- R6Class(
           all(portfolio$getPositions()$id %in% input_data$id)
         )
         
-        if (!isTRUE(simulator_config$inputs_without_pricing %in% "omit")) {
-          if (!all(input_data$id %in% pricing_data$id)) {
-            stop("Inputs found without pricing data. Consider setting simulator/inputs_without_pricing=omit")
+        if (!all(input_data$id %in% pricing_data$id)) {
+          if (!isTRUE(simulator_config$inputs_without_pricing %in% "omit")) {
+            stop(paste0("Input records (",
+                        sum(!input_data$id %in% pricing_data$id),
+                        ") found without pricing data. Consider setting simulator/inputs_without_pricing=omit"))
+          } else {
+            if (isTRUE(private$verbose)) {
+              cat("Omitting ",
+                  sum(!input_data$id %in% pricing_data$id),
+                  " input records without pricing data.\n")
+            }
+            input_data <- filter(input_data, .data$id %in% pricing_data$id)
           }
-        } else {
-          input_data <- filter(input_data, id %in% pricing_data$id)
-        }
-
+        } 
+        
         pricing_data <- pricing_data %>%
           select("id",
                  "close_price", "prior_close_price",
