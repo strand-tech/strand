@@ -80,7 +80,7 @@ StrategyConfig <-  R6Class(
       # 
       # As we validate strategy config entries we add to the strategy name
       # blacklist.
-      strategy_name_blacklist <- c()
+      strategy_name_blacklist <- c("joint")
         
       for (strategy in self$getStrategyNames()) {
         
@@ -122,7 +122,9 @@ StrategyConfig <-  R6Class(
       
       if (any(self$getStrategyNames() %in% strategy_name_blacklist)) {
         stop(paste0("Invalid strategy name found. Strategy names may not ",
-                    "match signal or constraint in_var names"))
+                    "match signal or constraint in_var names. ", 
+                    "The strategy name 'joint' is reserved."))
+                    
       }
 
       TRUE
