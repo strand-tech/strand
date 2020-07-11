@@ -385,6 +385,10 @@ PortOpt <- R6Class(
       invisible(res)
     },
     
+    getLoosenedConstraints = function() {
+      private$loosened_constraints
+    },
+    
     #' @description Provide aggregate level optimization information if the
     #'   problem has been solved.
     #' @return A data frame with one row per strategy, including the joint (net)

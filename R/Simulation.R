@@ -448,10 +448,11 @@ Simulation <- R6Class(
         portOpt$solve()
         
         # Record information on loosened constraints
-        if (length(portOpt$loosened_constraints) > 0) {
+        if (length(portOpt$getLoosenedConstraints()) > 0) {
+          
           loosened_df <- data.frame(date = current_date,
-                                    constraint_name = names(portOpt$loosened_constraints),
-                                    pct_loosened = 100 * (1 - as.vector(unlist(portOpt$loosened_constraints))))
+                                    constraint_name = names(portOpt$getLoosenedConstraints()),
+                                    pct_loosened = 100 * (1 - as.vector(unlist(portOpt$getLoosenedConstraints()))))
           private$saveLooseningInfo(current_date, loosened_df)
         }
         
