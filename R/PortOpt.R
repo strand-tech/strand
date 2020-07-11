@@ -385,6 +385,14 @@ PortOpt <- R6Class(
       invisible(res)
     },
     
+    #' @description Provide information about any constraints that were loosened
+    #'   in order to solve the optimization.
+    #' @return Object of class \code{list} where keys are the names of the
+    #'   loosened constraints and values are how much they were loosened toward
+    #'   current values. Values are expressed as (current constraint value -
+    #'   loosened constraint value) / (current constraint value - violated
+    #'   constraint value). A value of 0 means a constraint was loosened 100\%
+    #'   and is not binding.
     getLoosenedConstraints = function() {
       private$loosened_constraints
     },

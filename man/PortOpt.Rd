@@ -53,6 +53,7 @@ opt$solve()
 \item \href{#method-getConstraintMeta}{\code{PortOpt$getConstraintMeta()}}
 \item \href{#method-solve}{\code{PortOpt$solve()}}
 \item \href{#method-getResultData}{\code{PortOpt$getResultData()}}
+\item \href{#method-getLoosenedConstraints}{\code{PortOpt$getLoosenedConstraints()}}
 \item \href{#method-summaryDf}{\code{PortOpt$summaryDf()}}
 \item \href{#method-print}{\code{PortOpt$print()}}
 \item \href{#method-clone}{\code{PortOpt$clone()}}
@@ -244,6 +245,25 @@ Get optimization result.
 A data frame that contains the number of shares and the net
   market value of the trades at the strategy and joint (net) level
   for each stock in the optimization's input.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-getLoosenedConstraints"></a>}}
+\if{latex}{\out{\hypertarget{method-getLoosenedConstraints}{}}}
+\subsection{Method \code{getLoosenedConstraints()}}{
+Provide information about any constraints that were loosened
+  in order to solve the optimization.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{PortOpt$getLoosenedConstraints()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+Object of class \code{list} where keys are the names of the
+  loosened constraints and values are how much they were loosened toward
+  current values. Values are expressed as (current constraint value -
+  loosened constraint value) / (current constraint value - violated
+  constraint value). A value of 0 means a constraint was loosened 100\%
+  and is not binding.
 }
 }
 \if{html}{\out{<hr>}}

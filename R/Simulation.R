@@ -757,7 +757,7 @@ Simulation <- R6Class(
 
           exposures_input <-
             res %>%
-            select("strategy", "id", "end_nmv") %>%
+            select("strategy", "id", "end_nmv", "end_gmv") %>%
             left_join(select(private$security_reference, "id", one_of(!!category_vars)),
                              by = "id") %>%
             left_join(select(input_data, "id", one_of(!!factor_vars)),
@@ -791,6 +791,15 @@ Simulation <- R6Class(
                                            factor_vars = factor_vars)
           
           private$saveExposures(current_date, exposures, type = "short")
+          
+          # Save gross exposures
+          exposures <- calculate_exposures(detail_df = exposures_input,
+                                           in_var = "end_gmv",
+                                           weight_divisor = private$getStrategyCapital(),
+                                           category_vars = category_vars,
+                                           factor_vars = factor_vars)
+          
+          private$saveExposures(current_date, exposures, type = "gross")
           
         }
         
@@ -990,7 +999,7 @@ Simulation <- R6Class(
     #'     security has not been delisted and satisfies the universe criterion
     #'     provided (if any) in the \code{simulator/universe} configuration
     #'     option.}
-    #'   
+    #'   }
     getSimDetail = function(sim_date = NULL,
                             strategy_name = NULL,
                             security_id = NULL,
@@ -1130,6 +1139,8 @@ Simulation <- R6Class(
     },
     
     #' @description Get end-of-period exposure information.
+    #' @param type Vector of length 1 that may be one of \code{"net"},
+    #'   \code{"long"}, \code{"short"}, and \code{"gross"}.
     #' @return An object of class \code{data.frame} that contains end-of-period
     #'   exposure information for the simulation portfolio. The units of the
     #'   exposures are portfolio weight relative to strategy_captial (i.e., net
@@ -1145,7 +1156,7 @@ Simulation <- R6Class(
     #'     constraints, at the end of the period.}
     #'   }
     getExposures = function(type = "net") {
-      stopifnot(type %in% c("net", "long", "short"))
+      stopifnot(type %in% c("net", "long", "short", "gross"))
       invisible(bind_rows(private$exposures_list[[type]]))
     },
     
@@ -1683,7 +1694,7 @@ Simulation <- R6Class(
     # @param period Period to which the data pertains.
     # @param data_obj Data frame to save.
     saveExposures = function(period, data_obj, type = "net") {
-      stopifnot(type %in% c("net", "long", "short"))
+      stopifnot(type %in% c("net", "long", "short", "gross"))
       private$exposures_list[[type]][[as.character(period)]] <-
         mutate(data_obj, sim_date = period)
       invisible(self)

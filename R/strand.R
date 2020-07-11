@@ -22,7 +22,7 @@
 #' @importFrom Matrix Matrix Diagonal
 #' @importFrom Rglpk Rglpk_solve_LP
 #' @importFrom yaml yaml.load_file
-#' @importFrom rlang .data has_name
+#' @importFrom rlang .data has_name :=
 #' @importFrom feather read_feather write_feather
 #' @importFrom lubridate day month day<- month<-
 #' @importFrom stats cor qnorm sd as.formula residuals lm
