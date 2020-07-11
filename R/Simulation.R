@@ -149,8 +149,7 @@ Simulation <- R6Class(
       
       # Set dates
       private$input_dates <- input_dates
-      # private$pricing_dates <- pricing_dates
-      
+
       invisible(self)
     },
     
@@ -837,6 +836,9 @@ Simulation <- R6Class(
     },
     
     #' @description Get summary information.
+    #' @param strategy_name Character vector of length 1 that specifies the
+    #'   strategy for which to get detail data. If \code{NULL} data for all
+    #'   strategies is returned. Defaults to \code{NULL}.
     #' @return An object of class \code{data.frame} that contains summary data
     #'   for the simulation, by period, at the joint and strategy level. The data
     #'   frame contains the following columns:
@@ -892,8 +894,12 @@ Simulation <- R6Class(
     #'     
     #'   }
     #'   
-    getSimSummary = function() {
-      invisible(bind_rows(private$sim_summary_list))
+    getSimSummary = function(strategy_name = NULL) {
+      res <- bind_rows(private$sim_summary_list)
+      if (!is.null(strategy_name)) {
+        res <- filter(res, .data$strategy %in% !!strategy_name)
+      }
+      invisible(res)
     },
     
     #' @description Get detail information.
@@ -1160,14 +1166,14 @@ Simulation <- R6Class(
     #' @return A data frame that contains summary information for the desired
     #'   strategy, as well as columns for cumulative net and gross total return,
     #'   calculated as pnl divided by ending gross market value.
-    getSingleStrategySummaryDf = function(strategy_name, include_zero_row = TRUE) {
+    getSingleStrategySummaryDf = function(strategy_name = "joint", include_zero_row = TRUE) {
       res <- filter(self$getSimSummary(), .data$strategy %in% !!strategy_name)
       
       if (isTRUE(include_zero_row)) {
         # Create a zero-value starting row with date lagged by one day.
         res <- res[c(1, 1:nrow(res)),]
         res$sim_date[1] <- res$sim_date[1] - 1
-        res[1,] <- mutate_if(res[1,], is.numeric, function(x) { 0 })
+        res[1,] <- mutate_if(res[1,], is.numeric, ~ 0)
       }
       
       # Compute cumulative (net) return
@@ -1177,9 +1183,11 @@ Simulation <- R6Class(
     },
     
     #' @description Draw a plot of cumulative gross and net return by date.
-    plotPerformance = function() {
+    #' @param strategy_name Character vector of length 1 specifying the strategy
+    #'   for the plot. Defaults to \code{"joint"}.
+    plotPerformance = function(strategy_name = "joint") {
       
-      self$getSingleStrategySummaryDf("joint") %>%
+      self$getSingleStrategySummaryDf(strategy_name) %>%
         
         select("sim_date", "gross_cum_ret", "net_cum_ret") %>%
         rename(Gross = "gross_cum_ret", Net = "net_cum_ret") %>%
@@ -1201,13 +1209,66 @@ Simulation <- R6Class(
           axis.text = element_text(size = 10),
           axis.text.x = element_text(angle = 0),
           legend.title = element_blank())
-      
     },
     
-    #' @description Draw a plot of total gross, long, short, and net market value by date.
-    plotMarketValue = function() {
+    #' @description Draw a plot of contribution to net return on GMV for levels
+    #'   of a specified category.
+    #' @param category_var Plot performance contribution for the levels of
+    #'   \code{category_var}. \code{category_var} must be present in the
+    #'   simulation's security reference, and detail data must be present in the
+    #'   object's result data.
+    #' @param strategy_name Character vector of length 1 specifying the strategy
+    #'   for the plot. Defaults to \code{"joint"}.
+    plotContribution = function(category_var, strategy_name = "joint") {
       
-      mv_plot_df <- select(self$getSingleStrategySummaryDf("joint"),
+      summary_data <- self$getSimSummary(strategy_name) %>%
+        select(sim_date, end_gmv)
+      
+      contrib_data <- self$getSimDetail(strategy_name = strategy_name,
+                                        columns = c("id", "sim_date", "net_pnl")) %>%
+        left_join(select(self$getSecurityReference(), "id", !!category_var), by = "id") %>%
+        group_by(sim_date, assay_sector) %>%
+        summarise(net_pnl = sum(net_pnl)) %>%
+        left_join(summary_data, by = "sim_date") %>%
+        mutate(net_ret = net_pnl / end_gmv) %>%
+        group_by(assay_sector) %>%
+        mutate(cum_net_ret = cumsum(net_ret)) %>%
+        ungroup()
+      
+      # Adding zero-row for each group
+      zero_rows <- contrib_data %>% filter(!duplicated(get(category_var))) %>%
+        mutate(sim_date = sim_date - 1) %>%
+        mutate_if(is.numeric, ~ 0)
+      
+      contrib_data <- rbind(zero_rows, contrib_data)
+      
+      contrib_data %>%
+        ggplot(aes(x = sim_date, y = 100 * cum_net_ret, color = get(category_var), group = get(category_var))) +
+        geom_line() +
+        xlab("Date") + ylab("Contribution (%)") + 
+        ggtitle(paste0(category_var, " Contribution to Net Return (% GMV)")) + 
+        theme_light() + 
+        theme(
+          plot.background = element_rect(fill = NA, colour = NA),
+          plot.title = element_text(size = 18),
+          
+          axis.text = element_text(size = 10),
+          axis.text.x = element_text(angle = 0),
+          legend.title = element_blank())
+
+    },
+      
+    #' @description Draw a plot of total gross, long, short, and net market
+    #'   value by date.
+    #' @param strategy_name Character vector of length 1 specifying the strategy
+    #'   for the plot. Defaults to \code{"joint"}.
+    plotMarketValue = function(strategy_name = "joint") {
+
+      if (!strategy_name %in% c("joint", private$config$getStrategyNames())) {
+        stop(paste0("Invalid strategy name: ", strategy_name))
+      }
+      
+      mv_plot_df <- select(self$getSingleStrategySummaryDf(strategy_name),
                            sim_date, GMV = end_gmv, LMV = end_lmv, SMV = end_smv, NMV = end_nmv) %>%
         gather(type, value, GMV:NMV) %>% 
         filter(!is.na(value))
@@ -1235,9 +1296,11 @@ Simulation <- R6Class(
     #'   exposures for category \code{in_var}, we must have run the simulation
     #'   with \code{in_var} in the config setting
     #'   \code{simulator/calculate_exposures/category_vars}.
-    plotCategoryExposure = function(in_var) {
+    #' @param strategy_name Character vector of length 1 specifying the strategy
+    #'   for the plot. Defaults to \code{"joint"}.
+    plotCategoryExposure = function(in_var, strategy_name = "joint") {
       
-      exposures <- self$getExposures() %>% filter(strategy %in% "joint") %>%
+      exposures <- self$getExposures() %>% filter(strategy %in% strategy_name) %>%
         select("sim_date", starts_with(in_var))
 
       # Make sure that there is at least one level for in_var present in the
@@ -1269,8 +1332,10 @@ Simulation <- R6Class(
     
     #' @description Draw a plot of exposure to factors by date.
     #' @param in_var Factors for which exposures are plotted.
-    plotFactorExposure = function(in_var) {
-      exposures <- self$getExposures() %>% filter(strategy %in% "joint")
+    #' @param strategy_name Character vector of length 1 specifying the strategy
+    #'   for the plot. Defaults to \code{"joint"}.
+    plotFactorExposure = function(in_var, strategy_name = "joint") {
+      exposures <- self$getExposures() %>% filter(strategy %in% strategy_name)
       exposures %>%
         select("sim_date", one_of(!!in_var)) %>%
         pivot_longer(-"sim_date",
@@ -1292,8 +1357,10 @@ Simulation <- R6Class(
     },
     
     #' @description Draw a plot of number of long and short positions by date.
-    plotNumPositions = function() {
-      self$getSingleStrategySummaryDf("joint") %>%
+    #' @param strategy_name Character vector of length 1 specifying the strategy
+    #'   for the plot. Defaults to \code{"joint"}.
+    plotNumPositions = function(strategy_name = "joint") {
+      self$getSingleStrategySummaryDf(strategy_name) %>%
         select("sim_date", "end_num_long", "end_num_short") %>%
         rename(Long = "end_num_long", Short = "end_num_short") %>%
         pivot_longer(
@@ -1315,11 +1382,56 @@ Simulation <- R6Class(
           legend.title = element_blank())  
     },
     
+    #' @description Draw a plot of number of long and short positions by date.
+    #' @param strategy_name Character vector of length 1 specifying the strategy
+    #'   for the plot. Defaults to \code{"joint"}.
+    plotTurnover = function(strategy_name = "joint") {
+      
+      self$getSimSummary(strategy_name) %>%
+        select("sim_date", "market_fill_gmv") %>%
+        ggplot(aes(x = sim_date, y = market_fill_gmv)) + geom_bar(stat = "identity") +
+        xlab("Date") + ylab("Traded GMV ($)") + 
+        ggtitle("Turnover") + 
+        theme_light() + 
+        theme(
+          plot.background = element_rect(fill = NA, colour = NA),
+          plot.title = element_text(size = 18),
+          
+          axis.text = element_text(size = 10),
+          axis.text.x = element_text(angle = 0),
+          legend.title = element_blank())  
+    },
+    
+    #' @description Draw a plot of the universe size, or number of investable
+    #'   stocks, over time.
+    #' @param strategy_name Character vector of length 1 specifying the strategy
+    #'   for the plot. Defaults to \code{joint}.
+    plotUniverseSize = function(strategy_name = "joint") {
+      investable_data <- self$getSimDetail(strategy_name = strategy_name,
+                                           columns = c("sim_date", "id", "investable"))
+      investable_data %>%
+        group_by(sim_date) %>%
+        summarise(num_investable = sum(investable)) %>%
+        ggplot(aes(x = sim_date, y = num_investable)) + geom_line() +
+        xlab("Date") + ylab("Number of securities") + 
+        ggtitle("Universe size") + 
+        theme_light() + 
+        theme(
+          plot.background = element_rect(fill = NA, colour = NA),
+          plot.title = element_text(size = 18),
+          
+          axis.text = element_text(size = 10),
+          axis.text.x = element_text(angle = 0),
+          legend.title = element_blank())  
+        
+      
+    },
+    
     #' @description Draw a plot of the percentage of portfolio GMV held in
     #'   non-investable stocks (e.g., stocks that do not satisfy universe criteria)
     #'   for a given strategy. Note that this plot requires detail data.
     #' @param strategy_name Character vector of length 1 specifying the strategy
-    #'   for the plot. Defaults to \code{joint}.
+    #'   for the plot. Defaults to \code{"joint"}.
     plotNonInvestablePct = function(strategy_name = "joint") {
       investable_data <- self$getSimDetail(strategy_name = strategy_name,
                                            columns = c("sim_date", "id","end_gmv", "investable"))
