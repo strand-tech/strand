@@ -3,6 +3,7 @@ title: "Simulation Results: `r params$res$getConfig()$getStrategyNames()`"
 date: "Report date: `r Sys.Date()`"
 params:
    res: NULL
+   contrib_vars: NULL
 ---
 
 ```{css, echo=FALSE}
@@ -42,6 +43,10 @@ best_worst[[2]]
 
 ```{r}  
 res$plotPerformance()
+
+for (this_var in contrib_vars) {
+  print(res$plotContribution(this_var))
+}
 ```
 
 
@@ -61,4 +66,7 @@ if (!is.null(factor_vars) && length(factor_vars) > 0) {
 }
 
 res$plotNumPositions()
+res$plotTurnover()
+res$plotUniverseSize()
+res$plotNonInvestablePct()
 ```

@@ -1558,19 +1558,21 @@ Simulation <- R6Class(
     
     
     #' @description Write an html document of simulation results.
-    #' @param res The object of class 'Simulation' which we want to write the 
-    #' report about.
+    #' @param res The object of class 'Simulation' which we want to write the
+    #'   report about.
     #' @param out_dir Directory in which output files should be created
-    #' @param out_file File name for output 
-    #' @param out_fmt Format in which output files should be created. The 
-    #' default is html and that is currently the only option.
-    writeReport = function(out_dir, out_file, out_fmt="html") {
-      rmarkdown::render(input = system.file("reports/simReport.Rmd", 
+    #' @param out_file File name for output
+    #' @param out_fmt Format in which output files should be created. The
+    #'   default is html and that is currently the only option.
+    #' @param contrib_vars Security reference variables for which to plot return
+    #'   contribution.
+    writeReport = function(out_dir, out_file, out_fmt = "html", contrib_vars = NULL) {
+      rmarkdown::render(input = system.file("reports/simReport.Rmd",
                                             package = "strand"),
                         output_format = paste0(out_fmt, "_document"),
                         output_file = out_file,
                         output_dir = out_dir,
-                        params = list(res = self), 
+                        params = list(res = self, contrib_vars = contrib_vars),
                         quiet = TRUE)
     }
   ),
