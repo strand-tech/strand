@@ -241,7 +241,14 @@ PortOpt <- R6Class(
       solver <- private$config$getConfig("solver")
       res <- NULL
       
-      for (loosen_coef in c(0, 0.5, 0.5, 1)) {
+      loosening_sequence <- private$config$getConfig("loosening_sequence")
+
+      if (is.null(loosening_sequence) ||
+          length(loosening_sequence) %in% 0) {
+        loosening_sequence <- c(0, 0.5, 0.5, 1)
+      }
+      
+      for (loosen_coef in loosening_sequence) {
         
         private$loosen(loosen_coef)
 
