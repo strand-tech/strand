@@ -30,6 +30,8 @@ Simulation <- R6Class(
     #'   \code{date} column. Data supplied using this parameter will be
     #'   used if the configuration option \code{simulator/input_data/type} is
     #'   set to \code{object}. Defaults to \code{NULL}.
+    #' @param input_dates Vector of class \code{Date} that specifies when input
+    #'   data should be updated.
     #' @param raw_pricing_data A data frame that contains all of the input data
     #'   (for all periods) for the simulation. The data frame must have a
     #'   \code{date} column. Data supplied using this parameter will only be
@@ -54,6 +56,7 @@ Simulation <- R6Class(
     #' @return A new \code{Simulation} object.
     initialize = function(config = NULL,
                           raw_input_data = NULL,
+                          input_dates = NULL,
                           raw_pricing_data = NULL,
                           security_reference_data = NULL,
                           delisting_dates_data = NULL) {
@@ -261,12 +264,24 @@ Simulation <- R6Class(
         # example, columns of the form shares_{strategy name} will collide with
         # the simulator's work columns. There are other ways around this issue
         # but imposing column restrictions is the easiest.
-        input_data <- input_data_obj$get(current_date)
-        pricing_data <- pricing_data_obj$get(current_date)
-      
-        if (!is.null(simulator_config$input_data$track_metadata)) {}
-          input_stats <- input_data_obj$periodStats(simulator_config$input_data$track_metadata)
-          private$saveInputStats(current_date, input_stats)
+        
+        if (!is.null(private$input_dates) && !current_date %in% private$input_dates) {
+          input_data <- input_data_obj$getCurrent()
+        } else {
+          input_data <- input_data_obj$update(current_date)
+          
+          # Collect metadata as specified in the config.
+          if (!is.null(simulator_config$input_data$track_metadata)) {
+            input_stats <- input_data_obj$periodStats(simulator_config$input_data$track_metadata)
+            private$saveInputStats(current_date, input_stats)
+          }
+        }
+        
+        if (nrow(input_data) %in% 0) {
+          stop("Cannot formulate optimization: no input data found")  
+        }
+
+        pricing_data <- pricing_data_obj$update(current_date)
 
         # Properties we enforce on input data:
         #
@@ -1353,12 +1368,13 @@ Simulation <- R6Class(
     
     config = NULL,
     raw_input_data = NULL,
+    input_dates = NULL,
     raw_pricing_data = NULL,
     security_reference = NULL,
     delisting_dates = NULL,
     shiny_callback = NULL,
     verbose = FALSE,
-    
+
     # Results
     
     # _list objects are lists whose elements are result data for single

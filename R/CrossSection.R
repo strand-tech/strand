@@ -33,9 +33,9 @@ CrossSection <-  R6Class(
     #   should be carried forward from one period to the next. To carry forward
     #   data is to use data from the past for a security if no data is found
     #   for the present. Suppose data for security X has been retrieved in a
-    #   prior call to \code{get()}. Setting \code{carry_forward = TRUE} will
+    #   prior call to \code{update()}. Setting \code{carry_forward = TRUE} will
     #   cause the most recent data for X to be used if no records are found for
-    #   X in subsequent calls to \code{get()}. If carry-forward values are
+    #   X in subsequent calls to \code{update()}. If carry-forward values are
     #   supplied using the \code{setCarryForwardValue} method these values are
     #   used instead of the most recent data points.
     # @return A new \code{CrossSection} object.
@@ -74,7 +74,7 @@ CrossSection <-  R6Class(
     #   the list represents the new and old column names for the object's data.
     #   For example, if \code{column_map = list(foo = "bar")} values in the raw
     #   data in column bar will appear in the column foo in the data returned
-    #   by \code{get()}.
+    #   by \code{update()}.
     setColumnMap = function(column_map) {
       stopifnot(is.list(column_map))
       private$column_map <- column_map
@@ -109,16 +109,23 @@ CrossSection <-  R6Class(
       
       filter(private$raw_data, .data$date %in% !!date)
     },
-    
-    # @description Get cross-section data for a given date.
-    # @param date Date for which we want data.
+
+    # @description Get current cross-section.
+    # @return A data frame that contains current cross-section data.
+    getCurrent = function() {
+      invisible(private$current_data)
+    },
+
+    # @description Update and return cross-section data for a given date.
+    # @param date Date for which we want to update and return data.
     # @return A data frame of data for \code{date} that includes, if
     #   \code{carry_forward} was set to \code{TRUE} when creating the object,
     #   any data that has been carried-forward from previous periods. The
     #   records carried forward have default values as configured by calls to
     #   \code{setCarryForwardValue()}. In addition, NA values are replaced
     #   according the values passed to \code{setNAReplaceValue()}.
-    get = function(date) {
+    update = function(date) {
+      
       new_data <- self$getRaw(date)
       
       # Data is only carried forward for securities not found in the current
