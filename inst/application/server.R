@@ -9,12 +9,11 @@ server <- function(input, output, session) {
   # Store the sim result data in a reactiveValues object.
   values <- reactiveValues()
   
-  
   #reactive almost works, shows up with an error in positionSummary,
   #selectedHoldingRows, and #plotAndTable
   positionSummary <- eventReactive(values$sim_result, {
     
-    pos_sum <- values$sim_result$getPositionSummary(strategy_name = "joint") %>%
+    values$sim_result$getPositionSummary(strategy_name = "joint") %>%
       left_join(values$sim_obj$getSecurityReference()[c("id","symbol")], by = "id") %>%
       ungroup() %>%
       select(.data$symbol, .data$gross_pnl, .data$net_pnl,
@@ -25,41 +24,22 @@ server <- function(input, output, session) {
     
   })
   
-
-
-  
-  #adding a reactive value
-  #commented out sections work, but the uncomment stuff is what would be faster
+  #creates a data frame filled with the day by day of selected holdings
+  #change two names to undscores
   selectedHoldingRows <- eventReactive(input$positionSummaryTable_rows_selected, {
     
-    #this gets the list of symbols from selected rows
-    selected_row_symbols <- positionSummary()[input$positionSummaryTable_rows_selected, 1] %>%
-      as.data.frame()
-
-
-    #gets the security info (id) for the selected symbols
+    #gets the ID's for the selected holdings
     selected_sec_ref <- values$sim_obj$getSecurityReference() %>%
       as.data.frame() %>%
-      filter(symbol %in% selected_row_symbols$symbol) %>%
+      filter(symbol %in% positionSummary()$symbol[input$positionSummaryTable_rows_selected]) %>%
       select("id", "symbol") %>%
       as.data.frame()
-    
-    #keep looking into this
-    
-    #gets the security info (id) for the selected symbols
-    # selected_sec_ref <- values$sim_obj$getSecurityReference() %>%
-    #   as.data.frame() %>%
-    #   filter(symbol %in% positionSummary()[input$positionSummaryTable_rows_selected, "symbol"]) %>%
-    #   select("id", "symbol") %>%
-    #   as.data.frame()
-    
-    
-    #add in a leftjoin to add the symbol back
-    
-    #adding alpha_1 into the mix
-    #add that under simulatior
+
     # save_detail_columns: alpha_1 
-    indiv_holdings <- left_join(values$sim_result$getSimDetail(strategy_name = "joint", security_id = selected_sec_ref$id), selected_sec_ref, by = "id") %>%
+    #do 80 is character per line 
+    selected_holdings <- 
+      left_join(values$sim_result$getSimDetail(strategy_name = "joint", 
+                                               security_id = selected_sec_ref$id), selected_sec_ref, by = "id") %>%
       select("sim_date", "symbol", "net_pnl", "shares", "alpha_1","order_shares", "fill_shares", "end_shares", "end_nmv",
              "gross_pnl", "trade_costs", "financing_costs") %>%
       group_by(symbol) %>%
@@ -129,15 +109,7 @@ server <- function(input, output, session) {
     output$marketValueTable <- renderDT(market_value_stats,
                                         rownames = FALSE)
 
-    # pos_summary <- values$sim_result$getPositionSummary(strategy_name = "joint") %>%
-    #   left_join(values$sim_obj$getSecurityReference()[c("id","symbol")], by = "id") %>%
-    #   ungroup() %>%
-    #   select(.data$symbol, .data$gross_pnl, .data$net_pnl,
-    #          .data$average_market_value,
-    #          .data$total_trading, .data$trade_costs, .data$financing_costs,
-    #          .data$days_in_portfolio) %>%
-    #   arrange(.data$gross_pnl)
-    
+  
     output$positionSummaryTable <- renderDT(positionSummary(),
                                             rownames = FALSE)
 
@@ -162,7 +134,7 @@ server <- function(input, output, session) {
   })
   
   
-  #making the holdings data table
+  # making the seleted holdings data table
   output$selectedHoldings <- renderDT(
     
     selectedHoldingRows(),
@@ -172,93 +144,106 @@ server <- function(input, output, session) {
   
   
   output$selectedHoldingsPlot <- renderPlot({
-
-    plot <- selectedHoldingRows() %>%
+    
+    # change to fill or fill_nmv or gmv instead of the number of shares fill_...
+    selection_plot <- selectedHoldingRows() %>%
       select("sim_date", "symbol" , "fill_shares", "net_pnl", "alpha_1") %>%
       mutate(buy_sell = ifelse(fill_shares > 0, 'Buy',
-                                  ifelse(fill_shares < 0, 'Sell', 0)),
+                                  ifelse(fill_shares < 0, 'Sell', NA)),
              order_size = round(1 + log(abs(fill_shares), 10), digits = 0))
-    # create a data subset similar to fill shares that you can remove 0 values from.
-    # put that as the data for geom point, so it can get rid of 0 values
-    
-    #for the dot plot dots
-    order_shapes <- c(24, 25)
-    names(order_shapes) <- c('Buy', 'Sell')
 
-      ggplot(data = plot, aes(x = sim_date, y = net_pnl, group = symbol)) +
-        geom_line(aes(color = symbol)) +
-        geom_point(data = filter(plot, fill_shares !=  0),
-                   aes(shape = factor(buy_sell), fill = symbol, size = order_size)) +
-        geom_line(aes(y = (alpha_1 * 100), linetype = symbol)) +
-        scale_shape_manual(values = order_shapes) +
-        scale_y_continuous(
-          
-          name = "Net PnL",
-          
-          sec.axis = sec_axis(trans=~.*(1/100), name = "Alpha")
-          
-        ) +
-        xlab("Date") + ggtitle("Cumulative Profit and Loss") +
-        theme_light() + 
-        theme(
-          plot.background = element_rect(fill = NA, colour = NA),
-          plot.title = element_text(size = 18),
-          axis.text = element_text(size = 10),
-          axis.text.x = element_text(angle = 0),
-          legend.position = "bottom",
-          legend.box = "horizontal") +
-        labs(shape = "Orders", color = "Symbol", size = "Fill Magnitude") + 
-        guides(fill =FALSE,
-               shape = guide_legend(order = 1),
-               color = guide_legend(order = 2),
-               size = guide_legend(order =3))
+    # controls the shape of the points 
+    
+    # 
+    # order_point_shapes <- c(24, 25)
+    # names(order_point_shapes) <- c('Buy', 'Sell')
+    
+    # make order_point_shapes a name value pair
+
+    ggplot(data = selection_plot, aes(x = sim_date, y = net_pnl, group = symbol)) +
+      geom_line(aes(color = symbol)) +
+      geom_point(data = subset(selection_plot, !is.na(buy_sell)),
+                  aes(shape = factor(buy_sell), fill = symbol, size = order_size)) +
+      geom_line(aes(y = (alpha_1 * 100), linetype = symbol)) +
+      # Values = c(Buy = 24, Sell = 25)
+      scale_shape_manual(values = c(Buy = 24, Sell = 25)) +
+      scale_y_continuous(
+        name = "Net P&L",
+        sec.axis = sec_axis(trans = ~ . * (1 / 100), name = "Alpha")) +
+      xlab("Date") + ggtitle("Cumulative Profit and Loss") +
+      theme_light() + 
+      theme(
+        plot.background = element_rect(fill = NA, colour = NA),
+        plot.title = element_text(size = 18),
+        axis.text = element_text(size = 10),
+        axis.text.x = element_text(angle = 0),
+        legend.position = "bottom",
+        legend.box = "horizontal") +
+      labs(shape = "Orders", color = "Symbol", size = "Fill Magnitude") + 
+      guides(fill =FALSE,
+             shape = guide_legend(order = 1),
+             color = guide_legend(order = 2),
+             size = guide_legend(order = 3))
 
   })
   
-  
+  # outputs the click information from the graph
   output$clickInfo <- renderText({
   
-    x_click <- input$plot_click$x %>%
-      as.numeric() %>%
-      round(digits = 0) %>%
-      as.Date(origin = "1970-01-01")
+    clicked_point <- nearPoints(selectedHoldingRows(), input$plot_click,
+                         xvar = "sim_date", yvar = "net_pnl", maxpoints = 1, threshold = 10)
     
-    y_click <- input$plot_click$y %>%
-      as.numeric() %>%
-      round(digits = 0)
-    
-    paste0("Date=", x_click, "\nNet PnL=", y_click)
-  })
-  
-  
-  
-  output$plotAndTable <- renderUI({
-    #got rid of nrow(selectedHoldingRows) == 0
-    
-    if(is.null(input$positionSummaryTable_rows_selected)){
-      fluidRow(
-        column(
-          8,
-          align = "center",
-          offset = 2,
-          p(strong("Select rows for day by day information"))
-        )
-      )
+    if(nrow(clicked_point) == 0){
+      
+      paste0("Click on the graph for information: ")
+      
     } else {
-      fluidRow(
-        column(
-          2,
-          verbatimTextOutput("clickInfo")
-        ),
-        column(
-          10,
-          plotOutput('selectedHoldingsPlot', click = "plot_click")
-        ),
-        br(),
-        DT::dataTableOutput('selectedHoldings')
-      )
+      
+      
+      # change colums by refernce to name
+      paste0("Selection Information \nSymbol: ", clicked_point$symbol,
+             "\nDate: ", as.Date(as.numeric(clicked_point$sim_date), origin = "1970-01-01"),
+             "\nPnL: ", clicked_point$pnl, 
+             "\nAlpha: ", clicked_point$alpha_1, 
+             "\nShares: ", clicked_point$end_shares,
+             "\nOrdered Shares: ", clicked_point$order_shares, 
+             "\nFilled Shares: ", clicked_point$fill_shares, 
+             "\nEnd Shares: ", clicked_point$end_shares)
     }
   })
+  
+  
+  observeEvent(positionSummary(),{
+    
+    output$selectedPlotAndTable <- renderUI({
+      
+      if(is.null(input$positionSummaryTable_rows_selected)){
+        fluidRow(
+          column(
+            8,
+            align = "center",
+            offset = 2,
+            p(strong("Select rows for day by day information"))
+          )
+        )
+      } else {
+        fluidRow(
+          column(
+            10,
+            plotOutput('selectedHoldingsPlot', click = "plot_click")
+          ),
+          column(
+            2,
+            verbatimTextOutput("clickInfo")
+          ),
+          br(),
+          DT::dataTableOutput('selectedHoldings')
+        )
+      }
+    })
+    
+  })  
+  
   
   
   observeEvent(input$runSim, {

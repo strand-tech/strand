@@ -99,7 +99,7 @@ ui <- fluidPage(
               br()
             ),
           ),
-         uiOutput("plotAndTable")
+         uiOutput("selectedPlotAndTable")
         ),
         tabPanel(
           "Holdings by Date",
