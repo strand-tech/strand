@@ -153,7 +153,7 @@ server <- function(input, output, session) {
     # %>%
       mutate(buy_sell = ifelse(fill_shares > 0, 'triangle-up',
                                   ifelse(fill_shares < 0, 'triangle-down', '0')),
-             magnitude = trunc(1 + log(abs(market_fill_nmv)))) # adjusted truncated constant
+             magnitude = trunc(10 + log(abs(market_fill_nmv), 10))) # adjusted truncated constant
     
              # order_size = round(1 + log(abs(fill_shares), 10), digits = 0))
 
@@ -189,19 +189,44 @@ server <- function(input, output, session) {
     # ggplotly(gg_plot)
     
     interactive_plot <- plot_ly(selection_plot, x = ~sim_date, y = ~net_pnl, 
-                                type = 'scatter', mode = 'lines', color = "alpha_1",
+                                type = 'scatter', mode = 'lines+markers',
+                                marker = list(
+                                  color = ~alpha_1,
+                                  symbol = ~factor(buy_sell),
+                                  size = ~magnitude,
+                                  cmin = ifelse(min(selection_plot$alpha_1) > -1, -1, min(selection_plot$alpha_1)),
+                                  cmax = ifelse(max(selection_plot$alpha_1) > 1, max(selection_plot$alpha_1), 1),
+                                  colorscale = list(c(0, "rgb(178, 34, 34)"), 
+                                                    list( (ifelse(min(selection_plot$alpha_1) > -5, -5, min(selection_plot$alpha_1))
+                                                           / (ifelse(min(selection_plot$alpha_1) > -5, -5, min(selection_plot$alpha_1))
+                                                            - ifelse(max(selection_plot$alpha_1) > 5, max(selection_plot$alpha_1), 5))), "rgb(255, 255, 0)"),
+                                                    list(1, "rgb(50, 205, 50)")), 
+                                  colorbar=list(
+                                    title='Alpha'
+                                  )),
                                 text = ~paste("Date: ", sim_date, 
                                               '<br>P&L: ', net_pnl,
                                               '<br>alpha: ', alpha_1,
                                               '<br>Shares: ', shares,
                                               '<br>Order: ', order_shares,
                                               '<br>Fill: ', fill_shares,
-                                              '<br>End Shares: ', end_shares))  %>%
+                                              '<br>End Shares: ', end_shares))  
+    # %>%
     #   filter(!is.na(buy_sell)) %>%
-      add_trace(
-        mode = "markers", symbol = ~factor(buy_sell), marker = list( 
-          size = ~magnitude + 2)
-      )
+      # add_trace(
+      #   mode = "markers", symbol = ~factor(buy_sell), 
+      #   marker = list(
+      #     size = 10,
+      #     color = ~alpha_1,
+      #     cmin = ifelse(min(z) > -5, -5, min(alpha_1)),
+      #     cmax = ifelse(max(z) > 5, max(alpha_1), 5),
+      #     colorscale = list(c(0, "rgb(178, 34, 34)"), 
+      #                       list( (ifelse(min(alpha_1) > -5, -5, min(alpha_1)) / (ifelse(min(alpha_1) > -5, -5, min(alpha_1)) - ifelse(max(alpha_1) > 5, max(alpha_1), 5))), "rgb(255, 255, 0)"),
+      #                       list(1, "rgb(50, 205, 50)")), 
+      #     colorbar=list(
+      #       title='Alpha'
+      #     ))
+      # )
       
 
   })
