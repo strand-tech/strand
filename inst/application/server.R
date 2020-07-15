@@ -3,6 +3,7 @@ library(strand)
 library(dplyr)
 library(tidyr)
 library(DT)
+library(plotly)
 
 server <- function(input, output, session) {
 
@@ -41,7 +42,6 @@ server <- function(input, output, session) {
                 selected_sec_ref, by = "id") %>%
       select("sim_date", "symbol", "net_pnl", "shares", "alpha_1","order_shares", "fill_shares", 
              "market_fill_nmv", "end_shares", "end_nmv", "gross_pnl", "trade_costs", "financing_costs") %>%
-      group_by(symbol) %>%
       mutate(end_nmv = round(end_nmv),
              gross_pnl = round(gross_pnl, digits = 2),
              trade_costs = round(trade_costs, digits = 2),
@@ -112,33 +112,6 @@ server <- function(input, output, session) {
     output$positionSummaryTable <- renderDT(position_summary(),
                                             rownames = FALSE,
                                             selection = 'single')
-    
-    output$selectedPlotAndTable <- renderUI({
-      
-      if(is.null(input$positionSummaryTable_rows_selected)){
-        fluidRow(
-          column(
-            8,
-            align = "center",
-            offset = 2,
-            p(strong("Select rows for day by day information"))
-          )
-        )
-      } else {
-        fluidRow(
-          column(
-            10,
-            plotOutput('selectedHoldingsPlot', click = "plot_click")
-          ),
-          column(
-            2,
-            verbatimTextOutput("clickInfo")
-          ),
-          br(),
-          DT::dataTableOutput('selectedHoldings')
-        )
-      }
-    })
 
   })
   
@@ -170,107 +143,127 @@ server <- function(input, output, session) {
     
   )
   
-  
-  output$selectedHoldingsPlot <- renderPlot({
+  # change back to renderPlot
+  output$selectedHoldingsPlot <- renderPlotly({
     
     # using market fikl nmv currenty
     # can I normalize the shapes automatically somehow
     selection_plot <- selected_holding_rows() %>%
-      select("sim_date", "symbol" , "fill_shares", "market_fill_nmv", "net_pnl", "alpha_1") %>%
-      mutate(buy_sell = ifelse(fill_shares > 0, 'Buy',
-                                  ifelse(fill_shares < 0, 'Sell', NA)))
+    #   select("sim_date", "symbol" , "fill_shares", "market_fill_nmv", "net_pnl", "alpha_1") 
+    # %>%
+      mutate(buy_sell = ifelse(fill_shares > 0, 'triangle-up',
+                                  ifelse(fill_shares < 0, 'triangle-down', '0')),
+             magnitude = trunc(1 + log(abs(market_fill_nmv)))) # adjusted truncated constant
+    
              # order_size = round(1 + log(abs(fill_shares), 10), digits = 0))
 
-
-    ggplot(data = selection_plot, aes(x = sim_date, y = net_pnl, group = symbol)) +
+    # moved color to main graph
+    # gg_plot <- ggplot(data = selection_plot, aes(x = sim_date, y = net_pnl, color = alpha_1)) +
       # line plot of the net_pnl data
       # ask about scales
-      geom_line(aes(color = alpha_1)) +
+      # geom_line() +
       # creates line color gradient based on alpha truncated to -1 to 1 range
-      scale_colour_gradient2(low = "red", mid = "yellow", 
-                             high = "seagreen", limits = c(-1, 1), oob = scales::squish) +
+      # scale_colour_gradient2(low = "red", mid = "yellow", 
+      #                        high = "seagreen", limits = c(-1, 1), oob = scales::squish) +
       # dot plot of the fill data
-      geom_point(data = subset(selection_plot, !is.na(buy_sell)),
-                  aes(shape = factor(buy_sell), fill = alpha_1,
-                      size = trunc(1 + log(abs(market_fill_nmv))))) +
+      # geom_point(data = subset(selection_plot, !is.na(buy_sell)),
+      #             aes(shape = factor(buy_sell),
+      #                 size = trunc(1 + log(abs(market_fill_nmv))))) +
       # creates the shape of the fill
-      scale_shape_manual(values = c(Buy = 24, Sell = 25)) + 
-      # adds alpha gradient to the fill
-      scale_fill_gradient2(low = "red", mid = "yellow", 
-                             high = "seagreen", limits = c(-1, 1), oob = scales::squish) + 
-      ylab("Net P&L") + xlab("Date") + ggtitle("Cumulative Profit and Loss") +
-      theme_light() + 
-      theme(
-        plot.background = element_rect(fill = NA, colour = NA),
-        plot.title = element_text(size = 18),
-        axis.text = element_text(size = 10),
-        axis.text.x = element_text(angle = 0),
-        legend.position = "bottom",
-        legend.box = "horizontal") +
-      labs(shape = "Orders", color = "Symbol", size = "Fill Magnitude") + 
-      guides(fill =FALSE,
-             shape = guide_legend(order = 1),
-             color = guide_legend(order = 2),
-             size = guide_legend(order = 3))
+      # scale_shape_manual(values = c(Buy = 24, Sell = 25)) + 
+    #   ylab("Net P&L") + xlab("Date") + ggtitle("Cumulative Profit and Loss") +
+    #   theme_light() + 
+    #   theme(
+    #     plot.background = element_rect(fill = NA, colour = NA),
+    #     plot.title = element_text(size = 18),
+    #     axis.text = element_text(size = 10),
+    #     axis.text.x = element_text(angle = 0),
+    #     legend.position = "bottom",
+    #     legend.box = "horizontal") +
+    #   labs(shape = "Orders", color = "Symbol", size = "Fill Magnitude") + 
+    #   guides(fill =FALSE,
+    #          shape = guide_legend(order = 1),
+    #          color = guide_legend(order = 2),
+    #          size = guide_legend(order = 3))
+    # 
+    # ggplotly(gg_plot)
+    
+    interactive_plot <- plot_ly(selection_plot, x = ~sim_date, y = ~net_pnl, 
+                                type = 'scatter', mode = 'lines', color = "alpha_1",
+                                text = ~paste("Date: ", sim_date, 
+                                              '<br>P&L: ', net_pnl,
+                                              '<br>alpha: ', alpha_1,
+                                              '<br>Shares: ', shares,
+                                              '<br>Order: ', order_shares,
+                                              '<br>Fill: ', fill_shares,
+                                              '<br>End Shares: ', end_shares))  %>%
+    #   filter(!is.na(buy_sell)) %>%
+      add_trace(
+        mode = "markers", symbol = ~factor(buy_sell), marker = list( 
+          size = ~magnitude + 2)
+      )
+      
 
   })
   
   # outputs the click information from the graph
-  output$clickInfo <- renderText({
-  
-    clicked_point <- nearPoints(selected_holding_rows(), input$plot_click,
-                         xvar = "sim_date", yvar = "net_pnl", maxpoints = 1, threshold = 10)
-    
-    if(nrow(clicked_point) == 0){
-      
-      paste0("Click on the graph for information: ")
-      
-    } else {
-      
-      
-      # change colums by refernce to name
-      paste0("Selection Information \nSymbol: ", clicked_point$symbol,
-             "\nDate: ", as.Date(as.numeric(clicked_point$sim_date), origin = "1970-01-01"),
-             "\nPnL: ", clicked_point$net_pnl, 
-             "\nAlpha: ", clicked_point$alpha_1, 
-             "\nShares: ", clicked_point$shares,
-             "\nOrdered Shares: ", clicked_point$order_shares, 
-             "\nFilled Shares: ", clicked_point$fill_shares, 
-             "\nEnd Shares: ", clicked_point$end_shares)
-    }
-  })
-  
-  
-  # observeEvent(position_summary(),{
+  # output$clickInfo <- renderText({
+  # 
+  #   clicked_point <- nearPoints(selected_holding_rows(), input$plot_click,
+  #                        xvar = "sim_date", yvar = "net_pnl", maxpoints = 1, threshold = 10)
   #   
-  #   output$selectedPlotAndTable <- renderUI({
+  #   if(nrow(clicked_point) == 0){
   #     
-  #     if(is.null(input$positionSummaryTable_rows_selected)){
-  #       fluidRow(
-  #         column(
-  #           8,
-  #           align = "center",
-  #           offset = 2,
-  #           p(strong("Select rows for day by day information"))
-  #         )
-  #       )
-  #     } else {
-  #       fluidRow(
-  #         column(
-  #           10,
-  #           plotOutput('selectedHoldingsPlot', click = "plot_click")
-  #         ),
-  #         column(
-  #           2,
-  #           verbatimTextOutput("clickInfo")
-  #         ),
-  #         br(),
-  #         DT::dataTableOutput('selectedHoldings')
-  #       )
-  #     }
-  #   })
-  #   
-  # })  
+  #     paste0("Click on the graph for information: ")
+  #     
+  #   } else {
+  #     
+  #     
+  #     # change colums by refernce to name
+  #     paste0("Selection Information \nSymbol: ", clicked_point$symbol,
+  #            "\nDate: ", as.Date(as.numeric(clicked_point$sim_date), origin = "1970-01-01"),
+  #            "\nPnL: ", clicked_point$net_pnl, 
+  #            "\nAlpha: ", clicked_point$alpha_1, 
+  #            "\nShares: ", clicked_point$shares,
+  #            "\nOrdered Shares: ", clicked_point$order_shares, 
+  #            "\nFilled Shares: ", clicked_point$fill_shares, 
+  #            "\nEnd Shares: ", clicked_point$end_shares)
+  #   }
+  # })
+  
+  
+  observeEvent(position_summary(),{
+
+    output$selectedPlotAndTable <- renderUI({
+
+      if(is.null(input$positionSummaryTable_rows_selected)){
+        fluidRow(
+          column(
+            8,
+            align = "center",
+            offset = 2,
+            p(strong("Select rows for day by day information"))
+          )
+        )
+      } else {
+        fluidRow(
+          # column(
+            # 12,
+            # change back to plot output
+            # plotlyOutput('selectedHoldingsPlot', click = "plot_click")
+            plotlyOutput('selectedHoldingsPlot'),
+          # ),
+          # column(
+          #   2,
+          #   verbatimTextOutput("clickInfo")
+          # ),
+          br(),
+          DT::dataTableOutput('selectedHoldings')
+        )
+      }
+    })
+
+  })
   
   
   
