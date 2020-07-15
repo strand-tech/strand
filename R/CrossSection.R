@@ -128,6 +128,11 @@ CrossSection <-  R6Class(
       
       new_data <- self$getRaw(date)
       
+      # Duplicate entries are not allowed.
+      if (any(duplicated(new_data$id))) {
+        stop("Duplicate cross-section entries are not allowed")
+      }
+      
       # Data is only carried forward for securities not found in the current
       # data. So the carry_forward flag is set to FALSE for new records.
       new_data <- new_data %>% mutate(carry_forward = FALSE)

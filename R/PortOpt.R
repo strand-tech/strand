@@ -64,6 +64,10 @@ PortOpt <- R6Class(
         stop("config must be of class list, character, or StrategyConfig")
       }
       
+      if (any(duplicated(input_data$id))) {
+        stop("Only one row per id allowed in input_data")
+      }
+      
       private$input_data <- input_data
       
       # If there is no investable flag passed in input_data, assume all stocks
