@@ -308,7 +308,9 @@ Simulation <- R6Class(
             if (isTRUE(private$verbose)) {
               cat("Omitting ",
                   sum(!input_data$id %in% pricing_data$id),
-                  " input records without pricing data.\n")
+                  " input records without pricing data: ",
+                  paste0(input_data$id[!input_data$id %in% pricing_data$id], collapse = ", "),
+                  "\n")
             }
             input_data <- filter(input_data, .data$id %in% pricing_data$id)
           }
