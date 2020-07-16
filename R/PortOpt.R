@@ -319,17 +319,20 @@ PortOpt <- R6Class(
       }
       
       if (!res$status %in% 0) {
-        if (solver %in% "glpk" && res$status %in% 1 &&
-            length(res$solution) == length(private$objective_function)) {
+        if (solver %in% "glpk" && res$status %in% 1) {
           
           # We have encountered a case where symphony solves the problem and
-          # returns success, but GLPK solves the problem but returns 1. Here a
-          # better approach might be to try an alternate solver as opposed to
-          # checking the length of the solution vector.
+          # returns success, but GLPK solves the problem but returns the status
+          # code for invalid basis. However, in some cases GLPK will return this
+          # status when no solution can be found.
           #
-          # It's not clear why in this situation GLPK thinks the problem has an
-          # invalid basis.
-          warning("Solution found but encountered GLPK return value 1 (GLP_EBADB, invalid basis). Check results")
+          # Suggest trying the symphony solver if we encounter the GLP_EBADB
+          # status code.
+          #
+          # TODO: in this scenario fall back to symphony automatically if that
+          # solver is available.
+          stop(paste0("Encountered GLPK return value 1 (GLP_EBADB, invalid basis). ",
+                      "An alternate solver may be able to find a solution."))
         
         } else {
           stop(paste0("Optimization failed with status code: ", res$status))
