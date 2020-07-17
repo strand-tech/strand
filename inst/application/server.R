@@ -153,81 +153,61 @@ server <- function(input, output, session) {
     # %>%
       mutate(buy_sell = ifelse(fill_shares > 0, 'triangle-up',
                                   ifelse(fill_shares < 0, 'triangle-down', '0')),
-             magnitude = trunc(10 + log(abs(market_fill_nmv), 10))) # adjusted truncated constant
-    
-             # order_size = round(1 + log(abs(fill_shares), 10), digits = 0))
-
-    # moved color to main graph
-    # gg_plot <- ggplot(data = selection_plot, aes(x = sim_date, y = net_pnl, color = alpha_1)) +
-      # line plot of the net_pnl data
-      # ask about scales
-      # geom_line() +
-      # creates line color gradient based on alpha truncated to -1 to 1 range
-      # scale_colour_gradient2(low = "red", mid = "yellow", 
-      #                        high = "seagreen", limits = c(-1, 1), oob = scales::squish) +
-      # dot plot of the fill data
-      # geom_point(data = subset(selection_plot, !is.na(buy_sell)),
-      #             aes(shape = factor(buy_sell),
-      #                 size = trunc(1 + log(abs(market_fill_nmv))))) +
-      # creates the shape of the fill
-      # scale_shape_manual(values = c(Buy = 24, Sell = 25)) + 
-    #   ylab("Net P&L") + xlab("Date") + ggtitle("Cumulative Profit and Loss") +
-    #   theme_light() + 
-    #   theme(
-    #     plot.background = element_rect(fill = NA, colour = NA),
-    #     plot.title = element_text(size = 18),
-    #     axis.text = element_text(size = 10),
-    #     axis.text.x = element_text(angle = 0),
-    #     legend.position = "bottom",
-    #     legend.box = "horizontal") +
-    #   labs(shape = "Orders", color = "Symbol", size = "Fill Magnitude") + 
-    #   guides(fill =FALSE,
-    #          shape = guide_legend(order = 1),
-    #          color = guide_legend(order = 2),
-    #          size = guide_legend(order = 3))
-    # 
-    # ggplotly(gg_plot)
-    
+             magnitude = trunc(10 + 20 * log(10 * abs(market_fill_nmv / (max(abs(market_fill_nmv)) - min(abs(market_fill_nmv)))) + 1, 10)))
+              # round(10 + 10 * log(abs(market_fill_nmv) + 1, 10), digits = 0)) # adjusted truncated constant
+  
     interactive_plot <- plot_ly(selection_plot, x = ~sim_date, y = ~net_pnl, 
                                 type = 'scatter', mode = 'lines+markers',
+                                line = list(
+                                  color = 'black',
+                                  opacity = 0.2
+                                ),
                                 marker = list(
+                                  opacity = 1,
                                   color = ~alpha_1,
+                                  line = list(
+                                    color = 'black'
+                                  ),
                                   symbol = ~factor(buy_sell),
                                   size = ~magnitude,
                                   cmin = ifelse(min(selection_plot$alpha_1) > -1, -1, min(selection_plot$alpha_1)),
                                   cmax = ifelse(max(selection_plot$alpha_1) > 1, max(selection_plot$alpha_1), 1),
                                   colorscale = list(c(0, "rgb(178, 34, 34)"), 
-                                                    list( (ifelse(min(selection_plot$alpha_1) > -5, -5, min(selection_plot$alpha_1))
-                                                           / (ifelse(min(selection_plot$alpha_1) > -5, -5, min(selection_plot$alpha_1))
-                                                            - ifelse(max(selection_plot$alpha_1) > 5, max(selection_plot$alpha_1), 5))), "rgb(255, 255, 0)"),
+                                                    list( (ifelse(min(selection_plot$alpha_1) > -1, -1, min(selection_plot$alpha_1)) / (ifelse(min(selection_plot$alpha_1) > -1, -1, min(selection_plot$alpha_1)) - ifelse(max(selection_plot$alpha_1) > 1, max(selection_plot$alpha_1), 1))), "rgb(255, 255, 0)"),
                                                     list(1, "rgb(50, 205, 50)")), 
                                   colorbar=list(
-                                    title='Alpha'
-                                  )),
-                                text = ~paste("Date: ", sim_date, 
-                                              '<br>P&L: ', net_pnl,
-                                              '<br>alpha: ', alpha_1,
-                                              '<br>Shares: ', shares,
-                                              '<br>Order: ', order_shares,
-                                              '<br>Fill: ', fill_shares,
-                                              '<br>End Shares: ', end_shares))  
-    # %>%
-    #   filter(!is.na(buy_sell)) %>%
-      # add_trace(
-      #   mode = "markers", symbol = ~factor(buy_sell), 
-      #   marker = list(
-      #     size = 10,
-      #     color = ~alpha_1,
-      #     cmin = ifelse(min(z) > -5, -5, min(alpha_1)),
-      #     cmax = ifelse(max(z) > 5, max(alpha_1), 5),
-      #     colorscale = list(c(0, "rgb(178, 34, 34)"), 
-      #                       list( (ifelse(min(alpha_1) > -5, -5, min(alpha_1)) / (ifelse(min(alpha_1) > -5, -5, min(alpha_1)) - ifelse(max(alpha_1) > 5, max(alpha_1), 5))), "rgb(255, 255, 0)"),
-      #                       list(1, "rgb(50, 205, 50)")), 
-      #     colorbar=list(
-      #       title='Alpha'
-      #     ))
-      # )
-      
+                                    title='Symbol: 
+                                           \n▲ Buy      
+                                           \n▼ Sell
+                                           \nColor: Alpha'
+                                  ),
+                                  name = 'buy_sell'),
+                                hoverinfo = "text",
+                                hoverlabel = list(
+                                  bgcolor = 'white'
+                                ),
+                                text = paste("Date: ", selection_plot$sim_date, 
+                                             '<br>P&L: ', selection_plot$net_pnl,
+                                             '<br>alpha: ', selection_plot$alpha_1,
+                                             '<br>Shares: ', selection_plot$shares,
+                                             '<br>Order: ', selection_plot$order_shares,
+                                             '<br>Fill: ', selection_plot$fill_shares,
+                                             '<br>End Shares: ', selection_plot$end_shares)) %>%
+      layout(
+        title = list(
+          text = paste("P&L of", selection_plot$symbol[1]),
+          x = 0.03
+        ),
+        xaxis = list(
+          title = "Date"
+        ),
+        yaxis = list(
+          title = "Net P&L"
+        ))
+                                
+                                
+                                  
+
 
   })
   
