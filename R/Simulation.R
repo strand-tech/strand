@@ -1547,14 +1547,14 @@ Simulation <- R6Class(
     readFeather = function(in_loc) {
       
       # TODO Check to see if this object is empty before loading up data.
-      private$config$config <- yaml::yaml.load_file(paste0(in_loc, "/config.yaml"))
+      private$config <- StrategyConfig$new(yaml::yaml.load_file(paste0(in_loc, "/config.yaml")))
       
       private$sim_summary_list <- list(read_feather(paste0(in_loc, "/sim_summary.feather")))
       private$sim_detail_list <- list(read_feather(paste0(in_loc, "/sim_detail.feather")))
       private$input_stats_list <- list(read_feather(paste0(in_loc, "/input_stats.feather")))
       private$loosening_info_list <- list(read_feather(paste0(in_loc, "/loosening_info.feather")))
       private$optimization_summary_list <- list(read_feather(paste0(in_loc, "/optimization_summary.feather")))
-      private$exposures_list <- list(read_feather(paste0(in_loc, "/exposures.feather")))
+      private$exposures_list$net <- list(read_feather(paste0(in_loc, "/exposures.feather")))
       private$delistings_list <- list(read_feather(paste0(in_loc, "/delistings.feather")))
       
       warning("It will not be possible to use the sim_date parameter of getSimDetail on this object to filter detail records by period")
