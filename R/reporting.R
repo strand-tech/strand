@@ -73,21 +73,33 @@ show_stats = function(sim) {
 #' @param sim A Simulation object to show the configuration for
 show_config = function(sim) {
   # Limiting to a single strategy here
+  
+  stopifnot(length(sim$getConfig()$getStrategyNames()) %in% 1)
+  
   sim$getConfig()$config$strategies[[1]] %>%
     unlist(recursive = FALSE) %>%
-    enframe() %>%
-    pivot_wider(id_cols = .data$name) %>%
-    select(.data$in_var, .data$strategy_capital, .data$ideal_long_weight,
-           .data$ideal_short_weight, .data$position_limit_pct_lmv, 
-           .data$position_limit_pct_smv, .data$position_limit_pct_adv,
+    tibble::enframe() %>%
+    tidyr::pivot_wider(id_cols = .data$name) %>%
+    select(.data$in_var,
+           .data$strategy_capital,
+           # .data$ideal_long_weight,
+           # .data$ideal_short_weight,
+           .data$position_limit_pct_lmv, 
+           .data$position_limit_pct_smv,
+           .data$position_limit_pct_adv,
            .data$trading_limit_pct_adv) %>%
-    unnest(cols = names(.data)) %>%
+    tidyr::unnest(cols = names(.)) %>%
     make_ft(title = "Strategy Configuration",
-            col_names = c("in_var","Strategy\nCapital", "Ideal\nLong\nWeight",
-                          "Ideal\nShort\nWeight", "Position\nLimit\n(% LMV)", 
+            col_names = c("in_var",
+                          "Strategy\nCapital",
+                          # "Ideal\nLong\nWeight",
+                          # "Ideal\nShort\nWeight",
+                          "Position\nLimit\n(% LMV)", 
                           "Position\nLimit\n(% SMV)", 
                           "Position\nLimit\n(% ADV)", 
-                          "Trading\nLimit\n(% ADV)"))
+                          "Trading\nLimit\n(% ADV)")) %>%
+    flextable::colformat_num(big.mark = ",", digits = 0) %>%
+    flextable::autofit()
 }
 
 #' Show Strategy Constraints
@@ -146,14 +158,18 @@ show_best_worst = function(sim) {
     arrange(desc(.data$gross_pnl)) %>%
     head(10) %>%
     make_ft(title = "Top 10 Performers",
-            col_names = coltitles)
+            col_names = coltitles) %>%
+    flextable::colformat_num(big.mark = ",", digits = 0) %>%
+    flextable::autofit()
   
   # Ten worst performers
   ten_worst <- pos_summary %>%
     arrange(.data$gross_pnl) %>%
     head(10) %>%
     make_ft(title = "Bottom 10 Performers",
-            col_names = coltitles)
+            col_names = coltitles) %>%
+    flextable::colformat_num(big.mark = ",", digits = 0) %>%
+    flextable::autofit()
   
   return(list("ten_best" = ten_best,
               "ten_worst" = ten_worst))

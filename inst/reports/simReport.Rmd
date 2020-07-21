@@ -1,5 +1,5 @@
 ---
-title: "Simulation Results:`r params$res$getConfig()$getConfig('name')`"
+title: "Simulation Results: `r params$res$getConfig()$getConfig('name')`"
 date: "Report date: `r Sys.Date()`"
 params:
    res: NULL
