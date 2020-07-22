@@ -480,9 +480,10 @@ Simulation <- R6Class(
         # done (which means we're no longer forcing the trades).
         if (isTRUE(simulator_config$non_investable_policy %in% "force-exit")) {
           
+          vol_var <- private$config$getConfig("vol_var")
           non_investable <- input_data %>%
             filter(!investable) %>%
-            select("id", "average_volume", !!portfolio$getShareColumns()) %>%
+            select("id", !!vol_var, !!portfolio$getShareColumns()) %>%
             pivot_longer(cols = portfolio$getShareColumns(),
                          names_to = "strategy",
                          names_prefix = "shares_",
@@ -506,8 +507,9 @@ Simulation <- R6Class(
             # Call floor on abs share value to round toward zero (to avoid
             # over-filling in corner cases).
             non_investable <- non_investable %>%
-              mutate(order_shares = -1 * sign(shares) * pmin(abs(shares),
-                                                             floor((pct_adv_lim / 100) * average_volume))) %>%
+              mutate(order_shares = -1 *
+                       sign(shares) * pmin(abs(shares),
+                                           floor((pct_adv_lim / 100) * !!vol_var / start_price))) %>%
               select("id", "strategy", "order_shares")
             
             # Calculate joint level shares (this all would be easier to delegate

@@ -88,7 +88,7 @@ show_config = function(sim) {
            .data$position_limit_pct_smv,
            .data$position_limit_pct_adv,
            .data$trading_limit_pct_adv) %>%
-    tidyr::unnest(cols = names(.)) %>%
+    tidyr::unnest(cols = names(.data)) %>%
     make_ft(title = "Strategy Configuration",
             col_names = c("in_var",
                           "Strategy\nCapital",

@@ -828,10 +828,9 @@ PortOpt <- R6Class(
           
           trading_limit_pct_adv <- private$config$getStrategyConfig(strategy, "trading_limit_pct_adv")
           
-          # Calculate per-stock trading limit by multiplying the percentage volume
-          # limit by anticipated average trading volume.
-          trading_limit <- private$input_data[[price_var]] * 
-            private$input_data[[vol_var]] * trading_limit_pct_adv / 100
+          # Calculate per-stock trading limit by multiplying the percentage
+          # volume limit by anticipated average trading volume.
+          trading_limit <- private$input_data[[vol_var]] * trading_limit_pct_adv / 100
           
           # Should have a config method that returns the starting shares column
           # for a given strategy (or even a method that returns a vector of
@@ -859,13 +858,13 @@ PortOpt <- R6Class(
           
           # pos_upper_limit is the higest (signed) market value allowed based on position
           # limit configuration.
-          pos_upper_limit <- pmin(private$input_data[[price_var]] * private$input_data[[vol_var]] * position_limit_pct_adv / 100,
+          pos_upper_limit <- pmin(private$input_data[[vol_var]] * position_limit_pct_adv / 100,
                                   ideal_lmv * position_limit_pct_lmv / 100)
           
           # pos_lower_limit is the lowest (signed) market value allowed based on
           # position limit configuration.
           pos_lower_limit <- -1 * 
-            pmin(private$input_data[[price_var]] * private$input_data[[vol_var]] * position_limit_pct_adv / 100,
+            pmin(private$input_data[[vol_var]] * position_limit_pct_adv / 100,
                  ideal_smv * position_limit_pct_smv / 100)
           
           # Set pos_upper_limit and pos_lower_limit to zero for stocks that are
