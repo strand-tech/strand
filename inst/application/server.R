@@ -179,7 +179,10 @@ server <- function(input, output, session) {
     # %>%
       mutate(buy_sell = ifelse(fill_shares > 0, 'triangle-up',
                                   ifelse(fill_shares < 0, 'triangle-down', '0')),
-             magnitude = trunc(10 + 20 * log(10 * abs(market_fill_nmv / (max(abs(market_fill_nmv)) - min(abs(market_fill_nmv)))) + 1, 10)))
+             magnitude = ifelse(market_fill_nmv == 0, 5,
+                                 ifelse(abs(market_fill_nmv) > position_max_min()$market_fill_quartile[["50%"]],
+                                 ifelse(abs(market_fill_nmv) > position_max_min()$market_fill_quartile[["75%"]], 30, 25),
+                                 ifelse(abs(market_fill_nmv) > position_max_min()$market_fill_quartile[["25%"]], 20, 15))))
               # round(10 + 10 * log(abs(market_fill_nmv) + 1, 10), digits = 0)) # adjusted truncated constant
   
     holdings_plot <- plot_ly(selection_plot, x = ~sim_date, y = ~net_pnl, 
@@ -207,18 +210,20 @@ server <- function(input, output, session) {
                                            \n▼ Sell
                                            \nAlpha:'
                                   ),
-                                  name = 'buy_sell'),
+                                  # name = 'buy_sell',
+                                  showlegend =  TRUE),
                                 hoverinfo = "text",
                                 hoverlabel = list(
                                   bgcolor = 'white'
                                 ),
                                 text = paste("Date: ", selection_plot$sim_date, 
                                              '<br>P&L: ', selection_plot$net_pnl,
-                                             '<br>alpha: ', selection_plot$alpha_1,
+                                             '<br>Alpha: ', selection_plot$alpha_1,
                                              '<br>Shares: ', selection_plot$shares,
                                              '<br>Order: ', selection_plot$order_shares,
                                              '<br>Fill: ', selection_plot$fill_shares,
-                                             '<br>End Shares: ', selection_plot$end_shares)) %>%
+                                             '<br>End Shares: ', selection_plot$end_shares,
+                                             '<br>End Fill Market Value: ', selection_plot$market_fill_nmv)) %>%
       layout(
         title = list(
           text = paste("Cumulative Profit and Loss of", selection_plot$symbol[1]),
@@ -238,7 +243,19 @@ server <- function(input, output, session) {
                           type = "scatter", mode = "lines",
                           line = list(
                             color = "0000FF"
-                            )) %>%
+                            ),
+                          hoverinfo = "text",
+                          hoverlabel = list(
+                            bgcolor = 'white'
+                          ),
+                          text = paste("Date: ", selection_plot$sim_date, 
+                                       '<br>P&L: ', selection_plot$net_pnl,
+                                       '<br>Alpha: ', selection_plot$alpha_1,
+                                       '<br>Shares: ', selection_plot$shares,
+                                       '<br>Order: ', selection_plot$order_shares,
+                                       '<br>Fill: ', selection_plot$fill_shares,
+                                       '<br>End Shares: ', selection_plot$end_shares,
+                                       '<br>End Fill Market Value: ', selection_plot$market_fill_nmv)) %>%
       layout(
         yaxis = list(
           title = "Alpha",
