@@ -56,7 +56,7 @@ ui <- fluidPage(
             column(
               8,
               br(),
-              plotOutput('plot_1')
+              plotlyOutput('plot_1')
             )
           ),
           fluidRow(
@@ -74,7 +74,7 @@ ui <- fluidPage(
             column(
               12,
               br(),
-              plotOutput('plot_2'),
+              plotlyOutput('plot_2'),
               DT::dataTableOutput('marketValueTable')
             )
           )
@@ -85,8 +85,8 @@ ui <- fluidPage(
             column(
               12,
               br(),
-              plotOutput('plot_3'),
-              plotOutput('plot_4')
+              plotlyOutput('plot_3'),
+              plotlyOutput('plot_4')
             )
           )
         ),

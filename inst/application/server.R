@@ -76,30 +76,31 @@ server <- function(input, output, session) {
              net_pnl = round(net_pnl, digits = 0),
              gross_pnl = cumsum(gross_pnl),
              gross_pnl = round(gross_pnl, digits = 0),
-             alpha_1 = round(alpha_1, digits = 2))
+             alpha_1 = round(alpha_1, digits = 2),
+             market_fill_nmv = round(market_fill_nmv, digits = 2))
   })
  
   observeEvent(values$sim_result, {
     
-    output$plot_1 <- renderPlot(
-      values$sim_result$plotPerformance()
+    output$plot_1 <- renderPlotly(
+      ggplotly(values$sim_result$plotPerformance())
     )
     
-    output$plot_2 <- renderPlot(
-      values$sim_result$plotMarketValue()
+    output$plot_2 <- renderPlotly(
+      ggplotly(values$sim_result$plotMarketValue())
     )
     
     # TODO dynamically select exposure plot in_vars based on config file
-    output$plot_3 <- renderPlot(
-      values$sim_result$plotCategoryExposure(in_var = "category_1")
+    output$plot_3 <- renderPlotly(
+      ggplotly(values$sim_result$plotCategoryExposure(in_var = "category_1"))
     )
 
-    output$plot_4 <- renderPlot(
-      values$sim_result$plotFactorExposure(in_var = c("factor_1", "factor_2", "factor_3", "factor_4"))
+    output$plot_4 <- renderPlotly(
+      ggplotly(values$sim_result$plotFactorExposure(in_var = c("factor_1", "factor_2", "factor_3", "factor_4")))
     )
     
-    output$plot_5 <- renderPlot(
-      values$sim_result$plotNumPositions()
+    output$plot_5 <- renderPlotly(
+      ggplotly(values$sim_result$plotNumPositions())
     )
     output$overallStatsTable <- renderTable(values$sim_result$overallStatsDf(), align = "lrr")
 
@@ -223,7 +224,7 @@ server <- function(input, output, session) {
                                              '<br>Order: ', selection_plot$order_shares,
                                              '<br>Fill: ', selection_plot$fill_shares,
                                              '<br>End Shares: ', selection_plot$end_shares,
-                                             '<br>End Fill Market Value: ', selection_plot$market_fill_nmv)) %>%
+                                             '<br>Fill Market Value: ', selection_plot$market_fill_nmv)) %>%
       layout(
         title = list(
           text = paste("Cumulative Profit and Loss of", selection_plot$symbol[1]),
