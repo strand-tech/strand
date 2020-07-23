@@ -156,7 +156,7 @@ server <- function(input, output, session) {
              magnitude = trunc(10 + 20 * log(10 * abs(market_fill_nmv / (max(abs(market_fill_nmv)) - min(abs(market_fill_nmv)))) + 1, 10)))
               # round(10 + 10 * log(abs(market_fill_nmv) + 1, 10), digits = 0)) # adjusted truncated constant
   
-    interactive_plot <- plot_ly(selection_plot, x = ~sim_date, y = ~net_pnl, 
+    holdings_plot <- plot_ly(selection_plot, x = ~sim_date, y = ~net_pnl, 
                                 type = 'scatter', mode = 'lines+markers',
                                 line = list(
                                   color = 'black',
@@ -179,7 +179,7 @@ server <- function(input, output, session) {
                                     title='Symbol: 
                                            \n▲ Buy      
                                            \n▼ Sell
-                                           \nColor: Alpha'
+                                           \nAlpha:'
                                   ),
                                   name = 'buy_sell'),
                                 hoverinfo = "text",
@@ -195,19 +195,35 @@ server <- function(input, output, session) {
                                              '<br>End Shares: ', selection_plot$end_shares)) %>%
       layout(
         title = list(
-          text = paste("P&L of", selection_plot$symbol[1]),
+          text = paste("Cumulative Profit and Loss of", selection_plot$symbol[1]),
           x = 0.03
+        ),
+        # xaxis = list(
+        #   title = "Date"
+        # ),
+        yaxis = list(
+          title = "Net P&L",
+          fixedrange = TRUE
+        ))
+                                
+    alpha_plot <- plot_ly(selection_plot, x = ~sim_date, y = ~alpha_1, 
+                          type = "scatter", mode = "lines",
+                          line = list(
+                            color = "0000FF"
+                            )) %>%
+      layout(
+        yaxis = list(
+          title = "Alpha",
+          fixedrange = TRUE
         ),
         xaxis = list(
           title = "Date"
         ),
-        yaxis = list(
-          title = "Net P&L"
-        ))
-                                
-                                
-                                  
-
+        showlegend = FALSE) 
+    
+    multi_layed_plot <- subplot(holdings_plot, alpha_plot, 
+                                nrows = 2, shareX = TRUE, titleY = TRUE, heights = c(0.80, 0.20))
+      
 
   })
   
@@ -256,7 +272,7 @@ server <- function(input, output, session) {
             # 12,
             # change back to plot output
             # plotlyOutput('selectedHoldingsPlot', click = "plot_click")
-            plotlyOutput('selectedHoldingsPlot'),
+            plotlyOutput('selectedHoldingsPlot', height = "800px"),
           # ),
           # column(
           #   2,
