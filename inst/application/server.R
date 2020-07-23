@@ -25,6 +25,32 @@ server <- function(input, output, session) {
     
   })
   
+  # produces a name value list that stores
+  # 1 maximum net pnl, 2 minimum net pnl
+  # 3 maximum alpha, 4 minimum alpha, 5 average alpha
+  # 6 quartiles of market fill nmv
+  # across all positions and dates
+  position_max_min <- eventReactive(values$sim_result, {
+    
+    simulation_summary <- values$sim_result$getSimDetail(strategy_name = "joint") %>%
+      group_by(id) %>%
+      mutate(net_pnl = cumsum(net_pnl),
+             net_pnl = round(net_pnl, digits = 0),
+             alpha_1 = round(alpha_1, digits = 2)) %>%
+      ungroup() 
+    
+    trade_summary <- simulation_summary %>%
+      filter(market_fill_nmv != 0)
+    
+    list("holdings_max" = max(simulation_summary$net_pnl), 
+         "holdings_min" = min(simulation_summary$net_pnl),
+         "alpha_max" = max(simulation_summary$alpha_1),
+         "alpha_min" = min(simulation_summary$alpha_1), 
+         "alpha_normalized_average" = (mean(simulation_summary$alpha_1) - min(simulation_summary$alpha_1)) / 
+           (max(simulation_summary$alpha_1) -  min(simulation_summary$alpha_1)),
+         "market_fill_quartile" = quantile(abs(trade_summary$market_fill_nmv)))
+  })
+  
   # creates a data frame filled with the day by day of selected holdings
   selected_holding_rows <- eventReactive(input$positionSummaryTable_rows_selected, {
     
@@ -170,10 +196,10 @@ server <- function(input, output, session) {
                                   ),
                                   symbol = ~factor(buy_sell),
                                   size = ~magnitude,
-                                  cmin = ifelse(min(selection_plot$alpha_1) > -1, -1, min(selection_plot$alpha_1)),
-                                  cmax = ifelse(max(selection_plot$alpha_1) > 1, max(selection_plot$alpha_1), 1),
+                                  cmin = position_max_min()$alpha_min,
+                                  cmax = position_max_min()$alpha_max,
                                   colorscale = list(c(0, "rgb(178, 34, 34)"), 
-                                                    list( (ifelse(min(selection_plot$alpha_1) > -1, -1, min(selection_plot$alpha_1)) / (ifelse(min(selection_plot$alpha_1) > -1, -1, min(selection_plot$alpha_1)) - ifelse(max(selection_plot$alpha_1) > 1, max(selection_plot$alpha_1), 1))), "rgb(255, 255, 0)"),
+                                                    list(position_max_min()$alpha_normalized_average, "rgb(255, 255, 0)"),
                                                     list(1, "rgb(50, 205, 50)")), 
                                   colorbar=list(
                                     title='Symbol: 
@@ -199,11 +225,13 @@ server <- function(input, output, session) {
           x = 0.03
         ),
         # xaxis = list(
-        #   title = "Date"
+        #   showline = TRUE, linewidth = 1, linecolor='black', mirror = TRUE
         # ),
         yaxis = list(
           title = "Net P&L",
-          fixedrange = TRUE
+          range = c(position_max_min()$holdings_min, position_max_min()$holdings_max),
+          fixedrange = TRUE 
+          # showline = TRUE, linewidth = 1, linecolor='black', mirror = TRUE
         ))
                                 
     alpha_plot <- plot_ly(selection_plot, x = ~sim_date, y = ~alpha_1, 
@@ -214,10 +242,13 @@ server <- function(input, output, session) {
       layout(
         yaxis = list(
           title = "Alpha",
-          fixedrange = TRUE
+          range = c(position_max_min()$alpha_min, position_max_min()$alpha_max),
+          fixedrange = TRUE, showzeroline = FALSE,
+          showline = TRUE, linewidth = 1, linecolor='black', mirror = TRUE
         ),
         xaxis = list(
-          title = "Date"
+          title = "Date",
+          showline = TRUE, linewidth = 1, linecolor='black', mirror = TRUE
         ),
         showlegend = FALSE) 
     
