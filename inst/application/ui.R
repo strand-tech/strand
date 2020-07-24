@@ -1,4 +1,5 @@
 library(DT)
+library(plotly)
 
 .readYamlConfig <- function() {
   config <- example_strategy_config()
