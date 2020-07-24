@@ -1025,7 +1025,10 @@ Simulation <- R6Class(
           values_to = "cum_ret"
         ) %>%
         
-        ggplot(aes(x = sim_date, y = 100 * cum_ret, color = type, group = type)) + geom_line() +
+        ggplot(aes(x = sim_date, y = 100 * cum_ret, color = type, group = type,
+                   text = c("Date: ", sim_date,
+                                "<br>Return %: ", cum_ret))) + 
+        geom_line() +
         xlab("Date") + ylab("Return (%)") + 
         ggtitle("Cumulative Return (% GMV)") + 
         theme_light() + 

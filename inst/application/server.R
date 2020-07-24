@@ -83,7 +83,7 @@ server <- function(input, output, session) {
   observeEvent(values$sim_result, {
     
     output$plot_1 <- renderPlotly(
-      ggplotly(values$sim_result$plotPerformance())
+      ggplotly(values$sim_result$plotPerformance(), tooltip = c("text")) 
     )
     
     output$plot_2 <- renderPlotly(
