@@ -262,7 +262,7 @@ server <- function(input, output, session) {
           title = "Alpha",
           range = c(position_max_min()$alpha_min, position_max_min()$alpha_max),
           fixedrange = TRUE, showzeroline = FALSE,
-          showline = TRUE, linewidth = 1, linecolor='black', mirror = TRUE
+          showline = TRUE, linewidth = 3, linecolor='black', mirror = TRUE
         ),
         xaxis = list(
           title = "Date",
@@ -272,6 +272,7 @@ server <- function(input, output, session) {
     
     multi_layed_plot <- subplot(holdings_plot, alpha_plot, 
                                 nrows = 2, shareX = TRUE, titleY = TRUE, heights = c(0.80, 0.20))
+     
       
 
   })
