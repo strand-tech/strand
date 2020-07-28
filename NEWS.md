@@ -26,6 +26,8 @@ strategy_name parameter where appropriate.
 * Added new plotting methods for the `Simulation` class: `plotContribution`,
 `plotTurnover`, `plotUniverseSize`, and `plotNonInvestablePct`.
 
+* Added `overallReturnsByMonthDf` method for the `Simulation` class.
+
 * Fixed recording of loosened constraints during simulation.
 
 * Fixed loading of configuration information in `readFeather`.

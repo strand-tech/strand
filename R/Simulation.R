@@ -1191,10 +1191,15 @@ Simulation <- R6Class(
         res[1,] <- mutate_if(res[1,], is.numeric, ~ 0)
       }
       
-      # Compute cumulative (net) return
+      # Compute returns as a percentage GMV, by day and cumulative.
+      #
+      # These calculations should probably be done up front in the simulation
+      # loop and saved in the summary dataset.
       mutate(res,
-             net_cum_ret = cumsum(ifelse(end_gmv %in% 0, 0, .data$net_pnl / .data$end_gmv)),
-             gross_cum_ret = cumsum(ifelse(end_gmv %in% 0, 0, .data$gross_pnl / .data$end_gmv)))
+             net_ret = ifelse(end_gmv %in% 0, 0, .data$net_pnl / .data$end_gmv),
+             net_cum_ret = cumsum(net_ret),
+             gross_ret = ifelse(end_gmv %in% 0, 0, .data$gross_pnl / .data$end_gmv),
+             gross_cum_ret = cumsum(gross_ret))
     },
     
     #' @description Draw a plot of cumulative gross and net return by date.
@@ -1511,6 +1516,53 @@ Simulation <- R6Class(
         ))
     },
     
+    #' @description Calculate return for each month and summary statistics for
+    #'   each year, such as total return and annualized Sharpe. Return in data
+    #'   frame format suitable for reporting.
+    #' @return  The data frame contains one row for each calendar year in the
+    #'   simulation, and up to seventeen columns: one column for year, one
+    #'   column for each calendar month, and columns for the year's total
+    #'   return, annualized return, annualized volatility, and annualized
+    #'   Sharpe. Total return is the sum of daily net returns. Annualized return
+    #'   is the mean net return times 252. Annualized volatility is the standard
+    #'   deviation of net return times the square root of 252. Annualized Sharpe
+    #'   is the ratio of annualized return to annualized volatility. All returns
+    #'   are in percent.
+    overallReturnsByMonthDf = function() {
+      res <- self$getSingleStrategySummaryDf("joint", include_zero_row = FALSE)
+      
+      # Group by month and calculate return.
+      month_ret_long <- group_by(res, date = as.Date(paste0(format(sim_date, "%Y-%m"), "-01"))) %>%
+        summarize(ret = sum(net_ret) * 100) %>%
+        ungroup() %>%
+        transmute(year = lubridate::year(date),
+                  month = lubridate::month(date),
+                  ret)
+      
+      # Organize monthly returns into rows, one for each year.
+      month_ret_yearly <- month_ret_long %>%
+        tidyr::spread(month, ret)
+      
+      # Compute summary statistics for each year.
+      stats_yearly <- group_by(res, year = lubridate::year(sim_date)) %>%
+        summarize(
+          total_ret = 100 *sum(net_ret),
+          ann_ret = 100 * mean(net_ret) * 252, 
+          ann_vol = 100 * sd(net_ret) * sqrt(252)) %>%
+        mutate(ann_sr = ann_ret / ann_vol)
+      
+      # Add stats to monthly returns.
+      month_ret_yearly <- month_ret_yearly %>%
+        left_join(stats_yearly, by = "year")
+      
+      month_cols <- names(month_ret_yearly)[names(month_ret_yearly) %in% as.character(1:12)]
+      
+      # Replace numerical month strings with month abbreviation. Do it this way
+      # to handle cases where there are fewer than 12 months.
+      month_ret_yearly %>%
+        rename_at(month_cols, ~ month.abb[as.numeric(.x)])
+    },  
+      
     #' @description Print overall simulation statistics.
     print = function() {
       if (is.null(private$sim_summary_list)) {

@@ -3,10 +3,12 @@ context("Simulation")
 library(feather)
 library(dplyr)
 
+# Run the test simulation. Results will be used in several test blocks.
+sim <- Simulation$new("data/test_Simulation.yaml")
+sim$run()
+
 test_that("simulation produces expected results", {
   
-  sim <- Simulation$new("data/test_Simulation.yaml")
-  sim$run()
   
   test_summary <- filter(sim$getSimSummary())
   test_exposures <- filter(sim$getExposures())
@@ -187,3 +189,28 @@ test_that("fill_rate_pct limits order filling", {
   expect_equal(summary_df$fill_rate_pct, 65)
   
 })
+
+# Tests of summary functions
+
+test_that("overallStatsDf returns the correct values", {
+  test_overall_stats_df <- sim$overallStatsDf()
+  
+  # truth_overall_stats_df <- test_overall_stats_df
+  # save(truth_overall_stats_df, file = "data/test_Simulation_overallStatsDf.RData")
+  load("data/test_Simulation_overallStatsDf.RData")
+  
+  expect_equal(test_overall_stats_df, truth_overall_stats_df)
+})
+
+test_that("overallReturnsByMonthDf returns the correct values", {
+  # Would be nice to extend this test to include multiple years of results.
+  test_overall_returns_by_month_df <- sim$overallReturnsByMonthDf()
+  
+  # truth_overall_returns_by_month_df <- test_overall_returns_by_month_df
+  # save(truth_overall_returns_by_month_df, file = "data/test_Simulation_overallReturnsByMonthDf.RData")
+  load("data/test_Simulation_overallReturnsByMonthDf.RData")
+  
+  expect_equal(test_overall_returns_by_month_df, truth_overall_returns_by_month_df)
+  })
+
+

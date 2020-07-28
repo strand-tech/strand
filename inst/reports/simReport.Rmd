@@ -35,6 +35,7 @@ show_stats(res)
 ```
 
 ```{r, ft.align = 'left'}
+show_monthly_returns(res)
 best_worst <- show_best_worst(res)
 best_worst[[1]]
 best_worst[[2]]

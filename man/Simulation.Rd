@@ -41,6 +41,7 @@ The \code{Simulation} class is used to set up and run a daily
 \item \href{#method-plotUniverseSize}{\code{Simulation$plotUniverseSize()}}
 \item \href{#method-plotNonInvestablePct}{\code{Simulation$plotNonInvestablePct()}}
 \item \href{#method-overallStatsDf}{\code{Simulation$overallStatsDf()}}
+\item \href{#method-overallReturnsByMonthDf}{\code{Simulation$overallReturnsByMonthDf()}}
 \item \href{#method-print}{\code{Simulation$print()}}
 \item \href{#method-writeFeather}{\code{Simulation$writeFeather()}}
 \item \href{#method-readFeather}{\code{Simulation$readFeather()}}
@@ -795,6 +796,29 @@ Calculate overall simulation summary statistics, such as
 \subsection{Returns}{
 A data frame that contains summary statistics, suitable for
   reporting.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-overallReturnsByMonthDf"></a>}}
+\if{latex}{\out{\hypertarget{method-overallReturnsByMonthDf}{}}}
+\subsection{Method \code{overallReturnsByMonthDf()}}{
+Calculate return for each month and summary statistics for
+  each year, such as total return and annualized Sharpe. Return in data
+  frame format suitable for reporting.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Simulation$overallReturnsByMonthDf()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+The data frame contains one row for each calendar year in the
+  simulation, and up to seventeen columns: one column for year, one
+  column for each calendar month, and columns for the year's total
+  return, annualized return, annualized volatility, and annualized
+  Sharpe. Total return is the sum of daily net returns. Annualized return
+  is the mean net return times 252. Annualized volatility is the standard
+  deviation of net return times the square root of 252. Annualized Sharpe
+  is the ratio of annualized return to annualized volatility. All returns
+  are in percent.
 }
 }
 \if{html}{\out{<hr>}}

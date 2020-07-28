@@ -67,6 +67,24 @@ show_stats = function(sim) {
     flextable::autofit()
 }
 
+#' Show monthly returns
+#'
+#' @description Build a flextable object that shows a simulation's return by
+#'   month by formatting the output of `Simulation$overallReturnsByMonthDf`.
+#' @param sim A Simulation object with results to display
+show_monthly_returns <- function(sim) {
+  stopifnot(is(sim, "Simulation"))
+  sim$overallReturnsByMonthDf() %>%
+    mutate(year = as.character(.data$year)) %>%
+    rename(Year = .data$year,
+           "Total Return" = .data$total_ret,
+           "Ann Return" = .data$ann_ret,
+           "Ann Vol" = .data$ann_vol,
+           "Ann Sharpe" = .data$ann_sr) %>%
+    make_ft(title = "Returns by Month") %>%
+    flextable::colformat_num(digits = 2)
+}
+
 #' Show Strategy Configuration
 #' 
 #' @description Build a flextable object showing a Simulation's configuration
@@ -88,7 +106,7 @@ show_config = function(sim) {
            .data$position_limit_pct_smv,
            .data$position_limit_pct_adv,
            .data$trading_limit_pct_adv) %>%
-    tidyr::unnest(cols = names(.data)) %>%
+    tidyr::unnest(cols = everything()) %>%
     make_ft(title = "Strategy Configuration",
             col_names = c("in_var",
                           "Strategy\nCapital",

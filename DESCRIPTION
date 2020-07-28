@@ -37,7 +37,8 @@ Imports:
     rlang,
     yaml,
     ggplot2,
-    tibble
+    tibble,
+    methods
 Suggests:
     testthat,
     knitr,
