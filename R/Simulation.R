@@ -1529,6 +1529,8 @@ Simulation <- R6Class(
       # TODO Add getter and setter for raw config data in the Config class.
       yaml::write_yaml(private$config$config, paste0(out_loc, "/config.yaml"))
       
+      
+      write_feather(self$getSecurityReference(), paste0(out_loc, "/security_reference.feather"))
       write_feather(self$getSimSummary(), paste0(out_loc, "/sim_summary.feather"))
       write_feather(self$getSimDetail(), paste0(out_loc, "/sim_detail.feather"))
       write_feather(self$getInputStats(), paste0(out_loc, "/input_stats.feather"))
@@ -1551,6 +1553,7 @@ Simulation <- R6Class(
       # TODO Check to see if this object is empty before loading up data.
       private$config <- StrategyConfig$new(yaml::yaml.load_file(paste0(in_loc, "/config.yaml")))
       
+      private$security_reference <- read_feather(paste0(in_loc, "/security_reference.feather"))
       private$sim_summary_list <- list(read_feather(paste0(in_loc, "/sim_summary.feather")))
       private$sim_detail_list <- list(read_feather(paste0(in_loc, "/sim_detail.feather")))
       private$input_stats_list <- list(read_feather(paste0(in_loc, "/input_stats.feather")))
