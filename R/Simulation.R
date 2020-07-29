@@ -1513,7 +1513,8 @@ Simulation <- R6Class(
           formatC(mean(res$end_num), big.mark = ",", digit = 0, format = "f"),
           formatC(mean(res$market_fill_gmv), big.mark = ",", digit = 0, format = "f"),
           sprintf("%0.1f", 12 / (mean(res$market_fill_gmv) / mean(res$end_gmv) * 252 / 2))
-        ))
+        
+        ), stringsAsFactors = FALSE)
     },
     
     #' @description Calculate return for each month and summary statistics for
