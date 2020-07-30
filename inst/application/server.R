@@ -26,35 +26,37 @@ server <- function(input, output, session) {
   })
   
   # produces a name value list that stores
-  # 1 maximum net pnl, 2 minimum net pnl
-  # 3 maximum alpha, 4 minimum alpha, 5 average alpha
-  # 6 quartiles of market fill nmv
-  # across all positions and dates
-  position_max_min <- eventReactive(values$sim_result, {
+  # maximum alpha (alpha_max)
+  # minimum alpha (alpha_min)
+  # list of markey fill quarties (market_fill_quartile[[%]])
+  alpha_range_and_size <- eventReactive(values$sim_result, {
     
+    # includes days when no trades happen to compare alpha throughout simulation
     simulation_summary <- values$sim_result$getSimDetail(strategy_name = "joint") %>%
       group_by(id) %>%
-      mutate(net_pnl = cumsum(net_pnl),
-             net_pnl = round(net_pnl, digits = 0),
-             alpha_1 = round(alpha_1, digits = 2)) %>%
+      mutate(alpha_1 = round(alpha_1, digits = 2)) %>%
       ungroup() 
     
+    # removes all days when no trades happen
+    # improves efficiency of quartile summary
     trade_summary <- simulation_summary %>%
       filter(market_fill_nmv != 0)
     
-    list("holdings_max" = max(simulation_summary$net_pnl), 
-         "holdings_min" = min(simulation_summary$net_pnl),
-         "alpha_max" = max(simulation_summary$alpha_1),
+    list("alpha_max" = max(simulation_summary$alpha_1),
          "alpha_min" = min(simulation_summary$alpha_1), 
+         # normalizes the alpha, the mean is the average, not necessarily zero 
+         # used for plotly gradient
          "alpha_normalized_average" = (mean(simulation_summary$alpha_1) - min(simulation_summary$alpha_1)) / 
            (max(simulation_summary$alpha_1) -  min(simulation_summary$alpha_1)),
+         # uses trade summary instead of simulation summary
          "market_fill_quartile" = quantile(abs(trade_summary$market_fill_nmv)))
   })
   
   # creates a data frame filled with the day by day of selected holdings
-  selected_holding_rows <- eventReactive(input$positionSummaryTable_rows_selected, {
+  selected_holding_row <- eventReactive(input$positionSummaryTable_rows_selected, {
     
-    # gets the ID's for the selected holdings
+    # gets the ID of the selected holding
+    # returns a data frame of id and symbol
     selected_sec_ref <- values$sim_obj$getSecurityReference() %>%
       as.data.frame() %>%
       filter(symbol %in% position_summary()$symbol[input$positionSummaryTable_rows_selected]) %>%
@@ -62,6 +64,7 @@ server <- function(input, output, session) {
       as.data.frame()
 
     # save_detail_columns: alpha_1 
+    # uses id and symbol to get simulation details of the position
     selected_holdings <- 
       left_join(values$sim_result$getSimDetail(strategy_name = "joint", 
                                                security_id = selected_sec_ref$id), 
@@ -77,30 +80,30 @@ server <- function(input, output, session) {
              gross_pnl = cumsum(gross_pnl),
              gross_pnl = round(gross_pnl, digits = 0),
              alpha_1 = round(alpha_1, digits = 2),
-             market_fill_nmv = round(market_fill_nmv, digits = 2))
+             market_fill_nmv = round(market_fill_nmv, digits = 0))
   })
  
   observeEvent(values$sim_result, {
     
     output$plot_1 <- renderPlotly(
-      ggplotly(values$sim_result$plotPerformance(), tooltip = c("text")) 
+      ggplotly(values$sim_result$plotPerformance(), tooltip = FALSE) 
     )
     
     output$plot_2 <- renderPlotly(
-      ggplotly(values$sim_result$plotMarketValue())
+      ggplotly(values$sim_result$plotMarketValue(), tooltip = FALSE)
     )
     
     # TODO dynamically select exposure plot in_vars based on config file
     output$plot_3 <- renderPlotly(
-      ggplotly(values$sim_result$plotCategoryExposure(in_var = "category_1"))
+      ggplotly(values$sim_result$plotCategoryExposure(in_var = "category_1"), tooltip = FALSE)
     )
 
     output$plot_4 <- renderPlotly(
-      ggplotly(values$sim_result$plotFactorExposure(in_var = c("factor_1", "factor_2", "factor_3", "factor_4")))
+      ggplotly(values$sim_result$plotFactorExposure(in_var = c("factor_1", "factor_2", "factor_3", "factor_4")), tooltip = FALSE)
     )
     
     output$plot_5 <- renderPlotly(
-      ggplotly(values$sim_result$plotNumPositions())
+      ggplotly(values$sim_result$plotNumPositions(), tooltip = FALSE)
     )
     output$overallStatsTable <- renderTable(values$sim_result$overallStatsDf(), align = "lrr")
 
@@ -162,34 +165,39 @@ server <- function(input, output, session) {
   
   
   # making the seleted holdings data table
-  output$selectedHoldings <- renderDT(
+  output$selectedHolding <- renderDT(
     
-    selected_holding_rows(),
+    selected_holding_row(),
     rownames = FALSE,
     selection = "none"
     
   )
   
-  # change back to renderPlot
-  output$selectedHoldingsPlot <- renderPlotly({
+  # creates the three plotly plots for the selected holding
+  # 1st trace is net market value
+  # 2nd trace is end nmv
+  # 2nd plot is alpha
+  # 3rd plot is subplot combination of the both plots
+  output$selectedHoldingPlot <- renderPlotly({
     
-    # using market fikl nmv currenty
-    # can I normalize the shapes automatically somehow
-    selection_plot <- selected_holding_rows() %>%
-    #   select("sim_date", "symbol" , "fill_shares", "market_fill_nmv", "net_pnl", "alpha_1") 
-    # %>%
+    # adds columns to the selected holding
+    # adds shape column depending on the fill
+    # adds size column depending on the fill nmv
+    selection_plot <- selected_holding_row() %>%
+ 
       mutate(buy_sell = ifelse(fill_shares > 0, 'triangle-up',
                                   ifelse(fill_shares < 0, 'triangle-down', '0')),
              magnitude = ifelse(market_fill_nmv == 0, 5,
-                                 ifelse(abs(market_fill_nmv) > position_max_min()$market_fill_quartile[["50%"]],
-                                 ifelse(abs(market_fill_nmv) > position_max_min()$market_fill_quartile[["75%"]], 30, 25),
-                                 ifelse(abs(market_fill_nmv) > position_max_min()$market_fill_quartile[["25%"]], 20, 15))))
-              # round(10 + 10 * log(abs(market_fill_nmv) + 1, 10), digits = 0)) # adjusted truncated constant
+                                 ifelse(abs(market_fill_nmv) > alpha_range_and_size()$market_fill_quartile[["50%"]],
+                                 ifelse(abs(market_fill_nmv) > alpha_range_and_size()$market_fill_quartile[["75%"]], 30, 25),
+                                 ifelse(abs(market_fill_nmv) > alpha_range_and_size()$market_fill_quartile[["25%"]], 20, 15))))
+    
   
     holdings_plot <- plot_ly()
     
     holdings_plot <- holdings_plot %>%
       add_trace(
+        # visible when plotly is rendered
         visible = TRUE,
         x = selection_plot$sim_date,
         y = selection_plot$net_pnl, 
@@ -206,10 +214,13 @@ server <- function(input, output, session) {
           ),
           symbol = factor(selection_plot$buy_sell),
           size = selection_plot$magnitude,
-          cmin = position_max_min()$alpha_min,
-          cmax = position_max_min()$alpha_max,
+          # sets range of alpha colorscale based off all alphas
+          cmin = alpha_range_and_size()$alpha_min,
+          cmax = alpha_range_and_size()$alpha_max,
           colorscale = list(c(0, "rgb(178, 34, 34)"),
-                            list(position_max_min()$alpha_normalized_average, "rgb(255, 255, 0)"),
+                            # yellow will be set to normalized average
+                            # colorscale is based on [0, 1] range
+                            list(alpha_range_and_size()$alpha_normalized_average, "rgb(255, 255, 0)"),
                             list(1, "rgb(50, 205, 50)")),
           colorbar = list(
             title='Symbol:
@@ -218,12 +229,14 @@ server <- function(input, output, session) {
                    \nAlpha:'
           ),
           showlegend =  TRUE),
+        # creates tool tip aesthetics and information
         hoverinfo = "text",
         hoverlabel = list(
           bgcolor = 'white'
         ),
         text = paste('Profit and Loss<br>Date: ', selection_plot$sim_date,
                      '<br>P&L: ', selection_plot$net_pnl,
+                     '<br>NMV: ', selection_plot$end_nmv,
                      '<br>Alpha: ', selection_plot$alpha_1,
                      '<br>Shares: ', selection_plot$shares,
                      '<br>Order: ', selection_plot$order_shares,
@@ -249,10 +262,10 @@ server <- function(input, output, session) {
          ),
          symbol = factor(selection_plot$buy_sell),
          size = selection_plot$magnitude,
-         cmin = position_max_min()$alpha_min,
-         cmax = position_max_min()$alpha_max,
+         cmin = alpha_range_and_size()$alpha_min,
+         cmax = alpha_range_and_size()$alpha_max,
          colorscale = list(c(0, "rgb(178, 34, 34)"),
-                           list(position_max_min()$alpha_normalized_average, "rgb(255, 255, 0)"),
+                           list(alpha_range_and_size()$alpha_normalized_average, "rgb(255, 255, 0)"),
                            list(1, "rgb(50, 205, 50)")),
          colorbar = list(
             title='Symbol:
@@ -267,6 +280,7 @@ server <- function(input, output, session) {
        ),
        text = paste('Net Market Value<br>Date: ', selection_plot$sim_date,
                     '<br>P&L: ', selection_plot$net_pnl,
+                    '<br>NMV: ', selection_plot$end_nmv,
                     '<br>Alpha: ', selection_plot$alpha_1,
                     '<br>Shares: ', selection_plot$shares,
                     '<br>Order: ', selection_plot$order_shares,
@@ -277,16 +291,20 @@ server <- function(input, output, session) {
     holdings_plot <- holdings_plot %>%
       layout(
         title = list(
+          # initial title is same as PNL for consistency
           text = paste("Cumulative Profit and Loss of", selection_plot$symbol[1])
         ),
+        # controls graph toggle button
         updatemenus =  list(
           list(
+            # PNL is rendered first
             active = 0,
             type = "buttons",
             buttons = list(
               list(
                 label = "P&L",
                 method = "update",
+                # order of graphs in visible list is PNL, NMV, and ALPHA
                 args = list(list(visible = c(TRUE, FALSE, TRUE)),
                             list(title =  paste("Cumulative Profit and Loss of", selection_plot$symbol[1])))
               ),
@@ -304,33 +322,38 @@ server <- function(input, output, session) {
     alpha_plot <- plot_ly(selection_plot, x = ~sim_date, y = ~alpha_1,
                           type = "scatter", mode = "lines",
                           line = list(
-                            color = "0000FF"
+                            color = "rgb(0, 102, 204)"
                             ),
                           hoverinfo = "text",
                           hoverlabel = list(
                             bgcolor = 'white'
                           ),
-                          text = paste("Date: ", selection_plot$sim_date,
+                          text = paste('Alpha<br>Date: ', selection_plot$sim_date,
                                        '<br>P&L: ', selection_plot$net_pnl,
+                                       '<br>NMV: ', selection_plot$end_nmv,
                                        '<br>Alpha: ', selection_plot$alpha_1,
                                        '<br>Shares: ', selection_plot$shares,
                                        '<br>Order: ', selection_plot$order_shares,
                                        '<br>Fill: ', selection_plot$fill_shares,
                                        '<br>End Shares: ', selection_plot$end_shares,
-                                       '<br>End Fill Market Value: ', selection_plot$market_fill_nmv)) %>%
+                                       '<br>Fill Market Value: ', selection_plot$market_fill_nmv)) %>%
       layout(
         yaxis = list(
           title = "Alpha",
-          range = c(position_max_min()$alpha_min, position_max_min()$alpha_max),
+          range = c(alpha_range_and_size()$alpha_min, alpha_range_and_size()$alpha_max),
+          # removes zoom vertical zoom function from alpha plot
           fixedrange = TRUE, showzeroline = FALSE,
+          # controls vertical lines around alpha plot
           showline = TRUE, linewidth = 3, linecolor='black', mirror = TRUE
         ),
         xaxis = list(
           title = "Date",
+          # controls horizontal lines around alpha plot
           showline = TRUE, linewidth = 1, linecolor='black', mirror = TRUE
         ),
         showlegend = FALSE)
-
+    
+    # combines position plot with alpha plot and links horizontal axis
     multi_layed_plot <- subplot(holdings_plot, alpha_plot,
                                 nrows = 2, shareX = TRUE, titleY = TRUE, heights = c(0.80, 0.20))
      
@@ -338,33 +361,8 @@ server <- function(input, output, session) {
 
   })
   
-  # outputs the click information from the graph
-  # output$clickInfo <- renderText({
-  # 
-  #   clicked_point <- nearPoints(selected_holding_rows(), input$plot_click,
-  #                        xvar = "sim_date", yvar = "net_pnl", maxpoints = 1, threshold = 10)
-  #   
-  #   if(nrow(clicked_point) == 0){
-  #     
-  #     paste0("Click on the graph for information: ")
-  #     
-  #   } else {
-  #     
-  #     
-  #     # change colums by refernce to name
-  #     paste0("Selection Information \nSymbol: ", clicked_point$symbol,
-  #            "\nDate: ", as.Date(as.numeric(clicked_point$sim_date), origin = "1970-01-01"),
-  #            "\nPnL: ", clicked_point$net_pnl, 
-  #            "\nAlpha: ", clicked_point$alpha_1, 
-  #            "\nShares: ", clicked_point$shares,
-  #            "\nOrdered Shares: ", clicked_point$order_shares, 
-  #            "\nFilled Shares: ", clicked_point$fill_shares, 
-  #            "\nEnd Shares: ", clicked_point$end_shares)
-  #   }
-  # })
-  
-  
-  observeEvent(position_summary(),{
+
+  observeEvent(position_summary(), {
 
     output$selectedPlotAndTable <- renderUI({
 
@@ -379,18 +377,9 @@ server <- function(input, output, session) {
         )
       } else {
         fluidRow(
-          # column(
-            # 12,
-            # change back to plot output
-            # plotlyOutput('selectedHoldingsPlot', click = "plot_click")
-            plotlyOutput('selectedHoldingsPlot', height = "800px"),
-          # ),
-          # column(
-          #   2,
-          #   verbatimTextOutput("clickInfo")
-          # ),
+            plotlyOutput('selectedHoldingPlot', height = "800px"),
           br(),
-          DT::dataTableOutput('selectedHoldings')
+          DT::dataTableOutput('selectedHolding')
         )
       }
     })
