@@ -190,124 +190,111 @@ server <- function(input, output, session) {
     
     holdings_plot <- holdings_plot %>%
       add_trace(
-                x = selection_plot$sim_date,
-                y = selection_plot$net_pnl, 
-                type = 'scatter', mode = 'lines+markers',
-                visible = TRUE
-                # ,
-               #  line = list(
-               #    color = 'black',
-               #    opacity = 0.2
-               #  ),
-               #  marker = list(
-               #    opacity = 1,
-               #    color = ~alpha_1,
-               #    line = list(
-               #      color = 'black'
-               #    ),
-               #    symbol = ~factor(buy_sell),
-               #    size = ~magnitude,
-               #    cmin = position_max_min()$alpha_min,
-               #    cmax = position_max_min()$alpha_max,
-               #    colorscale = list(c(0, "rgb(178, 34, 34)"), 
-               #                     list(position_max_min()$alpha_normalized_average, "rgb(255, 255, 0)"),
-               #                     list(1, "rgb(50, 205, 50)")), 
-               #   colorbar=list(
-               #     title='Symbol: 
-               #                           \n▲ Buy      
-               #                           \n▼ Sell
-               #                           \nAlpha:'
-               #   ),
-               #   # name = 'buy_sell',
-               #   showlegend =  TRUE),
-               # hoverinfo = "text",
-               # hoverlabel = list(
-               #     bgcolor = 'white'
-               #   ),
-               # text = paste("Date: ", selection_plot$sim_date, 
-               #              '<br>P&L: ', selection_plot$net_pnl,
-               #              '<br>Alpha: ', selection_plot$alpha_1,
-               #              '<br>Shares: ', selection_plot$shares,
-               #              '<br>Order: ', selection_plot$order_shares,
-               #              '<br>Fill: ', selection_plot$fill_shares,
-               #              '<br>End Shares: ', selection_plot$end_shares,
-               #              '<br>Fill Market Value: ', selection_plot$market_fill_nmv)
-               ) 
+        visible = TRUE,
+        x = selection_plot$sim_date,
+        y = selection_plot$net_pnl, 
+        type = 'scatter', mode = 'lines+markers',
+        line = list(
+          color = 'black',
+          opacity = 0.2
+        ),
+        marker = list(
+          opacity = 1,
+          color = selection_plot$alpha_1,
+          line = list(
+            color = 'black'
+          ),
+          symbol = factor(selection_plot$buy_sell),
+          size = selection_plot$magnitude,
+          cmin = position_max_min()$alpha_min,
+          cmax = position_max_min()$alpha_max,
+          colorscale = list(c(0, "rgb(178, 34, 34)"),
+                            list(position_max_min()$alpha_normalized_average, "rgb(255, 255, 0)"),
+                            list(1, "rgb(50, 205, 50)")),
+          colorbar = list(
+            title='Symbol:
+                   \n▲ Buy
+                   \n▼ Sell
+                   \nAlpha:'
+          ),
+          showlegend =  TRUE),
+        hoverinfo = "text",
+        hoverlabel = list(
+          bgcolor = 'white'
+        ),
+        text = paste('Profit and Loss<br>Date: ', selection_plot$sim_date,
+                     '<br>P&L: ', selection_plot$net_pnl,
+                     '<br>Alpha: ', selection_plot$alpha_1,
+                     '<br>Shares: ', selection_plot$shares,
+                     '<br>Order: ', selection_plot$order_shares,
+                     '<br>Fill: ', selection_plot$fill_shares,
+                     '<br>End Shares: ', selection_plot$end_shares,
+                     '<br>Fill Market Value: ', selection_plot$market_fill_nmv)) 
+               
     holdings_plot <- holdings_plot %>%
      add_trace(
-        x = selection_plot$sim_date,
-        y = selection_plot$end_nmv, 
-        type = 'scatter', mode = 'lines+markers',
-        visible = FALSE
-        # ,
-        # line = list(
-        #   color = 'black',
-        #   opacity = 0.2
-        # ),
-        # marker = list(
-        #   opacity = 1,
-        #   color = ~alpha_1,
-        #   line = list(
-        #     color = 'black'
-        #   ),
-        #   symbol = ~factor(buy_sell),
-        #   size = ~magnitude,
-        #   cmin = position_max_min()$alpha_min,
-        #   cmax = position_max_min()$alpha_max,
-        #   colorscale = list(c(0, "rgb(178, 34, 34)"), 
-        #                     list(position_max_min()$alpha_normalized_average, "rgb(255, 255, 0)"),
-        #                     list(1, "rgb(50, 205, 50)")), 
-        #   colorbar=list(
-        #     title='Symbol: 
-        #                                    \n▲ Buy      
-        #                                    \n▼ Sell
-        #                                    \nAlpha:'
-        #   ),
-        #   # name = 'buy_sell',
-        #   showlegend =  TRUE),
-        # hoverinfo = "text",
-        # hoverlabel = list(
-        #   bgcolor = 'white'
-        # ),
-        # text = paste("Date: ", selection_plot$sim_date, 
-        #              '<br>P&L: ', selection_plot$net_pnl,
-        #              '<br>Alpha: ', selection_plot$alpha_1,
-        #              '<br>Shares: ', selection_plot$shares,
-        #              '<br>Order: ', selection_plot$order_shares,
-        #              '<br>Fill: ', selection_plot$fill_shares,
-        #              '<br>End Shares: ', selection_plot$end_shares,
-        #              '<br>Fill Market Value: ', selection_plot$market_fill_nmv)
-        ) 
+       visible = FALSE,
+       x = selection_plot$sim_date,
+       y = selection_plot$end_nmv, 
+       type = 'scatter', mode = 'lines+markers',
+       line = list(
+         color = 'black',
+         opacity = 0.2
+       ),
+       marker = list(
+         opacity = 1,
+         color = selection_plot$alpha_1,
+         line = list(
+           color = 'black'
+         ),
+         symbol = factor(selection_plot$buy_sell),
+         size = selection_plot$magnitude,
+         cmin = position_max_min()$alpha_min,
+         cmax = position_max_min()$alpha_max,
+         colorscale = list(c(0, "rgb(178, 34, 34)"),
+                           list(position_max_min()$alpha_normalized_average, "rgb(255, 255, 0)"),
+                           list(1, "rgb(50, 205, 50)")),
+         colorbar = list(
+            title='Symbol:
+                   \n▲ Buy
+                   \n▼ Sell
+                   \nAlpha:'
+          ),
+         showlegend =  TRUE),
+       hoverinfo = "text",
+       hoverlabel = list(
+         bgcolor = 'white'
+       ),
+       text = paste('Net Market Value<br>Date: ', selection_plot$sim_date,
+                    '<br>P&L: ', selection_plot$net_pnl,
+                    '<br>Alpha: ', selection_plot$alpha_1,
+                    '<br>Shares: ', selection_plot$shares,
+                    '<br>Order: ', selection_plot$order_shares,
+                    '<br>Fill: ', selection_plot$fill_shares,
+                    '<br>End Shares: ', selection_plot$end_shares,
+                    '<br>Fill Market Value: ', selection_plot$market_fill_nmv)) 
     
     holdings_plot <- holdings_plot %>%
       layout(
-        # title = list(
-        #   text = paste("Cumulative Profit and Loss of", selection_plot$symbol[1])
-        # ),
-        # xaxis = list(
-        #   showline = TRUE, linewidth = 1, linecolor='black', mirror = TRUE
-        # ),
-        # yaxis = list(
-        #   title = "Net P&L",
-        #   # range = c(position_max_min()$holdings_min, position_max_min()$holdings_max),
-        #   fixedrange = TRUE 
-        # ),
+        title = list(
+          text = paste("Cumulative Profit and Loss of", selection_plot$symbol[1])
+        ),
         updatemenus =  list(
           list(
-            active = 1,
+            active = 0,
             type = "buttons",
             buttons = list(
               list(
-                label = "Net P&L",
+                label = "P&L",
                 method = "update",
                 args = list(list(visible = c(TRUE, FALSE, TRUE)),
-                            list(title = "Net P&L"))
+                            list(title =  paste("Cumulative Profit and Loss of", selection_plot$symbol[1])))
               ),
               list(
-                label = "Position Value",
+                label = "Market Value",
                 method = "update",
                 args = list(list(visible = c(FALSE, TRUE, TRUE)),
-                            list(title = "Position Value"))
+                            list(title = paste("Market Value of", selection_plot$symbol[1])))
               )
             )
           )
