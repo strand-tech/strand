@@ -100,6 +100,7 @@ ui <- fluidPage(
               br()
             ),
           ),
+         # Contains the plot and data table of the selected position
          uiOutput("selectedPlotAndTable")
         ),
         tabPanel(
