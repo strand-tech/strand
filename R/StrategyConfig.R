@@ -73,6 +73,15 @@ StrategyConfig <-  R6Class(
         stop("No strategies found in config")
       }
       
+      # We need to be careful to not allow strategy names that will collide with
+      # with other columns in the data frames in which calculations are made in
+      # the system. For example, we don't allow strategy names that match signal or
+      # constraint in_var column names.
+      # 
+      # As we validate strategy config entries we add to the strategy name
+      # blacklist.
+      strategy_name_blacklist <- c("joint")
+        
       for (strategy in self$getStrategyNames()) {
         
         required_config_vars <- c("strategy_capital",
@@ -81,7 +90,8 @@ StrategyConfig <-  R6Class(
                                   "position_limit_pct_smv",
                                   "trading_limit_pct_adv",
                                   "ideal_long_weight",
-                                  "ideal_short_weight"
+                                  "ideal_short_weight",
+                                  "in_var"
                                   )
         
         for (config_var in required_config_vars) {
@@ -89,6 +99,8 @@ StrategyConfig <-  R6Class(
             stop(paste0("Missing ", config_var, " setting in strategy config for strategy: ", strategy))
           }
         }
+        
+        strategy_name_blacklist <- c(strategy_name_blacklist, self$getStrategyConfig(strategy, "in_var"))
         
         # Checks on constraint entries
         constraint_config <- self$getStrategyConfig(strategy, "constraints")
@@ -104,9 +116,17 @@ StrategyConfig <-  R6Class(
           if (!constraint_type %in% c("factor", "category")) {
             stop(paste0("Invalid constraint type of constraint: ", constraint_name))
           }
+          strategy_name_blacklist <- c(strategy_name_blacklist, in_var)
         }
       }
       
+      if (any(self$getStrategyNames() %in% strategy_name_blacklist)) {
+        stop(paste0("Invalid strategy name found. Strategy names may not ",
+                    "match signal or constraint in_var names. ", 
+                    "The strategy name 'joint' is reserved."))
+                    
+      }
+
       TRUE
     }
   ))

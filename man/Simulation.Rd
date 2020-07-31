@@ -32,14 +32,21 @@ The \code{Simulation} class is used to set up and run a daily
 \item \href{#method-getDelistings}{\code{Simulation$getDelistings()}}
 \item \href{#method-getSingleStrategySummaryDf}{\code{Simulation$getSingleStrategySummaryDf()}}
 \item \href{#method-plotPerformance}{\code{Simulation$plotPerformance()}}
+\item \href{#method-plotContribution}{\code{Simulation$plotContribution()}}
 \item \href{#method-plotMarketValue}{\code{Simulation$plotMarketValue()}}
 \item \href{#method-plotCategoryExposure}{\code{Simulation$plotCategoryExposure()}}
 \item \href{#method-plotFactorExposure}{\code{Simulation$plotFactorExposure()}}
 \item \href{#method-plotNumPositions}{\code{Simulation$plotNumPositions()}}
+\item \href{#method-plotTurnover}{\code{Simulation$plotTurnover()}}
+\item \href{#method-plotUniverseSize}{\code{Simulation$plotUniverseSize()}}
+\item \href{#method-plotNonInvestablePct}{\code{Simulation$plotNonInvestablePct()}}
 \item \href{#method-overallStatsDf}{\code{Simulation$overallStatsDf()}}
+\item \href{#method-overallReturnsByMonthDf}{\code{Simulation$overallReturnsByMonthDf()}}
 \item \href{#method-print}{\code{Simulation$print()}}
 \item \href{#method-writeFeather}{\code{Simulation$writeFeather()}}
 \item \href{#method-readFeather}{\code{Simulation$readFeather()}}
+\item \href{#method-getConfig}{\code{Simulation$getConfig()}}
+\item \href{#method-writeReport}{\code{Simulation$writeReport()}}
 \item \href{#method-clone}{\code{Simulation$clone()}}
 }
 }
@@ -52,6 +59,7 @@ Create a new \code{Simulation} object.
 \if{html}{\out{<div class="r">}}\preformatted{Simulation$new(
   config = NULL,
   raw_input_data = NULL,
+  input_dates = NULL,
   raw_pricing_data = NULL,
   security_reference_data = NULL,
   delisting_dates_data = NULL
@@ -75,9 +83,12 @@ which results will be loaded with \code{readFeather}.}
 
 \item{\code{raw_input_data}}{A data frame that contains all of the input data
 (for all periods) for the simulation. The data frame must have a
-\code{date} column. Data supplied using this parameter will only be
+\code{date} column. Data supplied using this parameter will be
 used if the configuration option \code{simulator/input_data/type} is
 set to \code{object}. Defaults to \code{NULL}.}
+
+\item{\code{input_dates}}{Vector of class \code{Date} that specifies when input
+data should be updated.}
 
 \item{\code{raw_pricing_data}}{A data frame that contains all of the input data
 (for all periods) for the simulation. The data frame must have a
@@ -200,9 +211,18 @@ weekdays between the 'from' and 'to' dates in the simulation's config.
 \subsection{Method \code{getSimSummary()}}{
 Get summary information.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Simulation$getSimSummary()}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Simulation$getSimSummary(strategy_name = NULL)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{strategy_name}}{Character vector of length 1 that specifies the
+strategy for which to get detail data. If \code{NULL} data for all
+strategies is returned. Defaults to \code{NULL}.}
+}
+\if{html}{\out{</div>}}
+}
 \subsection{Returns}{
 An object of class \code{data.frame} that contains summary data
   for the simulation, by period, at the joint and strategy level. The data
@@ -269,7 +289,8 @@ Get detail information.
 \if{html}{\out{<div class="r">}}\preformatted{Simulation$getSimDetail(
   sim_date = NULL,
   strategy_name = NULL,
-  security_id = NULL
+  security_id = NULL,
+  columns = NULL
 )}\if{html}{\out{</div>}}
 }
 
@@ -288,13 +309,17 @@ strategies is returned. Defaults to \code{NULL}.}
 \item{\code{security_id}}{Character vector of length 1 that specifies the
 security for which to get detail data. If \code{NULL} data for all
 securities is returned. Defaults to \code{NULL}.}
+
+\item{\code{columns}}{Vector of class character specifying the columns to
+return. This parameter can be useful when dealing with very large
+detail datasets.}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-An object of class \code{data.frame} that contains detail data
-  for the simulation at the joint and strategy level. Detail data is at
-  the security level. The data frame contains the following columns:
+An object of class \code{data.frame} that contains security-level
+  detail data for the simulation for the desired strategies, securities,
+  dates, and columns. Available columns include:
   \describe{
     \item{id}{Security identifier.}
     \item{strategy}{Strategy name, or 'joint' for the aggregate strategy.}
@@ -361,6 +386,11 @@ An object of class \code{data.frame} that contains detail data
     period.}
     \item{end_gmv}{Gross market value of the position at the end of the
     period.}
+    \item{investable}{Logical indicating whether the security is part of
+    the investable universe. The value of the flag is set to TRUE if the
+    security has not been delisted and satisfies the universe criterion
+    provided (if any) in the \code{simulator/universe} configuration
+    option.}
   }
 }
 }
@@ -501,9 +531,17 @@ An object of class \code{data.frame} that contains optimization
 \subsection{Method \code{getExposures()}}{
 Get end-of-period exposure information.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Simulation$getExposures()}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Simulation$getExposures(type = "net")}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{type}}{Vector of length 1 that may be one of \code{"net"},
+\code{"long"}, \code{"short"}, and \code{"gross"}.}
+}
+\if{html}{\out{</div>}}
+}
 \subsection{Returns}{
 An object of class \code{data.frame} that contains end-of-period
   exposure information for the simulation portfolio. The units of the
@@ -544,7 +582,10 @@ An object of class \code{data.frame} that contains a row for each
 Get summary information for a single strategy suitable for
   plotting input.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Simulation$getSingleStrategySummaryDf(strategy_name, include_zero_row = TRUE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Simulation$getSingleStrategySummaryDf(
+  strategy_name = "joint",
+  include_zero_row = TRUE
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -569,19 +610,60 @@ A data frame that contains summary information for the desired
 \subsection{Method \code{plotPerformance()}}{
 Draw a plot of cumulative gross and net return by date.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Simulation$plotPerformance()}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Simulation$plotPerformance(strategy_name = "joint")}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{strategy_name}}{Character vector of length 1 specifying the strategy
+for the plot. Defaults to \code{"joint"}.}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-plotContribution"></a>}}
+\if{latex}{\out{\hypertarget{method-plotContribution}{}}}
+\subsection{Method \code{plotContribution()}}{
+Draw a plot of contribution to net return on GMV for levels
+  of a specified category.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Simulation$plotContribution(category_var, strategy_name = "joint")}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{category_var}}{Plot performance contribution for the levels of
+\code{category_var}. \code{category_var} must be present in the
+simulation's security reference, and detail data must be present in the
+object's result data.}
+
+\item{\code{strategy_name}}{Character vector of length 1 specifying the strategy
+for the plot. Defaults to \code{"joint"}.}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-plotMarketValue"></a>}}
 \if{latex}{\out{\hypertarget{method-plotMarketValue}{}}}
 \subsection{Method \code{plotMarketValue()}}{
-Draw a plot of total gross, long, short, and net market value by date.
+Draw a plot of total gross, long, short, and net market
+  value by date.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Simulation$plotMarketValue()}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Simulation$plotMarketValue(strategy_name = "joint")}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{strategy_name}}{Character vector of length 1 specifying the strategy
+for the plot. Defaults to \code{"joint"}.}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-plotCategoryExposure"></a>}}
@@ -589,13 +671,19 @@ Draw a plot of total gross, long, short, and net market value by date.
 \subsection{Method \code{plotCategoryExposure()}}{
 Draw a plot of exposure to all levels in a category by date.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Simulation$plotCategoryExposure(in_var)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Simulation$plotCategoryExposure(in_var, strategy_name = "joint")}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{in_var}}{Category for which exposures are plotted.}
+\item{\code{in_var}}{Category for which exposures are plotted. In order to plot
+exposures for category \code{in_var}, we must have run the simulation
+with \code{in_var} in the config setting
+\code{simulator/calculate_exposures/category_vars}.}
+
+\item{\code{strategy_name}}{Character vector of length 1 specifying the strategy
+for the plot. Defaults to \code{"joint"}.}
 }
 \if{html}{\out{</div>}}
 }
@@ -606,13 +694,16 @@ Draw a plot of exposure to all levels in a category by date.
 \subsection{Method \code{plotFactorExposure()}}{
 Draw a plot of exposure to factors by date.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Simulation$plotFactorExposure(in_var)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Simulation$plotFactorExposure(in_var, strategy_name = "joint")}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{in_var}}{Factors for which exposures are plotted.}
+
+\item{\code{strategy_name}}{Character vector of length 1 specifying the strategy
+for the plot. Defaults to \code{"joint"}.}
 }
 \if{html}{\out{</div>}}
 }
@@ -623,9 +714,74 @@ Draw a plot of exposure to factors by date.
 \subsection{Method \code{plotNumPositions()}}{
 Draw a plot of number of long and short positions by date.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Simulation$plotNumPositions()}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Simulation$plotNumPositions(strategy_name = "joint")}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{strategy_name}}{Character vector of length 1 specifying the strategy
+for the plot. Defaults to \code{"joint"}.}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-plotTurnover"></a>}}
+\if{latex}{\out{\hypertarget{method-plotTurnover}{}}}
+\subsection{Method \code{plotTurnover()}}{
+Draw a plot of number of long and short positions by date.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Simulation$plotTurnover(strategy_name = "joint")}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{strategy_name}}{Character vector of length 1 specifying the strategy
+for the plot. Defaults to \code{"joint"}.}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-plotUniverseSize"></a>}}
+\if{latex}{\out{\hypertarget{method-plotUniverseSize}{}}}
+\subsection{Method \code{plotUniverseSize()}}{
+Draw a plot of the universe size, or number of investable
+  stocks, over time.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Simulation$plotUniverseSize(strategy_name = "joint")}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{strategy_name}}{Character vector of length 1 specifying the strategy
+for the plot. Defaults to \code{joint}.}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-plotNonInvestablePct"></a>}}
+\if{latex}{\out{\hypertarget{method-plotNonInvestablePct}{}}}
+\subsection{Method \code{plotNonInvestablePct()}}{
+Draw a plot of the percentage of portfolio GMV held in
+  non-investable stocks (e.g., stocks that do not satisfy universe criteria)
+  for a given strategy. Note that this plot requires detail data.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Simulation$plotNonInvestablePct(strategy_name = "joint")}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{strategy_name}}{Character vector of length 1 specifying the strategy
+for the plot. Defaults to \code{"joint"}.}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-overallStatsDf"></a>}}
@@ -640,6 +796,29 @@ Calculate overall simulation summary statistics, such as
 \subsection{Returns}{
 A data frame that contains summary statistics, suitable for
   reporting.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-overallReturnsByMonthDf"></a>}}
+\if{latex}{\out{\hypertarget{method-overallReturnsByMonthDf}{}}}
+\subsection{Method \code{overallReturnsByMonthDf()}}{
+Calculate return for each month and summary statistics for
+  each year, such as total return and annualized Sharpe. Return in data
+  frame format suitable for reporting.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Simulation$overallReturnsByMonthDf()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+The data frame contains one row for each calendar year in the
+  simulation, and up to seventeen columns: one column for year, one
+  column for each calendar month, and columns for the year's total
+  return, annualized return, annualized volatility, and annualized
+  Sharpe. Total return is the sum of daily net returns. Annualized return
+  is the mean net return times 252. Annualized volatility is the standard
+  deviation of net return times the square root of 252. Annualized Sharpe
+  is the ratio of annualized return to annualized volatility. All returns
+  are in percent.
 }
 }
 \if{html}{\out{<hr>}}
@@ -693,6 +872,53 @@ Load files created with \code{writeFeather} into the object.
 }
 \subsection{Returns}{
 No return value, called for side effects.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-getConfig"></a>}}
+\if{latex}{\out{\hypertarget{method-getConfig}{}}}
+\subsection{Method \code{getConfig()}}{
+Get the object's configuration information.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Simulation$getConfig()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+Object of class \code{list} that contains the simulation's
+  configuration information.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-writeReport"></a>}}
+\if{latex}{\out{\hypertarget{method-writeReport}{}}}
+\subsection{Method \code{writeReport()}}{
+Write an html document of simulation results.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Simulation$writeReport(
+  out_dir,
+  out_file,
+  out_fmt = "html",
+  contrib_vars = NULL
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{out_dir}}{Directory in which output files should be created}
+
+\item{\code{out_file}}{File name for output}
+
+\item{\code{out_fmt}}{Format in which output files should be created. The
+default is html and that is currently the only option.}
+
+\item{\code{contrib_vars}}{Security reference variables for which to plot return
+contribution.}
+
+\item{\code{res}}{The object of class 'Simulation' which we want to write the
+report about.}
+}
+\if{html}{\out{</div>}}
 }
 }
 \if{html}{\out{<hr>}}

@@ -1,3 +1,37 @@
+# strand 0.2.0 (unreleased)
+
+* The `PortOpt` class has been exported. This class can be used to solve single
+portfolio optimization problems.
+
+* Writing html reports for a simulation based on an Rmd template is now possible
+using the `writeReport` method of the `Simulation` class.
+
+* Average volume has been changed to a market value measure from a shares
+measure. This makes it much easier to provide a measure of ADV (average daily
+volume) for setting trading and position limit constraints.
+
+* Added input_dates parameter to Simulation class constructor. The date vector
+passed to input_dates contols the dates on which input data (e.g., alpha and
+risk factors) is updated.
+
+* Added force-exit feature for non-investable securities. Setting the simulator
+configuration parameter `non_investable_policy` to `"force-exit"` will cause exit
+orders to be created for positions not in the universe during a simulation.
+
+* Now saving gross, long, and short exposures in addition to net.
+
+* Standardized simulation result data and plotting methods to have a
+strategy_name parameter where appropriate.
+
+* Added new plotting methods for the `Simulation` class: `plotContribution`,
+`plotTurnover`, `plotUniverseSize`, and `plotNonInvestablePct`.
+
+* Added `overallReturnsByMonthDf` method for the `Simulation` class.
+
+* Fixed recording of loosened constraints during simulation.
+
+* Fixed loading of configuration information in `readFeather`.
+
 # strand 0.1.3 (2020-05-24)
 
 * The example in the package vignette now uses the sample datasets included in

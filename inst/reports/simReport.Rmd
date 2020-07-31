@@ -1,0 +1,73 @@
+---
+title: "Simulation Results: `r params$res$getConfig()$getConfig('name')`"
+date: "Report date: `r Sys.Date()`"
+params:
+   res: NULL
+   contrib_vars: NULL
+---
+
+```{css, echo=FALSE}
+h1, h2, h3, h4, h5 {
+  font-family: Arial, Helvetica, sans-serif;
+  font-weight: 500;
+}
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+res <- params$res
+```
+
+# Setup
+
+```{r, ft.align = 'left'}
+show_config(res)
+```
+
+```{r, ft.align = 'left'}
+show_constraints(res)
+```
+
+# Overview
+
+```{r, ft.align = 'left'}
+show_stats(res)
+```
+
+```{r, ft.align = 'left'}
+show_monthly_returns(res)
+best_worst <- show_best_worst(res)
+best_worst[[1]]
+best_worst[[2]]
+```
+
+
+```{r}  
+res$plotPerformance()
+
+for (this_var in contrib_vars) {
+  print(res$plotContribution(this_var))
+}
+```
+
+
+# Exposures
+
+```{r}
+res$plotMarketValue()
+
+category_vars <- res$getConfig()$getConfig("simulator")$calculate_exposures$category_vars
+for (this_var in category_vars) {
+  print(res$plotCategoryExposure(this_var))
+}
+
+factor_vars <- res$getConfig()$getConfig("simulator")$calculate_exposures$factor_vars
+if (!is.null(factor_vars) && length(factor_vars) > 0) {
+  print(res$plotFactorExposure(factor_vars))
+}
+
+res$plotNumPositions()
+res$plotTurnover()
+res$plotUniverseSize()
+res$plotNonInvestablePct()
+```

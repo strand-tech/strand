@@ -1,4 +1,4 @@
-price_var: price_unadj
+price_var: prior_close_unadj
 vol_var: average_volume
 solver: glpk
 strategies:

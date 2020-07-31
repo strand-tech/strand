@@ -113,7 +113,7 @@ Alpha and factor inputs are used in the daily portfolio construction process. Al
 
 * `date`: the date for which the information should be used to create orders.
 * `id`: the security identifier. The identifier must appear in the security reference discussed above.
-* `average_volume`: an estimate of the amount of volume, in shares, that we expect to see for one day, on average. This measure of volume is used in the portfolio optimization step to ensure that our order sizes are in line with the amount we expect to be able to trade in the market. It is also used in the optimization's liquidity constraint on position size.
+* `average_volume`: an estimate of the amount of volume, in market value (in the simulation's reference currency) that we expect to see for one day, on average. This measure of volume is used in the portfolio optimization step to ensure that our order sizes are in line with the amount we expect to be able to trade in the market. It is also used in the optimization's liquidity constraint on position size.
 * One column for each alpha variable used in the simulation.
 * One column for each numeric factor variable used in an exposure constraint.
 
@@ -281,9 +281,9 @@ strategies:
     position_limit_pct_adv: 30
 ```
 
-which means a position in our simulation can be no greater than 30\% of our `average_volume` value.  For example, suppose the price of security ABC is \$100 and its average volume measure is 100,000 shares. This means the the liquidity constraint imposes a limit on the size of long positions in ABC of \$3mm and a limit on the size of short positions of -\$3mm.
+which means a position in our simulation can be no greater than 30\% of our `average_volume` value.  For example, suppose the average volume measure for security ABC is \$10M. This means that the liquidity constraint imposes a limit on the size of long positions in ABC of \$3M and a limit on the size of short positions of -\$3mm.
 
-Second, the `trading_limit_pct_adv` parameter limits the size of the order that can be generated for a stock. The idea is to size orders in line with the amount of shares that are expected to trade in the market and any limitation we are planning on imposing on participation. It's difficult to control exposures effectively if we don't do this!  In the example configuration file, we have:
+Second, the `trading_limit_pct_adv` parameter limits the size of the order that can be generated for a stock. The idea is to size orders to be in line with the amount of trading expected in the market and any limitation we are planning on imposing on participation. It's difficult to control exposures effectively if we don't do this!  In the example configuration file, we have:
 
 ```
 strategies:
@@ -291,7 +291,7 @@ strategies:
     trading_limit_pct_adv: 5
 ```
 
-which means that we can buy at most 5\% or sell at most 5\% of a security's `average_volume` measure on a given day. Continuing our example above, if our measurement on a given day is that ABC is trading on average 100,000 shares per day, we can buy at most 5,000 shares or sell at most 5,000 shares on that day.
+which means that we can buy at most 5\% or sell at most 5\% of a security's `average_volume` measure on a given day. Continuing our example above, if our measurement on a given day is that ABC is trading on average \$10M per day, we can buy at most \$500,000 or sell at most \$500,000 on that day.
 
 ### Factor constraints
 

@@ -9,7 +9,7 @@ A data frame with 31500 rows and 9 variables:
 \describe{
   \item{id}{security identifier}
   \item{date}{input date}
-  \item{average_volume}{measurement of average security trading volume, in shares}
+  \item{average_volume}{measurement of average security trading volume, in market value (e.g., USD)}
   \item{alpha_1}{sample numeric alpha input}
   \item{alpha_2}{sample numeric alpha input}
   \item{factor_1}{sample numeric factor input}
