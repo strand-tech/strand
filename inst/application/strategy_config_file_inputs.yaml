@@ -40,6 +40,7 @@ strategies:
         upper_bound: 0.02
         lower_bound: -0.02
 simulator:
+  save_detail_columns: alpha_1 
   fill_rate_pct_vol: 4
   transaction_cost_pct: 0.1
   financing_cost_pct: 1
