@@ -1,4 +1,5 @@
 library(DT)
+library(plotly)
 
 .readYamlConfig <- function() {
   config <- example_strategy_config()
@@ -56,7 +57,7 @@ ui <- fluidPage(
             column(
               8,
               br(),
-              plotOutput('plot_1')
+              plotlyOutput('plot_1')
             )
           ),
           fluidRow(
@@ -74,7 +75,7 @@ ui <- fluidPage(
             column(
               12,
               br(),
-              plotOutput('plot_2'),
+              plotlyOutput('plot_2'),
               DT::dataTableOutput('marketValueTable')
             )
           )
@@ -85,8 +86,8 @@ ui <- fluidPage(
             column(
               12,
               br(),
-              plotOutput('plot_3'),
-              plotOutput('plot_4')
+              plotlyOutput('plot_3'),
+              plotlyOutput('plot_4')
             )
           )
         ),
@@ -96,11 +97,21 @@ ui <- fluidPage(
             column(
               12,
               DT::dataTableOutput('positionSummaryTable'),
-              br(),
+              br()
+            ),
+          ),
+         # Contains the plot and data table of the selected position
+         uiOutput("selectedPlotAndTable")
+        ),
+        tabPanel(
+          "Holdings by Date",
+          fluidRow(
+            column(
+              12,
               dateInput("holdingsDate", label = "Date", value = "2019-01-02",
                         daysofweekdisabled = c(0,6)),
               DT::dataTableOutput('holdingsTable')
-            )
+            ) 
           )
         )
       )
