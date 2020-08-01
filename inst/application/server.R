@@ -64,7 +64,7 @@ server <- function(input, output, session) {
       select("id", "symbol") %>%
       as.data.frame()
 
-    # Save_detail_columns: alpha_1 
+    # Add 'save_detail_columns: alpha_1' under simulation 
     # Uses id and symbol to get simulation details of the position
     selected_holdings <- 
       left_join(values$sim_result$getSimDetail(strategy_name = "joint", 
