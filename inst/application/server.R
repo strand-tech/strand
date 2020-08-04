@@ -11,9 +11,10 @@ server <- function(input, output, session) {
   values <- reactiveValues()
   
   # Creates a data.frame of the final positions
-  position_summary <- eventReactive(values$sim_result, {
-    
-    values$sim_result$getPositionSummary(strategy_name = "joint") %>%
+                                            # changed sim_result tom sim_obj
+  position_summary <- eventReactive(values$sim_obj, {
+            # result to obj
+    values$sim_obj$getPositionSummary(strategy_name = "joint") %>%
       left_join(values$sim_obj$getSecurityReference()[c("id","symbol")], by = "id") %>%
       ungroup() %>%
       select(.data$symbol, .data$gross_pnl, .data$net_pnl,
@@ -28,12 +29,17 @@ server <- function(input, output, session) {
   #   maximum alpha (alpha_max)
   #   minimum alpha (alpha_min)
   #   list of markey fill quarties (market_fill_quartile[[%]])
-  alpha_range_and_size <- eventReactive(values$sim_result, {
+  
+  
+                                                # result to obj
+  alpha_range_and_size <- eventReactive(values$sim_obj, {
     
     # Creates a data.frame of all positions throughout the simulation
     # Rounds alpha to get full alpha range
     # Includes days when no trades happen to compare alpha throughout simulation
-    simulation_summary <- values$sim_result$getSimDetail(strategy_name = "joint") %>%
+    
+                                # result to obj
+    simulation_summary <- values$sim_obj$getSimDetail(strategy_name = "joint") %>%
       group_by(id) %>%
       mutate(alpha_1 = round(alpha_1, digits = 2)) %>%
       ungroup() 
@@ -67,7 +73,8 @@ server <- function(input, output, session) {
     # Add 'save_detail_columns: alpha_1' under simulation 
     # Uses id and symbol to get simulation details of the position
     selected_holdings <- 
-      left_join(values$sim_result$getSimDetail(strategy_name = "joint", 
+                            # result to obj
+      left_join(values$sim_obj$getSimDetail(strategy_name = "joint", 
                                                security_id = selected_sec_ref$id), 
                 selected_sec_ref, by = "id") %>%
       select("sim_date", "symbol", "net_pnl", "shares", "alpha_1","order_shares", "fill_shares", 
@@ -84,31 +91,33 @@ server <- function(input, output, session) {
              market_fill_nmv = round(market_fill_nmv, digits = 0))
   })
  
-  observeEvent(values$sim_result, {
-    
+                      # result to obj
+  observeEvent(values$sim_obj, {
+    # result to obj
     output$plot_1 <- renderPlotly(
-      ggplotly(values$sim_result$plotPerformance(), tooltip = FALSE) 
+      ggplotly(values$sim_obj$plotPerformance(), tooltip = FALSE) 
     )
-    
+    # result to obj
     output$plot_2 <- renderPlotly(
-      ggplotly(values$sim_result$plotMarketValue(), tooltip = FALSE)
+      ggplotly(values$sim_obj$plotMarketValue(), tooltip = FALSE)
     )
     
     # TODO dynamically select exposure plot in_vars based on config file
+            # result to obj
     output$plot_3 <- renderPlotly(
-      ggplotly(values$sim_result$plotCategoryExposure(in_var = "category_1"), tooltip = FALSE)
+      ggplotly(values$sim_obj$plotCategoryExposure(in_var = "category_1"), tooltip = FALSE)
     )
-
+                # result to obj
     output$plot_4 <- renderPlotly(
-      ggplotly(values$sim_result$plotFactorExposure(in_var = c("factor_1", "factor_2", "factor_3", "factor_4")), tooltip = FALSE)
+      ggplotly(values$sim_obj$plotFactorExposure(in_var = c("factor_1", "factor_2", "factor_3", "factor_4")), tooltip = FALSE)
     )
-    
+                   # result to obj
     output$plot_5 <- renderPlotly(
-      ggplotly(values$sim_result$plotNumPositions(), tooltip = FALSE)
+      ggplotly(values$sim_obj$plotNumPositions(), tooltip = FALSE)
     )
-    output$overallStatsTable <- renderTable(values$sim_result$overallStatsDf(), align = "lrr")
-
-    summary_data <- values$sim_result$getSingleStrategySummaryDf("joint", include_zero_row = FALSE)
+    output$overallStatsTable <- renderTable(values$sim_obj$overallStatsDf(), align = "lrr")
+                            # result to obj
+    summary_data <- values$sim_obj$getSingleStrategySummaryDf("joint", include_zero_row = FALSE)
     perf_stats <- summary_data %>%
       transmute(
         Date = .data$sim_date,
@@ -151,8 +160,8 @@ server <- function(input, output, session) {
     if (!is.null(values$sim_obj)) {
       
       output$holdingsTable <- renderDT(
-        
-        left_join(values$sim_result$getSimDetail(as.character(input$holdingsDate), strategy_name = "joint"),
+                          # result to obj
+        left_join(values$sim_obj$getSimDetail(as.character(input$holdingsDate), strategy_name = "joint"),
                   values$sim_obj$getSecurityReference(), by = "id") %>%
           select("symbol", "shares", "order_shares", "fill_shares", "end_shares", "end_nmv",
                  "gross_pnl", "trade_costs", "financing_costs") %>%
@@ -423,9 +432,10 @@ server <- function(input, output, session) {
                             raw_pricing_data = sample_pricing,
                             security_reference_data = sample_secref)
       sim$setShinyCallback(updateProgress)
-      res <- sim$run()
+      sim$run()
+      # res <- sim$run()
 
-      values$sim_result <- res
+      # values$sim_result <- res
       values$sim_obj <- sim
       
       updateTabsetPanel(session,
