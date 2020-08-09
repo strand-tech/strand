@@ -26,41 +26,112 @@ server <- function(input, output, session) {
   })
   
   # Produces a name value list that stores
-  #   maximum alpha (alpha_max)
-  #   minimum alpha (alpha_min)
+  #   maximum alpha (in_var_max)
+  #   minimum alpha (in_var_min)
   #   list of markey fill quarties (market_fill_quartile[[%]])
   
   
+  
+  
+  
+  
+  
+  
+  # REMEMBER TO GET RID OF THIS
+  
+  observeEvent(values$sim_obj, {
+    
+    output$TestOutput <- renderText({
+      
+      # this should be alpha 
+      # 
+      # strategy_1:
+      #   in_var
+      
+      
+       strategy_name <- values$sim_obj$getConfig()$getStrategyNames() %>%
+         as.symbol()
+      # strategy_name_bang_bang = expr(strategy_name)
+      
+      
+      # strategy_name_bang_bang <- enquo(strategy_name)
+      
+      # my_config <- values$sim_obj$getConfig()
+      
+      # produces alpha_1
+      my_alpha <- values$sim_obj$getConfig()$getStrategyConfig(strategy_name, "in_var")
+      my_config <- values$sim_obj$getConfig()$getConfig("example_sim")
+      my_constraints <- values$sim_obj$getConfig()$getStrategyConfig(strategy_name, "constraints")
+      
+     factor_names <- list()
+     constraints <- 1
+     
+     while(constraints <= length(my_constraints)) {
+       if(my_constraints[[constraints]][["type"]] == "factor") {
+         factor_names[[constraints]] <- my_constraints[[constraints]][["in_var"]]
+       }
+       constraints <- constraints + 1
+     }
+      #   # getConfig()
+      # 
+      # 
+      # type_config <- typeof(my_config)
+      ham <- "ham" %>%
+        class()
+      
+      paste0(factor_names)
+      
+    })
+  })
+  
+  
+
+  
                                                 # result to obj
   alpha_range_and_size <- eventReactive(values$sim_obj, {
+    
+    # gets in_var for strategy
+    strategy_name <- values$sim_obj$getConfig()$getStrategyNames()
+    in_var <- values$sim_obj$getConfig()$getStrategyConfig(strategy_name, "in_var") %>%
+      as.symbol()
+    
     
     # Creates a data.frame of all positions throughout the simulation
     # Rounds alpha to get full alpha range
     # Includes days when no trades happen to compare alpha throughout simulation
     
                                 # result to obj
-    simulation_summary <- values$sim_obj$getSimDetail(strategy_name = "joint") %>%
-      group_by(id) %>%
-      mutate(alpha_1 = round(alpha_1, digits = 2)) %>%
-      ungroup() 
+    in_var_summary <- values$sim_obj$getSimDetail(strategy_name = "joint") %>%
+      select({{ in_var }}, market_fill_nmv) %>%
+      mutate(
+        {{ in_var }} := round(!!in_var, digits = 2),
+      )
     
     # Creates a data frame of all trades throughout the simulation
     # Removes all days when no trades happen
-    trade_summary <- simulation_summary %>%
+    trade_summary <- in_var_summary %>%
+      select(market_fill_nmv) %>%
       filter(market_fill_nmv != 0)
     
-    list("alpha_max" = max(simulation_summary$alpha_1),
-         "alpha_min" = min(simulation_summary$alpha_1), 
+    
+    list("in_var_max" = max(eval(expr('$'(in_var_summary, !!in_var)))),
+         "in_var_min" = min(eval(expr('$'(in_var_summary, !!in_var)))), 
          # Normalizes the alpha, the mean is the average, not necessarily zero 
          # Used for plotly gradient
-         "alpha_normalized_average" = (mean(simulation_summary$alpha_1) - min(simulation_summary$alpha_1)) / 
-           (max(simulation_summary$alpha_1) -  min(simulation_summary$alpha_1)),
+         "in_var_normalized_average" = (mean(eval(expr('$'(in_var_summary, !!in_var)))) 
+                                        - min(eval(expr('$'(in_var_summary, !!in_var))))) / 
+           (max(eval(expr('$'(in_var_summary, !!in_var)))) -  min(eval(expr('$'(in_var_summary, !!in_var))))),
          # Uses trade summary instead of simulation summary for trade quantile
          "market_fill_quartile" = quantile(abs(trade_summary$market_fill_nmv)))
   })
   
   # creates a data frame filled with the day by day of selected position
   selected_holding_row <- eventReactive(input$positionSummaryTable_rows_selected, {
+    
+    strategy_name <- values$sim_obj$getConfig()$getStrategyNames()
+    in_var <- values$sim_obj$getConfig()$getStrategyConfig(strategy_name, "in_var") %>%
+      as.symbol()
+    
     
     # Gets the ID of the selected holding
     # Returns a data frame of the position's id and symbol
@@ -77,7 +148,7 @@ server <- function(input, output, session) {
       left_join(values$sim_obj$getSimDetail(strategy_name = "joint", 
                                                security_id = selected_sec_ref$id), 
                 selected_sec_ref, by = "id") %>%
-      select("sim_date", "symbol", "net_pnl", "shares", "alpha_1","order_shares", "fill_shares", 
+      select("sim_date", "symbol", "net_pnl", "shares", !!in_var, "order_shares", "fill_shares", 
              "market_fill_nmv", "end_shares", "end_nmv", "gross_pnl", "trade_costs", "financing_costs") %>%
       mutate(end_nmv = round(end_nmv),
              gross_pnl = round(gross_pnl, digits = 2),
@@ -87,7 +158,7 @@ server <- function(input, output, session) {
              net_pnl = round(net_pnl, digits = 0),
              gross_pnl = cumsum(gross_pnl),
              gross_pnl = round(gross_pnl, digits = 0),
-             alpha_1 = round(alpha_1, digits = 2),
+             "{{ in_var }}" := round(!!in_var, digits = 2),
              market_fill_nmv = round(market_fill_nmv, digits = 0))
   })
  
@@ -102,14 +173,50 @@ server <- function(input, output, session) {
       ggplotly(values$sim_obj$plotMarketValue(), tooltip = FALSE)
     )
     
+    
+    
+    strategy_name <- values$sim_obj$getConfig()$getStrategyNames() %>%
+      as.symbol()
+    
+    my_constraints <- values$sim_obj$getConfig()$getStrategyConfig(strategy_name, "constraints")
+    
+    category_names <- vector()
+    vector_position <- 1
+    constraints <- 1
+    
+    while(constraints <= length(my_constraints)) {
+      if(my_constraints[[constraints]][["type"]] == "category") {
+        category_names[[vector_position]] <- my_constraints[[constraints]][["in_var"]]
+        vector_position <- vector_position + 1
+      }
+      constraints <- constraints + 1
+    }
+    
+    
+    
     # TODO dynamically select exposure plot in_vars based on config file
             # result to obj
     output$plot_3 <- renderPlotly(
-      ggplotly(values$sim_obj$plotCategoryExposure(in_var = "category_1"), tooltip = FALSE)
+      ggplotly(values$sim_obj$plotCategoryExposure(in_var = category_names), tooltip = FALSE)
     )
+    
+    
+    factor_names <- vector()
+    vector_position <- 1
+    constraints <- 1
+    
+    while(constraints <= length(my_constraints)) {
+      if(my_constraints[[constraints]][["type"]] == "factor") {
+        factor_names[[vector_position]] <- my_constraints[[constraints]][["in_var"]]
+        vector_position <- vector_position + 1
+      }
+      constraints <- constraints + 1
+    }
+    
+    
                 # result to obj
     output$plot_4 <- renderPlotly(
-      ggplotly(values$sim_obj$plotFactorExposure(in_var = c("factor_1", "factor_2", "factor_3", "factor_4")), tooltip = FALSE)
+      ggplotly(values$sim_obj$plotFactorExposure(in_var = factor_names), tooltip = FALSE)
     )
                    # result to obj
     output$plot_5 <- renderPlotly(
@@ -221,12 +328,12 @@ server <- function(input, output, session) {
           symbol = factor(selection_plot$buy_sell),
           size = selection_plot$magnitude,
           # Sets range of alpha colorscale based off all alphas
-          cmin = alpha_range_and_size()$alpha_min,
-          cmax = alpha_range_and_size()$alpha_max,
+          cmin = alpha_range_and_size()$in_var_min,
+          cmax = alpha_range_and_size()$in_var_max,
           colorscale = list(c(0, "rgb(178, 34, 34)"),
                             # Yellow will be set to normalized average
                             # Colorscale is based on [0, 1] range
-                            list(alpha_range_and_size()$alpha_normalized_average, "rgb(255, 255, 0)"),
+                            list(alpha_range_and_size()$in_var_normalized_average, "rgb(255, 255, 0)"),
                             list(1, "rgb(50, 205, 50)")),
           colorbar = list(
             title='Symbol:
@@ -268,10 +375,10 @@ server <- function(input, output, session) {
          ),
          symbol = factor(selection_plot$buy_sell),
          size = selection_plot$magnitude,
-         cmin = alpha_range_and_size()$alpha_min,
-         cmax = alpha_range_and_size()$alpha_max,
+         cmin = alpha_range_and_size()$in_var_min,
+         cmax = alpha_range_and_size()$in_var_max,
          colorscale = list(c(0, "rgb(178, 34, 34)"),
-                           list(alpha_range_and_size()$alpha_normalized_average, "rgb(255, 255, 0)"),
+                           list(alpha_range_and_size()$in_var_normalized_average, "rgb(255, 255, 0)"),
                            list(1, "rgb(50, 205, 50)")),
          colorbar = list(
             title='Symbol:
@@ -344,7 +451,7 @@ server <- function(input, output, session) {
       layout(
         yaxis = list(
           title = "Alpha",
-          range = c(alpha_range_and_size()$alpha_min, alpha_range_and_size()$alpha_max),
+          range = c(alpha_range_and_size()$in_var_min, alpha_range_and_size()$in_var_max),
           # Removes vertical zoom function from alpha plot
           fixedrange = TRUE, showzeroline = FALSE,
           # Controls vertical lines around alpha plot

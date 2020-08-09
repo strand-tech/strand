@@ -39,6 +39,19 @@ ui <- fluidPage(
                                   value = .readYamlConfig()
                                   )
              )),
+    
+    # REMOVE THE TESTING PANEL, its just for seeing whats happening
+    
+    tabPanel(
+      "Testing",
+      br(),
+      fluidRow(
+        column(
+          12,
+          verbatimTextOutput("TestOutput")
+        )
+      )
+    ),
     tabPanel(
       "Results",
       br(),
