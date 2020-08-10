@@ -72,7 +72,7 @@ server <- function(input, output, session) {
       
       
       
-      paste0(alpha_range_and_size()$config_category)
+      paste0(plot_aesthetics()$config_category)
       
     })
   })
@@ -134,7 +134,7 @@ server <- function(input, output, session) {
   #   list of markey fill quarties (market_fill_quartile[[%]])
   
                                                 # result to obj
-  alpha_range_and_size <- eventReactive(values$sim_obj, {
+  plot_aesthetics <- eventReactive(values$sim_obj, {
     
     # gets in_var for strategy
     # strategy_name <- values$sim_obj$getConfig()$getStrategyNames()
@@ -350,9 +350,9 @@ server <- function(input, output, session) {
       mutate(buy_sell = ifelse(fill_shares > 0, 'triangle-up',
                                   ifelse(fill_shares < 0, 'triangle-down', '0')),
              magnitude = ifelse(market_fill_nmv == 0, 5,
-                                 ifelse(abs(market_fill_nmv) > alpha_range_and_size()$market_fill_quartile[["50%"]],
-                                 ifelse(abs(market_fill_nmv) > alpha_range_and_size()$market_fill_quartile[["75%"]], 30, 25),
-                                 ifelse(abs(market_fill_nmv) > alpha_range_and_size()$market_fill_quartile[["25%"]], 20, 15))))
+                                 ifelse(abs(market_fill_nmv) > plot_aesthetics()$market_fill_quartile[["50%"]],
+                                 ifelse(abs(market_fill_nmv) > plot_aesthetics()$market_fill_quartile[["75%"]], 30, 25),
+                                 ifelse(abs(market_fill_nmv) > plot_aesthetics()$market_fill_quartile[["25%"]], 20, 15))))
     
     # Creates one plot with two traces for the PNL and NMV
     holdings_plot <- plot_ly() %>%
@@ -376,12 +376,12 @@ server <- function(input, output, session) {
           symbol = factor(selection_plot$buy_sell),
           size = selection_plot$magnitude,
           # Sets range of alpha colorscale based off all alphas
-          cmin = alpha_range_and_size()$in_var_min,
-          cmax = alpha_range_and_size()$in_var_max,
+          cmin = plot_aesthetics()$in_var_min,
+          cmax = plot_aesthetics()$in_var_max,
           colorscale = list(c(0, "rgb(178, 34, 34)"),
                             # Yellow will be set to normalized average
                             # Colorscale is based on [0, 1] range
-                            list(alpha_range_and_size()$in_var_normalized_average, "rgb(255, 255, 0)"),
+                            list(plot_aesthetics()$in_var_normalized_average, "rgb(255, 255, 0)"),
                             list(1, "rgb(50, 205, 50)")),
           colorbar = list(
             title= paste('Symbol:
@@ -423,10 +423,10 @@ server <- function(input, output, session) {
          ),
          symbol = factor(selection_plot$buy_sell),
          size = selection_plot$magnitude,
-         cmin = alpha_range_and_size()$in_var_min,
-         cmax = alpha_range_and_size()$in_var_max,
+         cmin = plot_aesthetics()$in_var_min,
+         cmax = plot_aesthetics()$in_var_max,
          colorscale = list(c(0, "rgb(178, 34, 34)"),
-                           list(alpha_range_and_size()$in_var_normalized_average, "rgb(255, 255, 0)"),
+                           list(plot_aesthetics()$in_var_normalized_average, "rgb(255, 255, 0)"),
                            list(1, "rgb(50, 205, 50)")),
          colorbar = list(
             title='Symbol:
@@ -478,7 +478,7 @@ server <- function(input, output, session) {
         ))
       
     # Creates the alpha sub plot                             
-    alpha_plot <- plot_ly(x = selection_plot$sim_date, y = eval(expr('$'(selection_plot, !!config_values()$in_var))),
+    in_var_plot <- plot_ly(x = selection_plot$sim_date, y = eval(expr('$'(selection_plot, !!config_values()$in_var))),
                           type = "scatter", mode = "lines",
                           line = list(
                             color = "rgb(0, 102, 204)"
@@ -499,7 +499,7 @@ server <- function(input, output, session) {
       layout(
         yaxis = list(
           title = paste(config_values()$in_var),
-          range = c(alpha_range_and_size()$in_var_min, alpha_range_and_size()$in_var_max),
+          range = c(plot_aesthetics()$in_var_min, plot_aesthetics()$in_var_max),
           # Removes vertical zoom function from alpha plot
           fixedrange = TRUE, showzeroline = FALSE,
           # Controls vertical lines around alpha plot
@@ -513,7 +513,7 @@ server <- function(input, output, session) {
         showlegend = FALSE)
     
     # Combines holdings plot with alpha plot and links horizontal axis
-    multi_layed_plot <- subplot(holdings_plot, alpha_plot,
+    multi_layed_plot <- subplot(holdings_plot, in_var_plot,
                                 nrows = 2, shareX = TRUE, titleY = TRUE, heights = c(0.80, 0.20))
      
       
