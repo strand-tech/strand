@@ -72,7 +72,7 @@ server <- function(input, output, session) {
       
       
       
-      paste0(config_values()$in_var)
+      paste0(alpha_range_and_size()$config_category)
       
     })
   })
@@ -90,28 +90,28 @@ server <- function(input, output, session) {
     # returns the list of config restraints
     my_constraints <- values$sim_obj$getConfig()$getStrategyConfig(strategy_name, "constraints")
     
-    category_names <- vector()
+    config_category <- vector()
     vector_position <- 1
     constraints <- 1
     
     # finds the categories in the config and returns a list
     while(constraints <= length(my_constraints)) {
       if(my_constraints[[constraints]][["type"]] == "category") {
-        category_names[[vector_position]] <- my_constraints[[constraints]][["in_var"]]
+        config_category[[vector_position]] <- my_constraints[[constraints]][["in_var"]]
         vector_position <- vector_position + 1
       }
       constraints <- constraints + 1
     }
     
     
-    factor_names <- vector()
+    config_factors <- vector()
     vector_position <- 1
     constraints <- 1
     
     # finds the factors in the config and returns a list
     while(constraints <= length(my_constraints)) {
       if(my_constraints[[constraints]][["type"]] == "factor") {
-        factor_names[[vector_position]] <- my_constraints[[constraints]][["in_var"]]
+        config_factors[[vector_position]] <- my_constraints[[constraints]][["in_var"]]
         vector_position <- vector_position + 1
       }
       constraints <- constraints + 1
@@ -119,8 +119,8 @@ server <- function(input, output, session) {
     
     list(
       "in_var" = in_var,
-      "config_category" = category_names,
-      "config_factors" = factor_names
+      "config_category" = config_category,
+      "config_factors" = config_factors
     )
   })
   
@@ -137,9 +137,9 @@ server <- function(input, output, session) {
   alpha_range_and_size <- eventReactive(values$sim_obj, {
     
     # gets in_var for strategy
-    strategy_name <- values$sim_obj$getConfig()$getStrategyNames()
-    in_var <- values$sim_obj$getConfig()$getStrategyConfig(strategy_name, "in_var") %>%
-      as.symbol()
+    # strategy_name <- values$sim_obj$getConfig()$getStrategyNames()
+    # in_var <- values$sim_obj$getConfig()$getStrategyConfig(strategy_name, "in_var") %>%
+    #   as.symbol()
     
     
     # Creates a data.frame of all positions throughout the simulation
@@ -150,7 +150,7 @@ server <- function(input, output, session) {
     in_var_summary <- values$sim_obj$getSimDetail(strategy_name = "joint") %>%
       select(config_values()$in_var, market_fill_nmv) %>%
       mutate(
-        "{{ config_values()$in_var }}" := round(config_values()$in_var, digits = 2),
+        !!config_values()$in_var := round(!!config_values()$in_var, digits = 2)
       )
     
     # Creates a data frame of all trades throughout the simulation
@@ -159,14 +159,16 @@ server <- function(input, output, session) {
       select(market_fill_nmv) %>%
       filter(market_fill_nmv != 0)
     
+    in_var_max <- max(eval(expr('$'(in_var_summary, !!config_values()$in_var))))
+    in_var_min <- min(eval(expr('$'(in_var_summary, !!config_values()$in_var))))
+  
     
-    list("in_var_max" = max(eval(expr('$'(in_var_summary, !!in_var)))),
-         "in_var_min" = min(eval(expr('$'(in_var_summary, !!in_var)))), 
+    list("in_var_max" = in_var_max,
+         "in_var_min" = in_var_min, 
          # Normalizes the alpha, the mean is the average, not necessarily zero 
          # Used for plotly gradient
-         "in_var_normalized_average" = (mean(eval(expr('$'(in_var_summary, !!in_var)))) 
-                                        - min(eval(expr('$'(in_var_summary, !!in_var))))) / 
-           (max(eval(expr('$'(in_var_summary, !!in_var)))) -  min(eval(expr('$'(in_var_summary, !!in_var))))),
+         "in_var_normalized_average" = (mean(eval(expr('$'(in_var_summary, !!config_values()$in_var)))) - in_var_min) / 
+           (in_var_max - in_var_min),
          # Uses trade summary instead of simulation summary for trade quantile
          "market_fill_quartile" = quantile(abs(trade_summary$market_fill_nmv)))
   })
@@ -174,9 +176,9 @@ server <- function(input, output, session) {
   # creates a data frame filled with the day by day of selected position
   selected_holding_row <- eventReactive(input$positionSummaryTable_rows_selected, {
     
-    strategy_name <- values$sim_obj$getConfig()$getStrategyNames()
-    in_var <- values$sim_obj$getConfig()$getStrategyConfig(strategy_name, "in_var") %>%
-      as.symbol()
+    # strategy_name <- values$sim_obj$getConfig()$getStrategyNames()
+    # in_var <- values$sim_obj$getConfig()$getStrategyConfig(strategy_name, "in_var") %>%
+    #   as.symbol()
     
     
     # Gets the ID of the selected holding
@@ -194,7 +196,7 @@ server <- function(input, output, session) {
       left_join(values$sim_obj$getSimDetail(strategy_name = "joint", 
                                                security_id = selected_sec_ref$id), 
                 selected_sec_ref, by = "id") %>%
-      select("sim_date", "symbol", "net_pnl", "shares", !!in_var, "order_shares", "fill_shares", 
+      select("sim_date", "symbol", "net_pnl", "shares", !!config_values()$in_var, "order_shares", "fill_shares", 
              "market_fill_nmv", "end_shares", "end_nmv", "gross_pnl", "trade_costs", "financing_costs") %>%
       mutate(end_nmv = round(end_nmv),
              gross_pnl = round(gross_pnl, digits = 2),
@@ -204,7 +206,7 @@ server <- function(input, output, session) {
              net_pnl = round(net_pnl, digits = 0),
              gross_pnl = cumsum(gross_pnl),
              gross_pnl = round(gross_pnl, digits = 0),
-             "{{ in_var }}" := round(!!in_var, digits = 2),
+           !!config_values()$in_var := round(!!config_values()$in_var, digits = 2),
              market_fill_nmv = round(market_fill_nmv, digits = 0))
   })
  
@@ -221,48 +223,48 @@ server <- function(input, output, session) {
     
     
     
-    strategy_name <- values$sim_obj$getConfig()$getStrategyNames() %>%
-      as.symbol()
-    
-    my_constraints <- values$sim_obj$getConfig()$getStrategyConfig(strategy_name, "constraints")
-    
-    category_names <- vector()
-    vector_position <- 1
-    constraints <- 1
-    
-    while(constraints <= length(my_constraints)) {
-      if(my_constraints[[constraints]][["type"]] == "category") {
-        category_names[[vector_position]] <- my_constraints[[constraints]][["in_var"]]
-        vector_position <- vector_position + 1
-      }
-      constraints <- constraints + 1
-    }
+    # strategy_name <- values$sim_obj$getConfig()$getStrategyNames() %>%
+    #   as.symbol()
+    # 
+    # my_constraints <- values$sim_obj$getConfig()$getStrategyConfig(strategy_name, "constraints")
+    # 
+    # category_names <- vector()
+    # vector_position <- 1
+    # constraints <- 1
+    # 
+    # while(constraints <= length(my_constraints)) {
+    #   if(my_constraints[[constraints]][["type"]] == "category") {
+    #     category_names[[vector_position]] <- my_constraints[[constraints]][["in_var"]]
+    #     vector_position <- vector_position + 1
+    #   }
+    #   constraints <- constraints + 1
+    # }
     
     
     
     # TODO dynamically select exposure plot in_vars based on config file
             # result to obj
     output$plot_3 <- renderPlotly(
-      ggplotly(values$sim_obj$plotCategoryExposure(in_var = category_names), tooltip = FALSE)
+      ggplotly(values$sim_obj$plotCategoryExposure(in_var = config_values()$config_category), tooltip = FALSE)
     )
     
     
-    factor_names <- vector()
-    vector_position <- 1
-    constraints <- 1
-    
-    while(constraints <= length(my_constraints)) {
-      if(my_constraints[[constraints]][["type"]] == "factor") {
-        factor_names[[vector_position]] <- my_constraints[[constraints]][["in_var"]]
-        vector_position <- vector_position + 1
-      }
-      constraints <- constraints + 1
-    }
+    # factor_names <- vector()
+    # vector_position <- 1
+    # constraints <- 1
+    # 
+    # while(constraints <= length(my_constraints)) {
+    #   if(my_constraints[[constraints]][["type"]] == "factor") {
+    #     factor_names[[vector_position]] <- my_constraints[[constraints]][["in_var"]]
+    #     vector_position <- vector_position + 1
+    #   }
+    #   constraints <- constraints + 1
+    # }
     
     
                 # result to obj
     output$plot_4 <- renderPlotly(
-      ggplotly(values$sim_obj$plotFactorExposure(in_var = factor_names), tooltip = FALSE)
+      ggplotly(values$sim_obj$plotFactorExposure(in_var = config_values()$config_factors), tooltip = FALSE)
     )
                    # result to obj
     output$plot_5 <- renderPlotly(
@@ -367,7 +369,7 @@ server <- function(input, output, session) {
         ),
         marker = list(
           opacity = 1,
-          color = selection_plot$alpha_1,
+          color = eval(expr('$'(selection_plot, !!config_values()$in_var))),
           line = list(
             color = 'black'
           ),
@@ -382,10 +384,10 @@ server <- function(input, output, session) {
                             list(alpha_range_and_size()$in_var_normalized_average, "rgb(255, 255, 0)"),
                             list(1, "rgb(50, 205, 50)")),
           colorbar = list(
-            title='Symbol:
+            title= paste('Symbol:
                    \n▲ Buy
                    \n▼ Sell
-                   \nAlpha:'
+                   \n', config_values()$in_var, ': ')
           ),
           showlegend =  TRUE),
         # Creates tool tip aesthetics and information
@@ -396,7 +398,7 @@ server <- function(input, output, session) {
         text = paste('Profit and Loss<br>Date: ', selection_plot$sim_date,
                      '<br>P&L: ', selection_plot$net_pnl,
                      '<br>NMV: ', selection_plot$end_nmv,
-                     '<br>Alpha: ', selection_plot$alpha_1,
+                     '<br>Alpha: ', eval(expr('$'(selection_plot, !!config_values()$in_var))),
                      '<br>Shares: ', selection_plot$shares,
                      '<br>Order: ', selection_plot$order_shares,
                      '<br>Fill: ', selection_plot$fill_shares,
@@ -415,7 +417,7 @@ server <- function(input, output, session) {
        ),
        marker = list(
          opacity = 1,
-         color = selection_plot$alpha_1,
+         color = eval(expr('$'(selection_plot, !!config_values()$in_var))),
          line = list(
            color = 'black'
          ),
@@ -440,7 +442,7 @@ server <- function(input, output, session) {
        text = paste('Net Market Value<br>Date: ', selection_plot$sim_date,
                     '<br>P&L: ', selection_plot$net_pnl,
                     '<br>NMV: ', selection_plot$end_nmv,
-                    '<br>Alpha: ', selection_plot$alpha_1,
+                    '<br>Alpha: ', eval(expr('$'(selection_plot, !!config_values()$in_var))),
                     '<br>Shares: ', selection_plot$shares,
                     '<br>Order: ', selection_plot$order_shares,
                     '<br>Fill: ', selection_plot$fill_shares,
@@ -476,7 +478,7 @@ server <- function(input, output, session) {
         ))
       
     # Creates the alpha sub plot                             
-    alpha_plot <- plot_ly(selection_plot, x = ~sim_date, y = ~alpha_1,
+    alpha_plot <- plot_ly(x = selection_plot$sim_date, y = eval(expr('$'(selection_plot, !!config_values()$in_var))),
                           type = "scatter", mode = "lines",
                           line = list(
                             color = "rgb(0, 102, 204)"
@@ -488,7 +490,7 @@ server <- function(input, output, session) {
                           text = paste('Alpha<br>Date: ', selection_plot$sim_date,
                                        '<br>P&L: ', selection_plot$net_pnl,
                                        '<br>NMV: ', selection_plot$end_nmv,
-                                       '<br>Alpha: ', selection_plot$alpha_1,
+                                       '<br>Alpha: ', eval(expr('$'(selection_plot, !!config_values()$in_var))),
                                        '<br>Shares: ', selection_plot$shares,
                                        '<br>Order: ', selection_plot$order_shares,
                                        '<br>Fill: ', selection_plot$fill_shares,
@@ -496,7 +498,7 @@ server <- function(input, output, session) {
                                        '<br>Fill Market Value: ', selection_plot$market_fill_nmv)) %>%
       layout(
         yaxis = list(
-          title = "Alpha",
+          title = paste(config_values()$in_var),
           range = c(alpha_range_and_size()$in_var_min, alpha_range_and_size()$in_var_max),
           # Removes vertical zoom function from alpha plot
           fixedrange = TRUE, showzeroline = FALSE,
