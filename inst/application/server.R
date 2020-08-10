@@ -25,18 +25,6 @@ server <- function(input, output, session) {
     
   })
   
-  # Produces a name value list that stores
-  #   maximum alpha (in_var_max)
-  #   minimum alpha (in_var_min)
-  #   list of markey fill quarties (market_fill_quartile[[%]])
-  
-  
-  
-  
-  
-  
-  
-  
   # REMEMBER TO GET RID OF THIS
   
   observeEvent(values$sim_obj, {
@@ -84,8 +72,61 @@ server <- function(input, output, session) {
     })
   })
   
+  # eventReactive that returns the name of the strategy, the in_var
+  # factors  
+  config_values <- eventReactive(values$sim_obj, {
+    
+    strategy_name <- values$sim_obj$getConfig()$getStrategyNames()
+    
+    # returns the config in_var
+    in_var <- values$sim_obj$getConfig()$getStrategyConfig(strategy_name, "in_var") %>%
+      as.symbol()
+    
+    # returns the list of config restraints
+    my_constraints <- values$sim_obj$getConfig()$getStrategyConfig(strategy_name, "constraints")
+    
+    category_names <- vector()
+    vector_position <- 1
+    constraints <- 1
+    
+    # finds the categories in the config and returns a list
+    while(constraints <= length(my_constraints)) {
+      if(my_constraints[[constraints]][["type"]] == "category") {
+        category_names[[vector_position]] <- my_constraints[[constraints]][["in_var"]]
+        vector_position <- vector_position + 1
+      }
+      constraints <- constraints + 1
+    }
+    
+    
+    factor_names <- vector()
+    vector_position <- 1
+    constraints <- 1
+    
+    # finds the factors in the config and returns a list
+    while(constraints <= length(my_constraints)) {
+      if(my_constraints[[constraints]][["type"]] == "factor") {
+        factor_names[[vector_position]] <- my_constraints[[constraints]][["in_var"]]
+        vector_position <- vector_position + 1
+      }
+      constraints <- constraints + 1
+    }
+    
+    list(
+      "in_var" = in_var,
+      "config_category" = category_names,
+      "config_factors" = factor_names
+    )
+    })
   
-
+  
+  
+  
+  
+  # Produces a name value list that stores
+  #   maximum alpha (in_var_max)
+  #   minimum alpha (in_var_min)
+  #   list of markey fill quarties (market_fill_quartile[[%]])
   
                                                 # result to obj
   alpha_range_and_size <- eventReactive(values$sim_obj, {
