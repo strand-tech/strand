@@ -30,44 +30,49 @@ server <- function(input, output, session) {
   observeEvent(values$sim_obj, {
     
     output$TestOutput <- renderText({
+     #  
+     #  # this should be alpha 
+     #  # 
+     #  # strategy_1:
+     #  #   in_var
+     #  
+     #  
+     #   strategy_name <- values$sim_obj$getConfig()$getStrategyNames() %>%
+     #     as.symbol()
+     #  # strategy_name_bang_bang = expr(strategy_name)
+     #  
+     #  
+     #  # strategy_name_bang_bang <- enquo(strategy_name)
+     #  
+     #  # my_config <- values$sim_obj$getConfig()
+     #  
+     #  # produces alpha_1
+     #  my_alpha <- values$sim_obj$getConfig()$getStrategyConfig(strategy_name, "in_var")
+     #  my_config <- values$sim_obj$getConfig()$getConfig("example_sim")
+     #  my_constraints <- values$sim_obj$getConfig()$getStrategyConfig(strategy_name, "constraints")
+     #  
+     # factor_names <- list()
+     # constraints <- 1
+     # 
+     # while(constraints <= length(my_constraints)) {
+     #   if(my_constraints[[constraints]][["type"]] == "factor") {
+     #     factor_names[[constraints]] <- my_constraints[[constraints]][["in_var"]]
+     #   }
+     #   constraints <- constraints + 1
+     # }
+     #  #   # getConfig()
+     #  # 
+     #  # 
+     #  # type_config <- typeof(my_config)
+     #  ham <- "ham" %>%
+     #    class()
       
-      # this should be alpha 
-      # 
-      # strategy_1:
-      #   in_var
       
       
-       strategy_name <- values$sim_obj$getConfig()$getStrategyNames() %>%
-         as.symbol()
-      # strategy_name_bang_bang = expr(strategy_name)
       
       
-      # strategy_name_bang_bang <- enquo(strategy_name)
       
-      # my_config <- values$sim_obj$getConfig()
-      
-      # produces alpha_1
-      my_alpha <- values$sim_obj$getConfig()$getStrategyConfig(strategy_name, "in_var")
-      my_config <- values$sim_obj$getConfig()$getConfig("example_sim")
-      my_constraints <- values$sim_obj$getConfig()$getStrategyConfig(strategy_name, "constraints")
-      
-     factor_names <- list()
-     constraints <- 1
-     
-     while(constraints <= length(my_constraints)) {
-       if(my_constraints[[constraints]][["type"]] == "factor") {
-         factor_names[[constraints]] <- my_constraints[[constraints]][["in_var"]]
-       }
-       constraints <- constraints + 1
-     }
-      #   # getConfig()
-      # 
-      # 
-      # type_config <- typeof(my_config)
-      ham <- "ham" %>%
-        class()
-      
-      paste0(factor_names)
+      paste0(config_values()$in_var)
       
     })
   })
@@ -117,7 +122,7 @@ server <- function(input, output, session) {
       "config_category" = category_names,
       "config_factors" = factor_names
     )
-    })
+  })
   
   
   
@@ -143,9 +148,9 @@ server <- function(input, output, session) {
     
                                 # result to obj
     in_var_summary <- values$sim_obj$getSimDetail(strategy_name = "joint") %>%
-      select({{ in_var }}, market_fill_nmv) %>%
+      select(config_values()$in_var, market_fill_nmv) %>%
       mutate(
-        {{ in_var }} := round(!!in_var, digits = 2),
+        "{{ config_values()$in_var }}" := round(config_values()$in_var, digits = 2),
       )
     
     # Creates a data frame of all trades throughout the simulation
