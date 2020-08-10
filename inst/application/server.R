@@ -84,8 +84,7 @@ server <- function(input, output, session) {
     strategy_name <- values$sim_obj$getConfig()$getStrategyNames()
     
     # returns the config in_var
-    in_var <- values$sim_obj$getConfig()$getStrategyConfig(strategy_name, "in_var") %>%
-      as.symbol()
+    in_var <- values$sim_obj$getConfig()$getStrategyConfig(strategy_name, "in_var")
     
     # returns the list of config restraints
     my_constraints <- values$sim_obj$getConfig()$getStrategyConfig(strategy_name, "constraints")
@@ -147,10 +146,11 @@ server <- function(input, output, session) {
     # Includes days when no trades happen to compare alpha throughout simulation
     
                                 # result to obj
+    browser()
     in_var_summary <- values$sim_obj$getSimDetail(strategy_name = "joint") %>%
-      select(config_values()$in_var, market_fill_nmv) %>%
+      select(!!config_values()$in_var, market_fill_nmv) %>%
       mutate(
-        !!config_values()$in_var := round(!!config_values()$in_var, digits = 2)
+        !!config_values()$in_var := round(get(config_values()$in_var), digits = 2)
       )
     
     # Creates a data frame of all trades throughout the simulation
@@ -159,15 +159,15 @@ server <- function(input, output, session) {
       select(market_fill_nmv) %>%
       filter(market_fill_nmv != 0)
     
-    in_var_max <- max(eval(expr('$'(in_var_summary, !!config_values()$in_var))))
-    in_var_min <- min(eval(expr('$'(in_var_summary, !!config_values()$in_var))))
+    in_var_max <- max(in_var_summary[[config_values()$in_var]])
+    in_var_min <- min(in_var_summary[[config_values()$in_var]])
   
     
     list("in_var_max" = in_var_max,
          "in_var_min" = in_var_min, 
          # Normalizes the alpha, the mean is the average, not necessarily zero 
          # Used for plotly gradient
-         "in_var_normalized_average" = (mean(eval(expr('$'(in_var_summary, !!config_values()$in_var)))) - in_var_min) / 
+         "in_var_normalized_average" = (mean(in_var_summary[[config_values()$in_var]]) - in_var_min) / 
            (in_var_max - in_var_min),
          # Uses trade summary instead of simulation summary for trade quantile
          "market_fill_quartile" = quantile(abs(trade_summary$market_fill_nmv)))
@@ -206,7 +206,7 @@ server <- function(input, output, session) {
              net_pnl = round(net_pnl, digits = 0),
              gross_pnl = cumsum(gross_pnl),
              gross_pnl = round(gross_pnl, digits = 0),
-           !!config_values()$in_var := round(!!config_values()$in_var, digits = 2),
+           !!config_values()$in_var := round(get(config_values()$in_var), digits = 2),
              market_fill_nmv = round(market_fill_nmv, digits = 0))
   })
  
@@ -369,7 +369,7 @@ server <- function(input, output, session) {
         ),
         marker = list(
           opacity = 1,
-          color = eval(expr('$'(selection_plot, !!config_values()$in_var))),
+          color = selection_plot[[config_values()$in_var]],
           line = list(
             color = 'black'
           ),
@@ -398,7 +398,7 @@ server <- function(input, output, session) {
         text = paste('Profit and Loss<br>Date: ', selection_plot$sim_date,
                      '<br>P&L: ', selection_plot$net_pnl,
                      '<br>NMV: ', selection_plot$end_nmv,
-                     '<br>Alpha: ', eval(expr('$'(selection_plot, !!config_values()$in_var))),
+                     '<br>Alpha: ', selection_plot[[config_values()$in_var]],
                      '<br>Shares: ', selection_plot$shares,
                      '<br>Order: ', selection_plot$order_shares,
                      '<br>Fill: ', selection_plot$fill_shares,
@@ -417,7 +417,7 @@ server <- function(input, output, session) {
        ),
        marker = list(
          opacity = 1,
-         color = eval(expr('$'(selection_plot, !!config_values()$in_var))),
+         color = selection_plot[[config_values()$in_var]],
          line = list(
            color = 'black'
          ),
@@ -442,7 +442,7 @@ server <- function(input, output, session) {
        text = paste('Net Market Value<br>Date: ', selection_plot$sim_date,
                     '<br>P&L: ', selection_plot$net_pnl,
                     '<br>NMV: ', selection_plot$end_nmv,
-                    '<br>Alpha: ', eval(expr('$'(selection_plot, !!config_values()$in_var))),
+                    '<br>Alpha: ', selection_plot[[config_values()$in_var]],
                     '<br>Shares: ', selection_plot$shares,
                     '<br>Order: ', selection_plot$order_shares,
                     '<br>Fill: ', selection_plot$fill_shares,
@@ -478,7 +478,7 @@ server <- function(input, output, session) {
         ))
       
     # Creates the alpha sub plot                             
-    in_var_plot <- plot_ly(x = selection_plot$sim_date, y = eval(expr('$'(selection_plot, !!config_values()$in_var))),
+    in_var_plot <- plot_ly(x = selection_plot$sim_date, y = selection_plot[[config_values()$in_var]],
                           type = "scatter", mode = "lines",
                           line = list(
                             color = "rgb(0, 102, 204)"
@@ -490,7 +490,7 @@ server <- function(input, output, session) {
                           text = paste('Alpha<br>Date: ', selection_plot$sim_date,
                                        '<br>P&L: ', selection_plot$net_pnl,
                                        '<br>NMV: ', selection_plot$end_nmv,
-                                       '<br>Alpha: ', eval(expr('$'(selection_plot, !!config_values()$in_var))),
+                                       '<br>Alpha: ', selection_plot[[config_values()$in_var]],
                                        '<br>Shares: ', selection_plot$shares,
                                        '<br>Order: ', selection_plot$order_shares,
                                        '<br>Fill: ', selection_plot$fill_shares,
