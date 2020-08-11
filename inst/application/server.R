@@ -146,7 +146,6 @@ server <- function(input, output, session) {
     # Includes days when no trades happen to compare alpha throughout simulation
     
                                 # result to obj
-    browser()
     in_var_summary <- values$sim_obj$getSimDetail(strategy_name = "joint") %>%
       select(!!config_values()$in_var, market_fill_nmv) %>%
       mutate(
