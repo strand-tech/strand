@@ -1615,7 +1615,7 @@ Simulation <- R6Class(
       
       # Group by month and calculate return.
       month_ret_long <- group_by(res, date = as.Date(paste0(format(sim_date, "%Y-%m"), "-01"))) %>%
-        summarize(ret = sum(net_ret) * 100) %>%
+        summarise(ret = sum(net_ret) * 100) %>%
         ungroup() %>%
         transmute(year = lubridate::year(date),
                   month = lubridate::month(date),
@@ -1627,7 +1627,7 @@ Simulation <- R6Class(
       
       # Compute summary statistics for each year.
       stats_yearly <- group_by(res, year = lubridate::year(sim_date)) %>%
-        summarize(
+        summarise(
           total_ret = 100 *sum(net_ret),
           ann_ret = 100 * mean(net_ret) * 252, 
           ann_vol = 100 * sd(net_ret) * sqrt(252)) %>%
