@@ -47,7 +47,8 @@ Suggests:
     DT,
     Rsymphony,
     officer,
-    flextable
+    flextable,
+    plotly
 Encoding: UTF-8
 LazyData: true
 VignetteBuilder: knitr
