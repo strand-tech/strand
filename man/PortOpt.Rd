@@ -54,6 +54,8 @@ opt$solve()
 \item \href{#method-solve}{\code{PortOpt$solve()}}
 \item \href{#method-getResultData}{\code{PortOpt$getResultData()}}
 \item \href{#method-getLoosenedConstraints}{\code{PortOpt$getLoosenedConstraints()}}
+\item \href{#method-getMaxPosition}{\code{PortOpt$getMaxPosition()}}
+\item \href{#method-getMaxOrder}{\code{PortOpt$getMaxOrder()}}
 \item \href{#method-summaryDf}{\code{PortOpt$summaryDf()}}
 \item \href{#method-print}{\code{PortOpt$print()}}
 \item \href{#method-clone}{\code{PortOpt$clone()}}
@@ -264,6 +266,49 @@ Object of class \code{list} where keys are the names of the
   loosened constraint value) / (current constraint value - violated
   constraint value). A value of 0 means a constraint was loosened 100\%
   and is not binding.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-getMaxPosition"></a>}}
+\if{latex}{\out{\hypertarget{method-getMaxPosition}{}}}
+\subsection{Method \code{getMaxPosition()}}{
+Provide information about the maximum position size allowed
+  for long and short positions.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{PortOpt$getMaxPosition()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+An object of class \code{data.frame} that contains the limits on
+  size for long and short positions for each strategy and security. The
+  columns in the data frame are:
+  \describe{
+    \item{id}{Security identifier.}
+    \item{strategy}{Strategy name.}
+    \item{max_pos_lmv}{Maximum net market value for a long position.}
+    \item{max_pos_smv}{Maximum net market value for a short position.}
+    }
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-getMaxOrder"></a>}}
+\if{latex}{\out{\hypertarget{method-getMaxOrder}{}}}
+\subsection{Method \code{getMaxOrder()}}{
+Provide information about the maximum order size allowed
+  for each security and strategy.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{PortOpt$getMaxOrder()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+An object of class \code{data.frame} that contains the limit on
+  order size for each strategy and security. The
+  columns in the data frame are:
+  \describe{
+    \item{id}{Security identifier.}
+    \item{strategy}{Strategy name.}
+    \item{max_order_gmv}{Maximum gross market value allowed for an order.}
+    }
 }
 }
 \if{html}{\out{<hr>}}

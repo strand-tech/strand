@@ -404,6 +404,35 @@ PortOpt <- R6Class(
       private$loosened_constraints
     },
     
+    #' @description Provide information about the maximum position size allowed
+    #'   for long and short positions.
+    #' @return An object of class \code{data.frame} that contains the limits on
+    #'   size for long and short positions for each strategy and security. The
+    #'   columns in the data frame are:
+    #'   \describe{
+    #'     \item{id}{Security identifier.}
+    #'     \item{strategy}{Strategy name.}
+    #'     \item{max_pos_lmv}{Maximum net market value for a long position.}
+    #'     \item{max_pos_smv}{Maximum net market value for a short position.}
+    #'     }
+    getMaxPosition = function() {
+      private$max_position
+    },
+    
+    #' @description Provide information about the maximum order size allowed
+    #'   for each security and strategy.
+    #' @return An object of class \code{data.frame} that contains the limit on
+    #'   order size for each strategy and security. The
+    #'   columns in the data frame are:
+    #'   \describe{
+    #'     \item{id}{Security identifier.}
+    #'     \item{strategy}{Strategy name.}
+    #'     \item{max_order_gmv}{Maximum gross market value allowed for an order.}
+    #'     }
+    getMaxOrder = function() {
+      private$max_order
+    },
+    
     #' @description Provide aggregate level optimization information if the
     #'   problem has been solved.
     #' @return A data frame with one row per strategy, including the joint (net)
@@ -539,6 +568,9 @@ PortOpt <- R6Class(
       config = NULL,
       
       input_data = NULL,
+      
+      max_position = NULL,
+      max_order = NULL,
       
       verbose = FALSE,
       
@@ -832,6 +864,16 @@ PortOpt <- R6Class(
           # volume limit by anticipated average trading volume.
           trading_limit <- private$input_data[[vol_var]] * trading_limit_pct_adv / 100
           
+          # Save this per-stock trading limit to the max_order member.
+          private$max_order <- rbind(
+            private$max_order,
+            data.frame(
+              strategy = strategy,
+              id = private$input_data$id,
+              max_order_gmv = trading_limit,
+              stringsAsFactors = FALSE)
+          )
+
           # Should have a config method that returns the starting shares column
           # for a given strategy (or even a method that returns a vector of
           # position nmvs).
@@ -866,7 +908,20 @@ PortOpt <- R6Class(
           pos_lower_limit <- -1 * 
             pmin(private$input_data[[vol_var]] * position_limit_pct_adv / 100,
                  ideal_smv * position_limit_pct_smv / 100)
-          
+
+          # Save the max position size based on position limit information in
+          # the object. These values can be accessed using the getMaxPosition
+          # method.
+          private$max_position <- rbind(
+            private$max_position,
+            data.frame(
+              strategy = strategy,
+              id = private$input_data$id,
+              max_pos_lmv = pos_upper_limit,
+              max_pos_smv = pos_lower_limit,
+              stringsAsFactors = FALSE)
+            )
+
           # Set pos_upper_limit and pos_lower_limit to zero for stocks that are
           # not investable
           pos_upper_limit[!private$input_data$investable] <- 0
@@ -918,7 +973,28 @@ PortOpt <- R6Class(
                                         rep(Inf, nrow(private$input_data)))
         private$variable_bounds$lower <- c(private$variable_bounds$lower,
                                         rep(0, nrow(private$input_data)))
-        
+    
+        # Finish bookkeeping for max_position and max_order data by adding
+        # values for the joint level. When we add joint position and trading
+        # limits as constraints this section will no longer be needed.
+        private$max_position <-
+          rbind(
+            private$max_position,
+            private$max_position %>%
+              mutate(strategy = "joint") %>%
+              group_by(strategy, id) %>%
+              summarise(max_pos_lmv = sum(max_pos_lmv),
+                        max_pos_smv = sum(max_pos_smv)))
+
+        private$max_order <-
+          rbind(
+            private$max_order,
+            private$max_order %>%
+              mutate(strategy = "joint") %>%
+              group_by(strategy, id) %>%
+              summarise(max_order_gmv = sum(max_order_gmv)))
+
+            
         invisible(self)
       },
       
