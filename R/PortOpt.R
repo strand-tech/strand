@@ -973,7 +973,7 @@ PortOpt <- R6Class(
                                         rep(Inf, nrow(private$input_data)))
         private$variable_bounds$lower <- c(private$variable_bounds$lower,
                                         rep(0, nrow(private$input_data)))
-    
+
         # Finish bookkeeping for max_position and max_order data by adding
         # values for the joint level. When we add joint position and trading
         # limits as constraints this section will no longer be needed.
@@ -984,7 +984,8 @@ PortOpt <- R6Class(
               mutate(strategy = "joint") %>%
               group_by(strategy, id) %>%
               summarise(max_pos_lmv = sum(max_pos_lmv),
-                        max_pos_smv = sum(max_pos_smv)))
+                        max_pos_smv = sum(max_pos_smv)) %>%
+              ungroup())
 
         private$max_order <-
           rbind(
@@ -992,7 +993,8 @@ PortOpt <- R6Class(
             private$max_order %>%
               mutate(strategy = "joint") %>%
               group_by(strategy, id) %>%
-              summarise(max_order_gmv = sum(max_order_gmv)))
+              summarise(max_order_gmv = sum(max_order_gmv)) %>%
+              ungroup())
 
             
         invisible(self)
