@@ -99,7 +99,8 @@ ui <- fluidPage(
             column(
               12,
               br(),
-              plotlyOutput('plot_3'),
+              # plotlyOutput('plot_3'),
+              uiOutput('plot_3s'),
               plotlyOutput('plot_4')
             )
           )

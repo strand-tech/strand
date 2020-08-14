@@ -86,36 +86,7 @@ server <- function(input, output, session) {
     # returns the config in_var
     in_var <- values$sim_obj$getConfig()$getStrategyConfig(strategy_name, "in_var")
     
-    # # returns the list of config restraints
-    # my_constraints <- values$sim_obj$getConfig()$getStrategyConfig(strategy_name, "constraints")
-    # 
-    # config_category <- vector()
-    # vector_position <- 1
-    # constraints <- 1
-    # 
-    # # finds the categories in the config and returns a list
-    # while(constraints <= length(my_constraints)) {
-    #   if(my_constraints[[constraints]][["type"]] == "category") {
-    #     config_category[[vector_position]] <- my_constraints[[constraints]][["in_var"]]
-    #     vector_position <- vector_position + 1
-    #   }
-    #   constraints <- constraints + 1
-    # }
-    # 
-    # 
-    # config_factors <- vector()
-    # vector_position <- 1
-    # constraints <- 1
-    # 
-    # # finds the factors in the config and returns a list
-    # while(constraints <= length(my_constraints)) {
-    #   if(my_constraints[[constraints]][["type"]] == "factor") {
-    #     config_factors[[vector_position]] <- my_constraints[[constraints]][["in_var"]]
-    #     vector_position <- vector_position + 1
-    #   }
-    #   constraints <- constraints + 1
-    # }
-    
+
     config_category <- values$sim_obj$getConfig()$getConfig("simulator")$calculate_exposures$category_vars %>%
       as.vector()
     config_factors <- values$sim_obj$getConfig()$getConfig("simulator")$calculate_exposures$factor_vars %>%
@@ -128,7 +99,19 @@ server <- function(input, output, session) {
     )
   })
   
-  
+  # exposure_graphs <- eventReactive(sim_obj, {
+  #   
+  #   config_category <- values$sim_obj$getConfig()$getConfig("simulator")$calculate_exposures$category_vars %>%
+  #     as.vector()
+  #   
+  #   config_factors <- values$sim_obj$getConfig()$getConfig("simulator")$calculate_exposures$factor_vars %>%
+  #     as.vector()
+  #   
+  #   if (is.null(config_category)) {
+  #     
+  #   }
+  #   
+  # })
   
   
   
@@ -252,7 +235,7 @@ server <- function(input, output, session) {
     #   ggplotly(values$sim_obj$plotCategoryExposure(in_var = config_values()$config_category), tooltip = FALSE)
     # )
     output$plot_3s <- renderUI({
-      category_plot_list <- lapply(1:length(categories), function(i) {
+      category_plot_list <- lapply(1:length(config_values()$config_category), function(i) {
         cat_plot_name <- paste("cat_plot_", i, sep = "")
         plotlyOutput(cat_plot_name)
       })
@@ -305,6 +288,16 @@ server <- function(input, output, session) {
                                             selection = 'single')
 
   })
+  
+  # generates multple category exposure plots
+  observe({
+    lapply(1:length(config_values()$config_category), function(i){
+      output[[paste("cat_plot_", i, sep = "")]] <- renderPlotly({
+        ggplotly(values$sim_obj$plotCategoryExposure(in_var = config_values()$config_category[[i]]), tooltip = FALSE)
+      })
+    })
+  })
+  
   
   observeEvent(input$holdingsDate, {
     
