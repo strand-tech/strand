@@ -101,7 +101,8 @@ ui <- fluidPage(
               br(),
               # plotlyOutput('plot_3'),
               uiOutput('plot_3s'),
-              plotlyOutput('plot_4')
+              # plotlyOutput('plot_4')
+              uiOutput('factor_exposure')
             )
           )
         ),

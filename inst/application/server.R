@@ -99,19 +99,23 @@ server <- function(input, output, session) {
     )
   })
   
-  # exposure_graphs <- eventReactive(sim_obj, {
-  #   
-  #   config_category <- values$sim_obj$getConfig()$getConfig("simulator")$calculate_exposures$category_vars %>%
-  #     as.vector()
-  #   
-  #   config_factors <- values$sim_obj$getConfig()$getConfig("simulator")$calculate_exposures$factor_vars %>%
-  #     as.vector()
-  #   
-  #   if (is.null(config_category)) {
-  #     
-  #   }
-  #   
-  # })
+  exposure_graphs <- eventReactive(values$sim_obj, {
+
+    # config_category <- values$sim_obj$getConfig()$getConfig("simulator")$calculate_exposures$category_vars %>%
+    #   as.vector()
+    
+    # TODO make sure both varaibles are names in the list
+    
+    config_factors <- values$sim_obj$getConfig()$getConfig("simulator")$calculate_exposures$factor_vars %>%
+      as.vector()
+    # browser()
+    if (is.null(config_factors)) {
+      config_vars <- NULL
+    } else {
+      config_vars <- ggplotly(values$sim_obj$plotFactorExposure(in_var = config_values()$config_factors), tooltip = FALSE)
+    }
+    return(config_vars)
+  })
   
   
   
@@ -198,7 +202,8 @@ server <- function(input, output, session) {
   })
  
                       # result to obj
-  observeEvent(values$sim_obj, {
+  # changed from values$sim_obj
+  observeEvent(exposure_graphs(), {
     # result to obj
     output$plot_1 <- renderPlotly(
       ggplotly(values$sim_obj$plotPerformance(), tooltip = FALSE) 
@@ -242,9 +247,42 @@ server <- function(input, output, session) {
       do.call(tagList, category_plot_list)
     })
                 # result to obj
-    output$plot_4 <- renderPlotly(
-      ggplotly(values$sim_obj$plotFactorExposure(in_var = config_values()$config_factors), tooltip = FALSE)
-    )
+    # output$plot_4 <- renderPlotly(
+    #   ggplotly(values$sim_obj$plotFactorExposure(in_var = config_values()$config_factors), tooltip = FALSE)
+    # )
+    
+    # browser()
+    output$factor_exposure <- renderUI({
+      if(!is.null(exposure_graphs())){
+        # browser()
+        # if(!is.null(values$sim_obj$getConfig()$getConfig("simulator")$calculate_exposures$factor_vars)){
+        output$plot_4 <- renderPlotly(
+          exposure_graphs()
+        )
+        plotlyOutput('plot_4')
+      } else {
+        # browser()
+        fluidRow(
+          column(
+            8,
+            align = "center",
+            offset = 2,
+            p(strong("You're not currently tracking any factor exposures. Check your config for more details."))
+          )
+        )
+      }
+    })
+    
+    
+    
+    
+    
+    
+    
+    # output$plot_4 <- renderPlotly(
+    #   exposure_graphs()
+    # )
+    
                    # result to obj
     output$plot_5 <- renderPlotly(
       ggplotly(values$sim_obj$plotNumPositions(), tooltip = FALSE)
