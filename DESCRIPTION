@@ -16,6 +16,10 @@ Authors@R:
              family = "Czekanski",
              email = "bmczekanski@gmail.com",
              role = "ctb"),
+      person(given = "Robert",
+             family = "Hoover",
+             email = "rbthoover@outlook.com",
+             role = "ctb"),       
       person(given = "Strand Technologies, Inc.",
              role = "cph"))
 Description: Provides a framework for performing discrete (share-level) simulations of
