@@ -499,30 +499,29 @@ Simulation <- R6Class(
             mutate(pos_nmv = shares * start_price,
                    max_pos_trim = ifelse(shares > 0, max_pos_lmv, max_pos_smv) *
                      force_trim_factor) %>%
-            filter(abs(shares * start_price) > abs(max_pos_trim))
-          
+            
+            # Grab those positions that are above the market value trim
+            # threshold.
+            filter(abs(shares * start_price) > abs(max_pos_trim)) %>%
+            
+            # Compute how much can be trimmed
+            left_join(portOpt$getMaxOrder(), by = c("id", "strategy")) %>%
+            mutate(
+              
+              # trim_gmv is the lesser of the amount required to trade the
+              # position down to max_pos_trim and the maximum order size.
+              trim_gmv = pmin(abs(pos_nmv) - abs(max_pos_trim), max_order_gmv),
+              
+              order_shares = -1 * sign(shares) * floor(trim_gmv / start_price)) %>%
+            
+            # Filter out cases where we are less than 1 share away from the
+            # max
+            filter(order_shares != 0) %>%
+            select("id", "strategy", "order_shares")
+
           if (nrow(too_big) > 0) {
             
-            # Trade down as far as possible to max_pos_trim. Call floor on abs
-            # share value to round toward zero (to avoid over-sizing in corner
-            # cases).
-            too_big <- too_big %>%
-              left_join(portOpt$getMaxOrder(), by = c("id", "strategy")) %>%
-              mutate(
-                
-                # trim_gmv is the lesser of the amount required to trade the
-                # position down to max_pos_trim and the maximum order size.
-                trim_gmv = pmin(abs(pos_nmv) - abs(max_pos_trim), max_order_gmv),
-                
-                order_shares = -1 * sign(shares) * floor(trim_gmv / start_price)) %>%
-              
-              # Filter out cases where we are less than 1 share away from the
-              # max
-              filter(order_shares != 0) %>%
-              select("id", "strategy", "order_shares")
-            
-            # Calculate joint level shares (this all would be easier to delegate
-            # to PortOpt).
+            # Calculate joint level shares.
             joint_level <- too_big %>%
               group_by(id) %>%
               summarise(
@@ -589,8 +588,7 @@ Simulation <- R6Class(
                 order_shares = -1 * sign(shares) * floor(exit_gmv / start_price)) %>%
               select("id", "strategy", "order_shares")
             
-            # Calculate joint level shares (this all would be easier to delegate
-            # to PortOpt).
+            # Calculate joint level shares.
             joint_level <- non_investable %>%
               group_by(id) %>%
               summarise(
