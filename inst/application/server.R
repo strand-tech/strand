@@ -25,57 +25,7 @@ server <- function(input, output, session) {
     
   })
   
-  # REMEMBER TO GET RID OF THIS
-  
-  observeEvent(values$sim_obj, {
-    
-    output$TestOutput <- renderText({
-     #  
-     #  # this should be alpha 
-     #  # 
-     #  # strategy_1:
-     #  #   in_var
-     #  
-     #  
-     #   strategy_name <- values$sim_obj$getConfig()$getStrategyNames() %>%
-     #     as.symbol()
-     #  # strategy_name_bang_bang = expr(strategy_name)
-     #  
-     #  
-     #  # strategy_name_bang_bang <- enquo(strategy_name)
-     #  
-     #  # my_config <- values$sim_obj$getConfig()
-     #  
-     #  # produces alpha_1
-     #  my_alpha <- values$sim_obj$getConfig()$getStrategyConfig(strategy_name, "in_var")
-     #  my_config <- values$sim_obj$getConfig()$getConfig("example_sim")
-     #  my_constraints <- values$sim_obj$getConfig()$getStrategyConfig(strategy_name, "constraints")
-     #  
-     # factor_names <- list()
-     # constraints <- 1
-     # 
-     # while(constraints <= length(my_constraints)) {
-     #   if(my_constraints[[constraints]][["type"]] == "factor") {
-     #     factor_names[[constraints]] <- my_constraints[[constraints]][["in_var"]]
-     #   }
-     #   constraints <- constraints + 1
-     # }
-     #  #   # getConfig()
-     #  # 
-     #  # 
-     #  # type_config <- typeof(my_config)
-     #  ham <- "ham" %>%
-     #    class()
-      
-      
-      
-      
-      
-      
-      paste0(plot_aesthetics()$config_category)
-      
-    })
-  })
+
   
   # eventReactive that returns the name of the strategy, the in_var
   # factors  
@@ -92,18 +42,18 @@ server <- function(input, output, session) {
     config_factors <- values$sim_obj$getConfig()$getConfig("simulator")$calculate_exposures$factor_vars %>%
       as.vector()
     
+    # browser()
     list(
       "in_var" = in_var,
-      "config_category" = config_category,
-      "config_factors" = config_factors
+      # ,
+      "config_category" = config_category
+      # ,
+      # "config_factors" = config_factors
     )
   })
   
+  # produces null or the factor plot (caches it as to not produce an eroor)
   exposure_graphs <- eventReactive(values$sim_obj, {
-
-    # config_category <- values$sim_obj$getConfig()$getConfig("simulator")$calculate_exposures$category_vars %>%
-    #   as.vector()
-    
     # TODO make sure both varaibles are names in the list
     
     config_factors <- values$sim_obj$getConfig()$getConfig("simulator")$calculate_exposures$factor_vars %>%
@@ -112,10 +62,29 @@ server <- function(input, output, session) {
     if (is.null(config_factors)) {
       config_vars <- NULL
     } else {
-      config_vars <- ggplotly(values$sim_obj$plotFactorExposure(in_var = config_values()$config_factors), tooltip = FALSE)
+      # browser()
+      config_vars <- ggplotly(values$sim_obj$plotFactorExposure(in_var = config_factors), tooltip = FALSE)
     }
     return(config_vars)
   })
+  
+  
+  # generates multple category exposure plots
+  observeEvent(config_values(), {
+    browser()
+    if(!is.null(config_values()$config_category)) {
+      # browser()
+      lapply(1:length(config_values()$config_category), function(i){
+        output[[paste("cat_plot_", i, sep = "")]] <- renderPlotly({
+          ggplotly(values$sim_obj$plotCategoryExposure(in_var = config_values()$config_category[[i]]), tooltip = FALSE)
+        })
+      })
+    } else {
+      return(NULL)
+    }
+    # ignore init does not help
+    # will run whenever config_category is changed (even to null)
+  }, ignoreNULL = FALSE)
   
   
   
@@ -125,12 +94,8 @@ server <- function(input, output, session) {
   #   list of markey fill quarties (market_fill_quartile[[%]])
   
                                                 # result to obj
-  plot_aesthetics <- eventReactive(values$sim_obj, {
-    
-    # gets in_var for strategy
-    # strategy_name <- values$sim_obj$getConfig()$getStrategyNames()
-    # in_var <- values$sim_obj$getConfig()$getStrategyConfig(strategy_name, "in_var") %>%
-    #   as.symbol()
+  # changing trigger to getting the config_values
+  plot_aesthetics <- eventReactive(config_values(), {
     
     
     # Creates a data.frame of all positions throughout the simulation
@@ -167,11 +132,6 @@ server <- function(input, output, session) {
   # creates a data frame filled with the day by day of selected position
   selected_holding_row <- eventReactive(input$positionSummaryTable_rows_selected, {
     
-    # strategy_name <- values$sim_obj$getConfig()$getStrategyNames()
-    # in_var <- values$sim_obj$getConfig()$getStrategyConfig(strategy_name, "in_var") %>%
-    #   as.symbol()
-    
-    
     # Gets the ID of the selected holding
     # Returns a data frame of the position's id and symbol
     selected_sec_ref <- values$sim_obj$getSecurityReference() %>%
@@ -203,7 +163,7 @@ server <- function(input, output, session) {
  
                       # result to obj
   # changed from values$sim_obj
-  observeEvent(exposure_graphs(), {
+  observeEvent(config_values(), {
     # result to obj
     output$plot_1 <- renderPlotly(
       ggplotly(values$sim_obj$plotPerformance(), tooltip = FALSE) 
@@ -239,12 +199,25 @@ server <- function(input, output, session) {
     # output$plot_3 <- renderPlotly(
     #   ggplotly(values$sim_obj$plotCategoryExposure(in_var = config_values()$config_category), tooltip = FALSE)
     # )
+    # browser()
     output$plot_3s <- renderUI({
-      category_plot_list <- lapply(1:length(config_values()$config_category), function(i) {
-        cat_plot_name <- paste("cat_plot_", i, sep = "")
-        plotlyOutput(cat_plot_name)
-      })
-      do.call(tagList, category_plot_list)
+      browser()
+      if(!is.null(config_values()$config_category)){
+        category_plot_list <- lapply(1:length(config_values()$config_category), function(i) {
+          cat_plot_name <- paste("cat_plot_", i, sep = "")
+          plotlyOutput(cat_plot_name)
+        })
+        do.call(tagList, category_plot_list)
+      } else {
+        fluidRow(
+          column(
+            8,
+            align = "center",
+            offset = 2,
+            p(strong("You're not currently tracking any factor exposures. Check your config for more details."))
+          )
+        )
+      }
     })
                 # result to obj
     # output$plot_4 <- renderPlotly(
@@ -325,22 +298,26 @@ server <- function(input, output, session) {
                                             rownames = FALSE,
                                             selection = 'single')
 
-  })
+  }, priority = 1)
   
-  # generates multple category exposure plots
-  observe({
-    lapply(1:length(config_values()$config_category), function(i){
-      output[[paste("cat_plot_", i, sep = "")]] <- renderPlotly({
-        ggplotly(values$sim_obj$plotCategoryExposure(in_var = config_values()$config_category[[i]]), tooltip = FALSE)
-      })
-    })
-  })
+  # # generates multple category exposure plots
+  # observeEvent(config_values()$config_category, {
+  #   # browser()
+  #   if(!is.null(config_values()$config_category)) {
+  #     # browser()
+  #     lapply(1:length(config_values()$config_category), function(i){
+  #       output[[paste("cat_plot_", i, sep = "")]] <- renderPlotly({
+  #         ggplotly(values$sim_obj$plotCategoryExposure(in_var = config_values()$config_category[[i]]), tooltip = FALSE)
+  #       })
+  #     })
+  #   }
+  #   # ignore init does not help
+  #   # will run whenever config_category is changed (even to null)
+  # }, ignoreNULL = FALSE)
   
   
   observeEvent(input$holdingsDate, {
-    
     if (!is.null(values$sim_obj)) {
-      
       output$holdingsTable <- renderDT(
                           # result to obj
         left_join(values$sim_obj$getSimDetail(as.character(input$holdingsDate), strategy_name = "joint"),
