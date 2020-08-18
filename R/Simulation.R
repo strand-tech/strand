@@ -730,7 +730,7 @@ Simulation <- R6Class(
         res <- res %>%
           inner_join(select(input_data, "id", "start_price", "end_price", "dividend", "distribution",
                             "investable",
-                            !!simulator_config$save_detail_columns),
+                            !!simulator_config$add_detail_columns),
                             by = "id") %>%
           mutate(
             # Position P&L is computed by comparing the value of the starting
@@ -893,6 +893,17 @@ Simulation <- R6Class(
         # only turn saving detail off and on.
         if (is.null(simulator_config$skip_saving) ||
             !"detail" %in% simulator_config$skip_saving) {
+          
+          # The full detail dataset is large. To save specific columns, use the
+          # simulator/keep_detail_columns parameter.
+          
+          if (!is.null(simulator_config$keep_detail_columns)) {
+            keep_detail_columns <-
+                unique(c("id", "strategy",
+                       simulator_config$keep_detail_columns))
+            res <- res %>% select(!!keep_detail_columns)
+          }
+          
           private$saveSimDetail(current_date, res)
         }
         private$saveOptimizationSummary(current_date, portOpt$summaryDf())
