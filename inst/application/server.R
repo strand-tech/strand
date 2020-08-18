@@ -56,8 +56,6 @@ server <- function(input, output, session) {
     # Creates a data.frame of all positions throughout the simulation
     # Rounds alpha to get full alpha range
     # Includes days when no trades happen to compare alpha throughout simulation
-    
-                                # result to obj
     in_var_summary <- values$sim_obj$getSimDetail(strategy_name = "joint") %>%
       select(!!config_values()$in_var, market_fill_nmv) %>%
       mutate(
@@ -488,9 +486,6 @@ server <- function(input, output, session) {
                             security_reference_data = sample_secref)
       sim$setShinyCallback(updateProgress)
       sim$run()
-      # res <- sim$run()
-
-      # values$sim_result <- res
       values$sim_obj <- sim
       
       updateTabsetPanel(session,
