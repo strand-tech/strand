@@ -5,34 +5,12 @@ library(tidyr)
 library(DT)
 library(plotly)
 
-
-# category_exposure_output <- function(exposure_list) {
-#   # Insert plot output objects the list
-#   plot_output_list <- lapply(1:length(exposure_list), function(i) {
-#     plotname <- paste("cat_plot", i, sep="")
-#     plot_output_object <- plotOutput(plotname)
-#     plot_output_object <- renderPlotly({
-#       ggplotly(values$sim_obj$plotCategoryExposure(in_var = exposure_list[[i]])
-#                , tooltip = FALSE)
-#     })
-#   })
-#   
-#   do.call(tagList, plot_output_list) # needed to display properly.
-#   
-#   return(plot_output_list)
-# }
-
-
-
-
-
 server <- function(input, output, session) {
 
   # Store the sim result data in a reactiveValues object.
   values <- reactiveValues()
   
   # Creates a data.frame of the final positions
-                                            # changed sim_result tom sim_obj
   position_summary <- eventReactive(values$sim_obj, {
             # result to obj
     values$sim_obj$getPositionSummary(strategy_name = "joint") %>%
@@ -47,9 +25,7 @@ server <- function(input, output, session) {
   })
   
 
-  
-  # eventReactive that returns the name of the strategy, the in_var
-  # factors  
+  # eventReactive that returns the name of the strategy, the in_var, and the factors  
   config_values <- eventReactive(values$sim_obj, {
     
     strategy_name <- values$sim_obj$getConfig()$getStrategyNames()
@@ -57,98 +33,23 @@ server <- function(input, output, session) {
     # returns the config in_var
     in_var <- values$sim_obj$getConfig()$getStrategyConfig(strategy_name, "in_var")
     
-
+    # creates vectors of the categories and factors to track
     config_category <- values$sim_obj$getConfig()$getConfig("simulator")$calculate_exposures$category_vars %>%
       as.vector()
     config_factors <- values$sim_obj$getConfig()$getConfig("simulator")$calculate_exposures$factor_vars %>%
       as.vector()
     
-    # browser()
     list(
       "in_var" = in_var,
-      # ,
-      "config_category" = config_category
-      # ,
-      # "config_factors" = config_factors
+      "config_category" = config_category,
+      "config_factors" = config_factors
     )
   })
-  
-  # produces null or the factor plot (caches it as to not produce an eroor)
-  exposure_graphs <- eventReactive(values$sim_obj, {
-    # TODO make sure both varaibles are names in the list
-    
-    config_factors <- values$sim_obj$getConfig()$getConfig("simulator")$calculate_exposures$factor_vars %>%
-      as.vector()
-    # browser()
-    if (is.null(config_factors)) {
-      config_vars <- NULL
-    } else {
-      # browser()
-      config_vars <- ggplotly(values$sim_obj$plotFactorExposure(in_var = config_factors), tooltip = FALSE)
-    }
-    return(config_vars)
-  })
-  
-  
-  # new error, no matches because there are no categories being tracked
-  
-  category_exposure_output <- eventReactive(req(!is.null(config_values()$config_category)), {
-    # Insert plot output objects the list
-    browser()
-    
-    
-    if(!is.null(config_values()$config_category)) {
-      categories <- config_values()$config_category %>%
-        as.vector()
-      
-      plot_output_list <- lapply(1:length(categories), function(i) {
-        plotname <- paste("cat_plot", i, sep="")
-        plot_output_object <- plotOutput(plotname)
-        plot_output_object <- renderPlotly({
-          ggplotly(values$sim_obj$plotCategoryExposure(in_var = categories[[i]])
-                   , tooltip = FALSE)
-        })
-      })
-      
-      do.call(tagList, plot_output_list) # needed to display properly.
-      return(plot_output_list)
-   
-    } else {
-      warning_output <- textOutput(
-        strong("Select rows for day by day information")
-      )
-      return(warning_output)
-    }
-    
-  })
-  
-  
-  # generates multple category exposure plots
-  # observeEvent(config_values(), {
-  #   # browser()
-  #   if(!is.null(config_values()$config_category)) {
-  #     # browser()
-  #     lapply(1:length(config_values()$config_category), function(i){
-  #       output[[paste("cat_plot_", i, sep = "")]] <- renderPlotly({
-  #         ggplotly(values$sim_obj$plotCategoryExposure(in_var = config_values()$config_category[[i]]), tooltip = FALSE)
-  #       })
-  #     })
-  #   } else {
-  #     return(NULL)
-  #   }
-  #   # ignore init does not help
-  #   # will run whenever config_category is changed (even to null)
-  # })
-  # 
-  
   
   # Produces a name value list that stores
   #   maximum alpha (in_var_max)
   #   minimum alpha (in_var_min)
   #   list of markey fill quarties (market_fill_quartile[[%]])
-  
-                                                # result to obj
-  # changing trigger to getting the config_values
   plot_aesthetics <- eventReactive(config_values(), {
     
     
@@ -215,105 +116,59 @@ server <- function(input, output, session) {
              market_fill_nmv = round(market_fill_nmv, digits = 0))
   })
  
-                      # result to obj
+                      
   # changed from values$sim_obj
   observeEvent(config_values(), {
-    # result to obj
     output$plot_1 <- renderPlotly(
       ggplotly(values$sim_obj$plotPerformance(), tooltip = FALSE) 
     )
-    # result to obj
+
     output$plot_2 <- renderPlotly(
       ggplotly(values$sim_obj$plotMarketValue(), tooltip = FALSE)
     )
     
-    
-    
-    # strategy_name <- values$sim_obj$getConfig()$getStrategyNames() %>%
-    #   as.symbol()
-    # 
-    # my_constraints <- values$sim_obj$getConfig()$getStrategyConfig(strategy_name, "constraints")
-    # 
-    # category_names <- vector()
-    # vector_position <- 1
-    # constraints <- 1
-    # 
-    # while(constraints <= length(my_constraints)) {
-    #   if(my_constraints[[constraints]][["type"]] == "category") {
-    #     category_names[[vector_position]] <- my_constraints[[constraints]][["in_var"]]
-    #     vector_position <- vector_position + 1
-    #   }
-    #   constraints <- constraints + 1
-    # }
-    
-    
-    
-    # TODO dynamically select exposure plot in_vars based on config file
-            # result to obj
-    # output$plot_3 <- renderPlotly(
-    #   ggplotly(values$sim_obj$plotCategoryExposure(in_var = config_values()$config_category), tooltip = FALSE)
-    # )
- 
     output$plot_3s <- renderUI({
-      # browser()
       if(!is.null(config_values()$config_category)){
-        # category_plot_list <- lapply(1:length(config_values()$config_category), function(i) {
-        #   cat_plot_name <- paste("cat_plot_", i, sep = "")
-        #   plotlyOutput(cat_plot_name)
-        # })
-        # do.call(tagList, category_plot_list)
-        category_exposure_output()
+        category_plot_list <- lapply(1:length(config_values()$config_category), function(i) {
+          cat_plot_name <- paste("cat_plot_", i, sep = "")
+          plotlyOutput(cat_plot_name)
+        })
+        do.call(tagList, category_plot_list)
       } else {
         fluidRow(
           column(
             8,
             align = "center",
             offset = 2,
-            p(strong("You're not currently tracking any category exposures. Check your config for more details."))
+            p(strong("You're not currently tracking any category exposures."))
           )
         )
       }
     })
-                # result to obj
-    # output$plot_4 <- renderPlotly(
-    #   ggplotly(values$sim_obj$plotFactorExposure(in_var = config_values()$config_factors), tooltip = FALSE)
-    # )
     
-    # browser()
     output$factor_exposure <- renderUI({
-      if(!is.null(exposure_graphs())){
-        # browser()
-        # if(!is.null(values$sim_obj$getConfig()$getConfig("simulator")$calculate_exposures$factor_vars)){
+      if(!is.null(config_values()$config_factors)){
         output$plot_4 <- renderPlotly(
-          exposure_graphs()
+          ggplotly(values$sim_obj$plotFactorExposure(in_var = config_values()$config_factors), tooltip = FALSE)
         )
         plotlyOutput('plot_4')
       } else {
-        # browser()
         fluidRow(
           column(
             8,
             align = "center",
             offset = 2,
-            p(strong("You're not currently tracking any factor exposures. Check your config for more details."))
+            p(strong("You're not currently tracking any factor exposures."))
           )
         )
       }
     })
     
-    
-  
-    
-    # output$plot_4 <- renderPlotly(
-    #   exposure_graphs()
-    # )
-    
-                   # result to obj
     output$plot_5 <- renderPlotly(
       ggplotly(values$sim_obj$plotNumPositions(), tooltip = FALSE)
     )
     output$overallStatsTable <- renderTable(values$sim_obj$overallStatsDf(), align = "lrr")
-                            # result to obj
+                          
     summary_data <- values$sim_obj$getSingleStrategySummaryDf("joint", include_zero_row = FALSE)
     perf_stats <- summary_data %>%
       transmute(
@@ -352,55 +207,18 @@ server <- function(input, output, session) {
 
   })
   
-  # # generates multple category exposure plots
-  # observeEvent(config_values()$config_category, {
-  #   browser()
-  #   if(!is.null(config_values()$config_category)) {
-  #     # browser()
-  #     lapply(1:length(config_values()$config_category), function(i){
-  #       output[[paste("cat_plot_", i, sep = "")]] <- renderPlotly({
-  #         ggplotly(values$sim_obj$plotCategoryExposure(in_var = config_values()$config_category[[i]]), tooltip = FALSE)
-  #       })
-  #     })
-  #   }
-  #   # ignore init does not help
-  #   # will run whenever config_category is changed (even to null)
-  # }, ignoreNULL = FALSE)
-  
-  # category_exposure_output <- eventReactive(req(!is.null(config_values()$config_category)), {
-  #   # Insert plot output objects the list
-  #   browser()
-  #   
-  #   # if(!is.null(config_values()$config_category)) {
-  #     plot_output_list <- lapply(1:length(config_values()$config_category), function(i) {
-  #       plotname <- paste("cat_plot", i, sep="")
-  #       plot_output_object <- plotOutput(plotname)
-  #       plot_output_object <- renderPlotly({
-  #         ggplotly(values$sim_obj$plotCategoryExposure(in_var = config_values()$config_category[[i]])
-  #                  , tooltip = FALSE)
-  #       })
-  #     })
-  #     do.call(tagList, plot_output_list) # needed to display properly.
-  #     return(plot_output_list)
-  #   # } else {
-  #   #   warning_output <- textOutput(
-  #   #     strong("Select rows for day by day information")
-  #   #   )
-  #   #   return(warning_output)
-  #   # }
-  #  
-  #   
-  #   
-  #   
-  # })
-  
-  
-  
+  # generates multple category exposure plots
+  observeEvent(config_values()$config_category, {
+      lapply(1:length(config_values()$config_category), function(i){
+        output[[paste("cat_plot_", i, sep = "")]] <- renderPlotly({
+          ggplotly(values$sim_obj$plotCategoryExposure(in_var = config_values()$config_category[[i]]), tooltip = FALSE)
+        })
+      })
+  })
   
   observeEvent(input$holdingsDate, {
     if (!is.null(values$sim_obj)) {
       output$holdingsTable <- renderDT(
-                          # result to obj
         left_join(values$sim_obj$getSimDetail(as.character(input$holdingsDate), strategy_name = "joint"),
                   values$sim_obj$getSecurityReference(), by = "id") %>%
           select("symbol", "shares", "order_shares", "fill_shares", "end_shares", "end_nmv",
@@ -414,7 +232,7 @@ server <- function(input, output, session) {
   })
   
   
-  # making the seleted holdings data table
+  # makes the seleted holdings data table
   output$selectedHolding <- renderDT(
     
     selected_holding_row(),
@@ -600,9 +418,6 @@ server <- function(input, output, session) {
     # Combines holdings plot with alpha plot and links horizontal axis
     multi_layed_plot <- subplot(holdings_plot, in_var_plot,
                                 nrows = 2, shareX = TRUE, titleY = TRUE, heights = c(0.80, 0.20))
-     
-      
-
   })
   
  # renders the updated UI when a row is clicked
