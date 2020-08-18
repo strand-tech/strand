@@ -30,8 +30,10 @@ Simulation <- R6Class(
     #'   \code{date} column. Data supplied using this parameter will be
     #'   used if the configuration option \code{simulator/input_data/type} is
     #'   set to \code{object}. Defaults to \code{NULL}.
-    #' @param input_dates Vector of class \code{Date} that specifies when input
-    #'   data should be updated.
+    #' @param input_dates Vector of class \code{Date} that specifies  when input
+    #'   data should be updated. If data is being supplied using the
+    #'   \code{raw_input_data} parameter, then \code{input_dates} defaults to
+    #'   set of dates present in this data.
     #' @param raw_pricing_data A data frame that contains all of the input data
     #'   (for all periods) for the simulation. The data frame must have a
     #'   \code{date} column. Data supplied using this parameter will only be
@@ -148,8 +150,12 @@ Simulation <- R6Class(
       }
       
       # Set dates
-      private$input_dates <- input_dates
-
+      if (is.null(input_dates) & !is.null(raw_input_data)) {
+        private$input_dates <- unique(sort(raw_input_data$date))
+      } else {
+        private$input_dates <- input_dates
+      }
+      
       invisible(self)
     },
     
