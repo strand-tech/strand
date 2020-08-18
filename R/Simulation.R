@@ -469,13 +469,26 @@ Simulation <- R6Class(
           input_data$investable <- input_data$investable & univ
         }
         
-        # Perform normalization, if necessary. Here we normalize the entire
-        # vector, but we should consider, especially in the case of a signal
-        # vector, how we are treating values for stocks not in the universe,
-        # stocks for which data has been carried forward, delisted stocks, etc.
+        
+
+        # Perform normalization for variables listed in
+        # simulator/normalize_vars.
+        #
+        # The procedure is as follows:
+        #
+        # 1. Set variable values for non-investable securities to NA.
+        # 2. Normalize variable to N(0, 1).
+        # 3. Set variable values for non-investable securities to zero.
+        #
+        # Store raw (pre-normalized) in_var values for column foo in the detail
+        # dataset column foo_raw.
         if (!is.null(simulator_config$normalize_vars)) {
           for (normalize_var in simulator_config$normalize_vars) {
-            input_data[[normalize_var]] <- normalize(input_data[[normalize_var]])
+            raw_normalize_var <- paste0(normalize_var, "_raw")
+            input_data <- input_data %>%
+              mutate(
+                !!raw_normalize_var := get(normalize_var),
+                !! normalize_var := replace_na(normalize(ifelse(investable, get(normalize_var), NA)), 0))
           }
         }
         
