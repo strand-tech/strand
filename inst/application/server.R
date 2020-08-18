@@ -27,7 +27,7 @@ server <- function(input, output, session) {
 
   # eventReactive that returns the name of the strategy, the in_var, and the factors  
   config_values <- eventReactive(values$sim_obj, {
-    
+    # browser()
     strategy_name <- values$sim_obj$getConfig()$getStrategyNames()
     
     # returns the config in_var
@@ -84,7 +84,7 @@ server <- function(input, output, session) {
   
   # creates a data frame filled with the day by day of selected position
   selected_holding_row <- eventReactive(input$positionSummaryTable_rows_selected, {
-    
+    # browser()
     # Gets the ID of the selected holding
     # Returns a data frame of the position's id and symbol
     selected_sec_ref <- values$sim_obj$getSecurityReference() %>%
@@ -95,9 +95,7 @@ server <- function(input, output, session) {
 
     # Add 'save_detail_columns: alpha_1' under simulation 
     # Uses id and symbol to get simulation details of the position
-    selected_holdings <- 
-                            # result to obj
-      left_join(values$sim_obj$getSimDetail(strategy_name = "joint", 
+    selected_holdings <- left_join(values$sim_obj$getSimDetail(strategy_name = "joint", 
                                                security_id = selected_sec_ref$id), 
                 selected_sec_ref, by = "id") %>%
       select("sim_date", "symbol", "net_pnl", "shares", !!config_values()$in_var, "order_shares", "fill_shares", 
@@ -299,7 +297,7 @@ server <- function(input, output, session) {
         text = paste('Profit and Loss<br>Date: ', selection_plot$sim_date,
                      '<br>P&L: ', selection_plot$net_pnl,
                      '<br>NMV: ', selection_plot$end_nmv,
-                     '<br>Alpha: ', selection_plot[[config_values()$in_var]],
+                     '<br>',  config_values()$in_var,': ', selection_plot[[config_values()$in_var]],
                      '<br>Shares: ', selection_plot$shares,
                      '<br>Order: ', selection_plot$order_shares,
                      '<br>Fill: ', selection_plot$fill_shares,
@@ -330,10 +328,10 @@ server <- function(input, output, session) {
                            list(plot_aesthetics()$in_var_normalized_average, "rgb(255, 255, 0)"),
                            list(1, "rgb(50, 205, 50)")),
          colorbar = list(
-            title='Symbol:
+            title= paste('Symbol:
                    \n▲ Buy
                    \n▼ Sell
-                   \nAlpha:'
+                   \n', config_values()$in_var, ': ')
           ),
          showlegend =  TRUE),
        hoverinfo = "text",
@@ -343,7 +341,7 @@ server <- function(input, output, session) {
        text = paste('Net Market Value<br>Date: ', selection_plot$sim_date,
                     '<br>P&L: ', selection_plot$net_pnl,
                     '<br>NMV: ', selection_plot$end_nmv,
-                    '<br>Alpha: ', selection_plot[[config_values()$in_var]],
+                    '<br>',  config_values()$in_var,': ', selection_plot[[config_values()$in_var]],
                     '<br>Shares: ', selection_plot$shares,
                     '<br>Order: ', selection_plot$order_shares,
                     '<br>Fill: ', selection_plot$fill_shares,
@@ -388,10 +386,10 @@ server <- function(input, output, session) {
                           hoverlabel = list(
                             bgcolor = 'white'
                           ),
-                          text = paste('Alpha<br>Date: ', selection_plot$sim_date,
+                          text = paste(config_values()$in_var, '<br>Date: ', selection_plot$sim_date,
                                        '<br>P&L: ', selection_plot$net_pnl,
                                        '<br>NMV: ', selection_plot$end_nmv,
-                                       '<br>Alpha: ', selection_plot[[config_values()$in_var]],
+                                       '<br>',  config_values()$in_var,': ', selection_plot[[config_values()$in_var]],
                                        '<br>Shares: ', selection_plot$shares,
                                        '<br>Order: ', selection_plot$order_shares,
                                        '<br>Fill: ', selection_plot$fill_shares,
@@ -480,12 +478,17 @@ server <- function(input, output, session) {
       data(sample_pricing)
       data(sample_secref)
       
-      sim <- Simulation$new(config,
-                            raw_input_data = sample_inputs,
-                            raw_pricing_data = sample_pricing,
-                            security_reference_data = sample_secref)
-      sim$setShinyCallback(updateProgress)
-      sim$run()
+      # sim <- Simulation$new(config,
+      #                       raw_input_data = sample_inputs,
+      #                       raw_pricing_data = sample_pricing,
+      #                       security_reference_data = sample_secref)
+      # sim$setShinyCallback(updateProgress)
+      # sim$run()
+      
+      sim <- Simulation$new()
+      sim$readFeather("C:/Users/WhovR/Downloads/strand_data_in_var")
+      
+      
       values$sim_obj <- sim
       
       updateTabsetPanel(session,
