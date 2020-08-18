@@ -275,7 +275,8 @@ Simulation <- R6Class(
         } else {
           input_data <- input_data_obj$update(current_date)
           
-          # Collect metadata as specified in the config.
+          # Collect metadata as specified in the config (such as correlation of
+          # values from one period to the next).
           if (!is.null(simulator_config$input_data$track_metadata)) {
             input_stats <- input_data_obj$periodStats(simulator_config$input_data$track_metadata)
             private$saveInputStats(current_date, input_stats)
@@ -433,6 +434,33 @@ Simulation <- R6Class(
         # delistings in the simulator, but each strategy should be able to have
         # its own universe.
         input_data$investable <- !input_data$id %in% id_delisted
+        
+        # By default, presence in the latest set of input data affects
+        # investability: stocks that are not in the latest update are not
+        # investable. This makes it easy to define the investable universe
+        # simply as the stocks present in the input cross-section.
+        #
+        # This behavior may not always be desirable, and can be controlled by
+        # setting the simulator/inputs_define_universe configuration option to
+        # FALSE. For example, a user may want to pass in updated factor data for
+        # stocks that are no longer in the universe but may be in the portfolio.
+        #
+        # Note that simulator/inputs_define_universe = TRUE is the same as
+        # having the expression `!inputs_carry_forward` as part of the
+        # simulator/universe configuration parameter.
+        #
+        # Note also that any expression in simulator/universe will be applied
+        # regardless of the setting of simulator/inputs_define_universe.
+        
+        # TODO We need to validate config entries and set defaults in the
+        # StrategyConfig class.
+        inputs_define_universe <- simulator_config$inputs_define_universe
+        stopifnot(is.null(inputs_define_universe) || is.logical(inputs_define_universe))
+
+        if (is.null(inputs_define_universe) || isTRUE(inputs_define_universe)) {
+          input_data$investable <- input_data$investable & !input_data$inputs_carry_forward
+        }
+        
         if (!is.null(simulator_config$universe) && length(simulator_config$universe) > 0) {
           univ <- eval(rlang::parse_expr(simulator_config$universe), envir = input_data)
           if (any(is.na(univ))) {
