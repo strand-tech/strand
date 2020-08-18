@@ -5,6 +5,27 @@ library(tidyr)
 library(DT)
 library(plotly)
 
+
+# category_exposure_output <- function(exposure_list) {
+#   # Insert plot output objects the list
+#   plot_output_list <- lapply(1:length(exposure_list), function(i) {
+#     plotname <- paste("cat_plot", i, sep="")
+#     plot_output_object <- plotOutput(plotname)
+#     plot_output_object <- renderPlotly({
+#       ggplotly(values$sim_obj$plotCategoryExposure(in_var = exposure_list[[i]])
+#                , tooltip = FALSE)
+#     })
+#   })
+#   
+#   do.call(tagList, plot_output_list) # needed to display properly.
+#   
+#   return(plot_output_list)
+# }
+
+
+
+
+
 server <- function(input, output, session) {
 
   # Store the sim result data in a reactiveValues object.
@@ -69,23 +90,56 @@ server <- function(input, output, session) {
   })
   
   
-  # generates multple category exposure plots
-  observeEvent(config_values(), {
+  # new error, no matches because there are no categories being tracked
+  
+  category_exposure_output <- eventReactive(req(!is.null(config_values()$config_category)), {
+    # Insert plot output objects the list
     browser()
+    
+    
     if(!is.null(config_values()$config_category)) {
-      # browser()
-      lapply(1:length(config_values()$config_category), function(i){
-        output[[paste("cat_plot_", i, sep = "")]] <- renderPlotly({
-          ggplotly(values$sim_obj$plotCategoryExposure(in_var = config_values()$config_category[[i]]), tooltip = FALSE)
+      categories <- config_values()$config_category %>%
+        as.vector()
+      
+      plot_output_list <- lapply(1:length(categories), function(i) {
+        plotname <- paste("cat_plot", i, sep="")
+        plot_output_object <- plotOutput(plotname)
+        plot_output_object <- renderPlotly({
+          ggplotly(values$sim_obj$plotCategoryExposure(in_var = categories[[i]])
+                   , tooltip = FALSE)
         })
       })
+      
+      do.call(tagList, plot_output_list) # needed to display properly.
+      return(plot_output_list)
+   
     } else {
-      return(NULL)
+      warning_output <- textOutput(
+        strong("Select rows for day by day information")
+      )
+      return(warning_output)
     }
-    # ignore init does not help
-    # will run whenever config_category is changed (even to null)
-  }, ignoreNULL = FALSE)
+    
+  })
   
+  
+  # generates multple category exposure plots
+  # observeEvent(config_values(), {
+  #   # browser()
+  #   if(!is.null(config_values()$config_category)) {
+  #     # browser()
+  #     lapply(1:length(config_values()$config_category), function(i){
+  #       output[[paste("cat_plot_", i, sep = "")]] <- renderPlotly({
+  #         ggplotly(values$sim_obj$plotCategoryExposure(in_var = config_values()$config_category[[i]]), tooltip = FALSE)
+  #       })
+  #     })
+  #   } else {
+  #     return(NULL)
+  #   }
+  #   # ignore init does not help
+  #   # will run whenever config_category is changed (even to null)
+  # })
+  # 
   
   
   # Produces a name value list that stores
@@ -199,22 +253,23 @@ server <- function(input, output, session) {
     # output$plot_3 <- renderPlotly(
     #   ggplotly(values$sim_obj$plotCategoryExposure(in_var = config_values()$config_category), tooltip = FALSE)
     # )
-    # browser()
+ 
     output$plot_3s <- renderUI({
-      browser()
+      # browser()
       if(!is.null(config_values()$config_category)){
-        category_plot_list <- lapply(1:length(config_values()$config_category), function(i) {
-          cat_plot_name <- paste("cat_plot_", i, sep = "")
-          plotlyOutput(cat_plot_name)
-        })
-        do.call(tagList, category_plot_list)
+        # category_plot_list <- lapply(1:length(config_values()$config_category), function(i) {
+        #   cat_plot_name <- paste("cat_plot_", i, sep = "")
+        #   plotlyOutput(cat_plot_name)
+        # })
+        # do.call(tagList, category_plot_list)
+        category_exposure_output()
       } else {
         fluidRow(
           column(
             8,
             align = "center",
             offset = 2,
-            p(strong("You're not currently tracking any factor exposures. Check your config for more details."))
+            p(strong("You're not currently tracking any category exposures. Check your config for more details."))
           )
         )
       }
@@ -247,10 +302,7 @@ server <- function(input, output, session) {
     })
     
     
-    
-    
-    
-    
+  
     
     # output$plot_4 <- renderPlotly(
     #   exposure_graphs()
@@ -298,11 +350,11 @@ server <- function(input, output, session) {
                                             rownames = FALSE,
                                             selection = 'single')
 
-  }, priority = 1)
+  })
   
   # # generates multple category exposure plots
   # observeEvent(config_values()$config_category, {
-  #   # browser()
+  #   browser()
   #   if(!is.null(config_values()$config_category)) {
   #     # browser()
   #     lapply(1:length(config_values()$config_category), function(i){
@@ -314,6 +366,35 @@ server <- function(input, output, session) {
   #   # ignore init does not help
   #   # will run whenever config_category is changed (even to null)
   # }, ignoreNULL = FALSE)
+  
+  # category_exposure_output <- eventReactive(req(!is.null(config_values()$config_category)), {
+  #   # Insert plot output objects the list
+  #   browser()
+  #   
+  #   # if(!is.null(config_values()$config_category)) {
+  #     plot_output_list <- lapply(1:length(config_values()$config_category), function(i) {
+  #       plotname <- paste("cat_plot", i, sep="")
+  #       plot_output_object <- plotOutput(plotname)
+  #       plot_output_object <- renderPlotly({
+  #         ggplotly(values$sim_obj$plotCategoryExposure(in_var = config_values()$config_category[[i]])
+  #                  , tooltip = FALSE)
+  #       })
+  #     })
+  #     do.call(tagList, plot_output_list) # needed to display properly.
+  #     return(plot_output_list)
+  #   # } else {
+  #   #   warning_output <- textOutput(
+  #   #     strong("Select rows for day by day information")
+  #   #   )
+  #   #   return(warning_output)
+  #   # }
+  #  
+  #   
+  #   
+  #   
+  # })
+  
+  
   
   
   observeEvent(input$holdingsDate, {
