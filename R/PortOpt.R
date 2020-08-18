@@ -765,22 +765,46 @@ PortOpt <- R6Class(
           current_short_weight <- abs(current_smv / strategy_capital)
           
           target_weight_policy <- private$config$getConfig("target_weight_policy")
+
           if (isTRUE(all.equal(target_weight_policy, "half-way"))) {
             
             # If there is a target_weight_policy of 'half-way' (trade half-way to
             # the ideal weight) set in the config file, set the target long/short
             # weight for this strategy accordingly.
-            private$setTargetWeight(strategy,
-                                    (ideal_long_weight - current_long_weight) * 0.5 + current_long_weight,
-                                    (ideal_short_weight - current_short_weight) * 0.5 + current_short_weight)
-            
+            long_weight_change <- (ideal_long_weight - current_long_weight) * 0.5
+            short_weight_change <- (ideal_short_weight - current_short_weight) * 0.5
+
           } else if (is.null(target_weight_policy) || isTRUE(all.equal(target_weight_policy, "full"))) {
-            private$setTargetWeight(strategy,
-                                    ideal_long_weight,
-                                    ideal_short_weight)
+            long_weight_change <- ideal_long_weight - current_long_weight
+            short_weight_change <- ideal_short_weight - current_short_weight
           } else {
             stop(paste0("Invalid target_weight_policy: ", target_weight_policy))
           }
+          
+          # Limit weight change on each side if the simulator/max_weight_change
+          # configuration parameter is set. max_weight_change is expressed as a
+          # fraction of the ideal long and short weight. It imposes a limit on
+          # the absolute value of the change of the portfolio's long and short
+          # weight in the optimization.
+          #
+          # For example, if the ideal long weight is 1, the current weight is 0,
+          # and max_weight_change is 0.1, then the target long weight can be at
+          # most 0.1.
+          max_weight_change <- private$config$getConfig("max_weight_change")
+          if (!is.null(max_weight_change)) {
+            stopifnot(is.numeric(max_weight_change))
+            
+            long_weight_change <-
+              sign(long_weight_change) * min(abs(long_weight_change),
+                                             max_weight_change * ideal_long_weight)
+            short_weight_change <-
+              sign(short_weight_change) * min(abs(short_weight_change),
+                                             max_weight_change * ideal_short_weight)
+          }
+          
+          private$setTargetWeight(strategy,
+                                  current_long_weight + long_weight_change,
+                                  current_short_weight + short_weight_change)
         }
         
         invisible(self)
