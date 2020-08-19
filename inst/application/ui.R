@@ -23,22 +23,30 @@ ui <- fluidPage(
     type = "tabs",
     tabPanel("Configuration",
              br(),
-             column(2,
-                    dateInput("startDate", label = "Start date", value = "2019-01-02",
-                              min = "2019-01-02", max = "2019-03-29",
-                              daysofweekdisabled = c(0,6)),
-                    dateInput("endDate", label = "End date", value = "2019-03-29",
-                              min = "2019-01-02", max = "2019-03-29",
-                              daysofweekdisabled = c(0,6)),
-                    actionButton("runSim", "Run simulation")
-             ),
-             column(10,
-                    textAreaInput("config", "Configuration",
-                                  width = "600px",
-                                  height = "400px",
-                                  value = .readYamlConfig()
-                                  )
-             )),
+             fluidRow(
+               column(2,
+                      dateInput("startDate", label = "Start date", value = "2019-01-02",
+                                min = "2019-01-02", max = "2019-03-29",
+                                daysofweekdisabled = c(0,6)),
+                      dateInput("endDate", label = "End date", value = "2019-03-29",
+                                min = "2019-01-02", max = "2019-03-29",
+                                daysofweekdisabled = c(0,6)),
+                      actionButton("runSim", "Run simulation")
+               ),
+               column(10,
+                      textAreaInput("config", "Configuration",
+                                    width = "600px",
+                                    height = "400px",
+                                    value = .readYamlConfig()
+                      )
+               )),
+             fluidRow(
+               column(2,
+                      # align = "left",
+                      # p(strong("Load simulation")),
+                      textInput("simDirectory", "Paste your simulation directory"),
+                      actionButton("loadSim", "Load simulation")
+                      ))),
     tabPanel("Results",
       br(),
       tabsetPanel(

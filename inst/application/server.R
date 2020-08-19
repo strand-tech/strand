@@ -10,6 +10,16 @@ server <- function(input, output, session) {
   # Store the sim result data in a reactiveValues object.
   values <- reactiveValues()
   
+  
+  # Creates a warning message if the user did not set save_detail_columns: in_var in their simulation
+  observeEvent(values$sim_obj, {
+    if(!config_values()$in_var %in% colnames(values$sim_obj$getSimDetail())) {
+    showNotification(p(strong("Warning:"), "no in_var column"), type = "warning", duration = 30)
+    }
+  })
+  
+  
+  
   # Creates a data.frame of the final positions
   position_summary <- eventReactive(values$sim_obj, {
             # result to obj
@@ -419,20 +429,32 @@ server <- function(input, output, session) {
  # renders the updated UI when a row is clicked
   observeEvent(position_summary(), {
     output$selectedPlotAndTable <- renderUI({
-      if(is.null(input$positionSummaryTable_rows_selected)){
+      # checks to see if there is in in_var column in the position summary
+      if(config_values()$in_var %in% colnames(values$sim_obj$getSimDetail())) {
+        if(is.null(input$positionSummaryTable_rows_selected)){
+          fluidRow(
+            column(
+              8,
+              align = "center",
+              offset = 2,
+              p(strong("Select rows for day by day information"))
+            )
+          )
+        } else {
+          fluidRow(
+            plotlyOutput('selectedHoldingPlot', height = "800px"),
+            br(),
+            DT::dataTableOutput('selectedHolding')
+          )
+        }
+      } else {
         fluidRow(
           column(
             8,
             align = "center",
             offset = 2,
-            p(strong("Select rows for day by day information"))
+            p(strong("Add save_detailed_columns: in_var to your simulation configuration to see more."))
           )
-        )
-      } else {
-        fluidRow(
-            plotlyOutput('selectedHoldingPlot', height = "800px"),
-          br(),
-          DT::dataTableOutput('selectedHolding')
         )
       }
     })
@@ -441,63 +463,77 @@ server <- function(input, output, session) {
   
   
   
-  observeEvent(input$runSim, {
-    
-    if (input$runSim %in% 0) {
+  observeEvent(input$runSim | input$loadSim, {
+    # checkts to see if BOTH inputs are null
+    if (input$runSim %in% 0 & input$loadSim %in% 0) {
       return(NULL)
     }
     
-    # Create a Progress object
-    progress <- Progress$new()
-    progress$set(message = "Running simulation", value = 0)
     
-    # Close the progress when this reactive exits (even if there's an error)
-    on.exit(progress$close())
-    
-    updateProgress <- function(value = NULL, detail = NULL) {
-      progress$set(value = value, detail = detail)
-    }
-    
-    # Load yaml from config textAreaInput ui element
-    config <- yaml::read_yaml(text = input$config)
-
-    # For debugging:
-    #
-    # config <- yaml::yaml.load_file("strategy_config.yaml")
-    # config$from <- as.Date("2019-01-03")
-    # config$to <- as.Date("2019-01-07")
-    
-    # Supplement with other ui settings
-    config$from <- input$startDate
-    config$to <- input$endDate
-    
-    # Create and run the sim
-    tryCatch({
+    # Decides what simulation to run
+    if (input$runSim & !input$loadSim) {
+      # Create a Progress object
+      progress <- Progress$new()
+      progress$set(message = "Running simulation", value = 0)
       
-      data(sample_inputs)
-      data(sample_pricing)
-      data(sample_secref)
+      # Close the progress when this reactive exits (even if there's an error)
+      on.exit(progress$close())
       
-      # sim <- Simulation$new(config,
-      #                       raw_input_data = sample_inputs,
-      #                       raw_pricing_data = sample_pricing,
-      #                       security_reference_data = sample_secref)
-      # sim$setShinyCallback(updateProgress)
-      # sim$run()
+      updateProgress <- function(value = NULL, detail = NULL) {
+        progress$set(value = value, detail = detail)
+      }
       
+      # Load yaml from config textAreaInput ui element
+      config <- yaml::read_yaml(text = input$config)
+      
+      # For debugging:
+      #
+      # config <- yaml::yaml.load_file("strategy_config.yaml")
+      # config$from <- as.Date("2019-01-03")
+      # config$to <- as.Date("2019-01-07")
+      
+      # Supplement with other ui settings
+      config$from <- input$startDate
+      config$to <- input$endDate
+      
+      # Create and run the sim
+      tryCatch({
+        
+        data(sample_inputs)
+        data(sample_pricing)
+        data(sample_secref)
+        
+        
+        sim <- Simulation$new(config,
+                              raw_input_data = sample_inputs,
+                              raw_pricing_data = sample_pricing,
+                              security_reference_data = sample_secref)
+        sim$setShinyCallback(updateProgress)
+        sim$run()
+        
+        
+        values$sim_obj <- sim
+        
+        updateTabsetPanel(session,
+                          "top",
+                          selected = "Results"
+        )
+      },
+      error = function(e) { showNotification(e$message, type = "error", duration = NULL)}
+      )
+    } else if (!input$runSim & input$loadSim) {
       sim <- Simulation$new()
-      sim$readFeather("C:/Users/WhovR/Downloads/strand_data_in_var")
-      
+      sim$readFeather(input$simDirectory)
       
       values$sim_obj <- sim
       
+      # this is used in both if statements, move it outside to optimize flow
       updateTabsetPanel(session,
                         "top",
                         selected = "Results"
       )
-    },
-    error = function(e) { showNotification(e$message, type = "error", duration = NULL)}
-    )
- 
+    }
+    
+    
   })
 }
