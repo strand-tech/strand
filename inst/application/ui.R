@@ -1,5 +1,6 @@
 library(DT)
 library(plotly)
+library(shinyFiles)
 
 .readYamlConfig <- function() {
   config <- example_strategy_config()
@@ -41,12 +42,24 @@ ui <- fluidPage(
                       )
                )),
              fluidRow(
+               column(
+                 12,
+                 p(strong("Select your simulation directory and press Load Simulation"))
+               )
+             ),
+             fluidRow(
                column(2,
-                      # align = "left",
-                      # p(strong("Load simulation")),
-                      textInput("simDirectory", "Paste your simulation directory"),
+                      # textInput("simDirectory", "Paste your simulation directory"),
+                      shinyDirButton("simDir", "Directory select", "Please select your simulation directory")
+               ),
+               column(10,
+                      textOutput("directory")
+               )),
+             fluidRow(
+               column(2,
+                      br(),
                       actionButton("loadSim", "Load simulation")
-                      ))),
+             ))),
     tabPanel("Results",
       br(),
       tabsetPanel(

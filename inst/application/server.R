@@ -4,6 +4,7 @@ library(dplyr)
 library(tidyr)
 library(DT)
 library(plotly)
+library(shinyFiles)
 
 server <- function(input, output, session) {
 
@@ -11,10 +12,20 @@ server <- function(input, output, session) {
   values <- reactiveValues()
   
   
+  # volumes is the root of the directory
+  volumes <- c(Home = fs::path_home(), "R Installation" = R.home(), getVolumes()())
+  shinyDirChoose(input, "simDir", roots = volumes, session = session, restrictions = system.file(package = "base"))
+  
+  # Displays directory path
+  output$directory <- renderText({
+    parseDirPath(volumes, input$simDir)
+  })
+  
+  
   # Creates a warning message if the user did not set save_detail_columns: in_var in their simulation
   observeEvent(values$sim_obj, {
     if(!config_values()$in_var %in% colnames(values$sim_obj$getSimDetail())) {
-    showNotification(p(strong("Warning:"), "no in_var column"), type = "warning", duration = 30)
+    showNotification(p(strong("Warning:"), "no in_var present, some features will be disabled"), type = "warning", duration = 30)
     }
   })
   
@@ -296,7 +307,8 @@ server <- function(input, output, session) {
             title= paste('Symbol:
                    \n▲ Buy
                    \n▼ Sell
-                   \n', config_values()$in_var, ': ')
+                   \n', config_values()$in_var, ': '),
+            thickness = 10
           ),
           showlegend =  TRUE),
         # Creates tool tip aesthetics and information
@@ -341,7 +353,8 @@ server <- function(input, output, session) {
             title= paste('Symbol:
                    \n▲ Buy
                    \n▼ Sell
-                   \n', config_values()$in_var, ': ')
+                   \n', config_values()$in_var, ': '),
+            thickness = 10
           ),
          showlegend =  TRUE),
        hoverinfo = "text",
@@ -362,6 +375,9 @@ server <- function(input, output, session) {
           # initial title is same as PNL for consistency when the plot renders
           text = paste("Cumulative Profit and Loss of", selection_plot$symbol[1])
         ),
+        # legend = list(
+        #   font = list(size = 500)
+        # ),
         # Controls graph toggle button
         updatemenus =  list(
           list(
@@ -464,14 +480,17 @@ server <- function(input, output, session) {
   
   
   observeEvent(input$runSim | input$loadSim, {
+  # observeEvent(input$runSim | input$directory, {
     # checkts to see if BOTH inputs are null
     if (input$runSim %in% 0 & input$loadSim %in% 0) {
+    # if (input$runSim %in% 0 & input$directory %in% 0) {
       return(NULL)
     }
     
     
     # Decides what simulation to run
     if (input$runSim & !input$loadSim) {
+    # if (input$runSim & !input$directory) {
       # Create a Progress object
       progress <- Progress$new()
       progress$set(message = "Running simulation", value = 0)
@@ -514,26 +533,43 @@ server <- function(input, output, session) {
         
         values$sim_obj <- sim
         
-        updateTabsetPanel(session,
-                          "top",
-                          selected = "Results"
-        )
+        # updateTabsetPanel(session,
+        #                   "top",
+        #                   selected = "Results"
+        # )
       },
       error = function(e) { showNotification(e$message, type = "error", duration = NULL)}
       )
     } else if (!input$runSim & input$loadSim) {
-      sim <- Simulation$new()
-      sim$readFeather(input$simDirectory)
-      
-      values$sim_obj <- sim
-      
-      # this is used in both if statements, move it outside to optimize flow
-      updateTabsetPanel(session,
-                        "top",
-                        selected = "Results"
-      )
+      if(!is.integer(input$simDir)) {
+        
+        # gets the yaml file from the uploaded directory and converts the list to a yaml
+        upload_yaml <- yaml::read_yaml(paste0(parseDirPath(volumes, input$simDir), "/config.yaml")) %>%
+          yaml::as.yaml()
+        
+        # updates displayed fig in the text area
+        updateTextAreaInput(session, "config", value = upload_yaml)
+        
+        # uploads simulation from the directory
+        sim <- Simulation$new()
+        
+        sim$readFeather(parseDirPath(volumes, input$simDir))
+        
+        values$sim_obj <- sim
+        
+        # this is used in both if statements, move it outside to optimize flow
+        # updateTabsetPanel(session,
+        #                   "top",
+        #                   selected = "Results")
+      } else { 
+        return(showNotification(p(strong("Error:"), "select a valid directory"), type = "error"))
+      }
     }
     
+    
+    updateTabsetPanel(session,
+                      "top",
+                      selected = "Results")
     
   })
 }
