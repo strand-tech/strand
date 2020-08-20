@@ -11,7 +11,7 @@ load_data_files <- function(in_loc) {
   lapply(all_files,
          function(x) {
            this_date <- as.Date(gsub("^.*(\\d{8})[^\\/]*$", "\\1", x), format = "%Y%m%d")
-           feather::read_feather(x) %>%
+           read_feather(x) %>%
              mutate(date = this_date)
          }) %>% bind_rows
 }

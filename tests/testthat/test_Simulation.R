@@ -1,6 +1,6 @@
 context("Simulation")
 
-library(feather)
+library(arrow)
 library(dplyr)
 
 # Run the test simulation. Results will be used in several test blocks.
