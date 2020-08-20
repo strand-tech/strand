@@ -404,6 +404,35 @@ PortOpt <- R6Class(
       private$loosened_constraints
     },
     
+    #' @description Provide information about the maximum position size allowed
+    #'   for long and short positions.
+    #' @return An object of class \code{data.frame} that contains the limits on
+    #'   size for long and short positions for each strategy and security. The
+    #'   columns in the data frame are:
+    #'   \describe{
+    #'     \item{id}{Security identifier.}
+    #'     \item{strategy}{Strategy name.}
+    #'     \item{max_pos_lmv}{Maximum net market value for a long position.}
+    #'     \item{max_pos_smv}{Maximum net market value for a short position.}
+    #'     }
+    getMaxPosition = function() {
+      private$max_position
+    },
+    
+    #' @description Provide information about the maximum order size allowed
+    #'   for each security and strategy.
+    #' @return An object of class \code{data.frame} that contains the limit on
+    #'   order size for each strategy and security. The
+    #'   columns in the data frame are:
+    #'   \describe{
+    #'     \item{id}{Security identifier.}
+    #'     \item{strategy}{Strategy name.}
+    #'     \item{max_order_gmv}{Maximum gross market value allowed for an order.}
+    #'     }
+    getMaxOrder = function() {
+      private$max_order
+    },
+    
     #' @description Provide aggregate level optimization information if the
     #'   problem has been solved.
     #' @return A data frame with one row per strategy, including the joint (net)
@@ -539,6 +568,9 @@ PortOpt <- R6Class(
       config = NULL,
       
       input_data = NULL,
+      
+      max_position = NULL,
+      max_order = NULL,
       
       verbose = FALSE,
       
@@ -733,22 +765,46 @@ PortOpt <- R6Class(
           current_short_weight <- abs(current_smv / strategy_capital)
           
           target_weight_policy <- private$config$getConfig("target_weight_policy")
+
           if (isTRUE(all.equal(target_weight_policy, "half-way"))) {
             
             # If there is a target_weight_policy of 'half-way' (trade half-way to
             # the ideal weight) set in the config file, set the target long/short
             # weight for this strategy accordingly.
-            private$setTargetWeight(strategy,
-                                    (ideal_long_weight - current_long_weight) * 0.5 + current_long_weight,
-                                    (ideal_short_weight - current_short_weight) * 0.5 + current_short_weight)
-            
+            long_weight_change <- (ideal_long_weight - current_long_weight) * 0.5
+            short_weight_change <- (ideal_short_weight - current_short_weight) * 0.5
+
           } else if (is.null(target_weight_policy) || isTRUE(all.equal(target_weight_policy, "full"))) {
-            private$setTargetWeight(strategy,
-                                    ideal_long_weight,
-                                    ideal_short_weight)
+            long_weight_change <- ideal_long_weight - current_long_weight
+            short_weight_change <- ideal_short_weight - current_short_weight
           } else {
             stop(paste0("Invalid target_weight_policy: ", target_weight_policy))
           }
+          
+          # Limit weight change on each side if the simulator/max_weight_change
+          # configuration parameter is set. max_weight_change is expressed as a
+          # fraction of the ideal long and short weight. It imposes a limit on
+          # the absolute value of the change of the portfolio's long and short
+          # weight in the optimization.
+          #
+          # For example, if the ideal long weight is 1, the current weight is 0,
+          # and max_weight_change is 0.1, then the target long weight can be at
+          # most 0.1.
+          max_weight_change <- private$config$getConfig("max_weight_change")
+          if (!is.null(max_weight_change)) {
+            stopifnot(is.numeric(max_weight_change))
+            
+            long_weight_change <-
+              sign(long_weight_change) * min(abs(long_weight_change),
+                                             max_weight_change * ideal_long_weight)
+            short_weight_change <-
+              sign(short_weight_change) * min(abs(short_weight_change),
+                                             max_weight_change * ideal_short_weight)
+          }
+          
+          private$setTargetWeight(strategy,
+                                  current_long_weight + long_weight_change,
+                                  current_short_weight + short_weight_change)
         }
         
         invisible(self)
@@ -832,6 +888,16 @@ PortOpt <- R6Class(
           # volume limit by anticipated average trading volume.
           trading_limit <- private$input_data[[vol_var]] * trading_limit_pct_adv / 100
           
+          # Save this per-stock trading limit to the max_order member.
+          private$max_order <- rbind(
+            private$max_order,
+            data.frame(
+              strategy = strategy,
+              id = private$input_data$id,
+              max_order_gmv = trading_limit,
+              stringsAsFactors = FALSE)
+          )
+
           # Should have a config method that returns the starting shares column
           # for a given strategy (or even a method that returns a vector of
           # position nmvs).
@@ -866,7 +932,20 @@ PortOpt <- R6Class(
           pos_lower_limit <- -1 * 
             pmin(private$input_data[[vol_var]] * position_limit_pct_adv / 100,
                  ideal_smv * position_limit_pct_smv / 100)
-          
+
+          # Save the max position size based on position limit information in
+          # the object. These values can be accessed using the getMaxPosition
+          # method.
+          private$max_position <- rbind(
+            private$max_position,
+            data.frame(
+              strategy = strategy,
+              id = private$input_data$id,
+              max_pos_lmv = pos_upper_limit,
+              max_pos_smv = pos_lower_limit,
+              stringsAsFactors = FALSE)
+            )
+
           # Set pos_upper_limit and pos_lower_limit to zero for stocks that are
           # not investable
           pos_upper_limit[!private$input_data$investable] <- 0
@@ -918,7 +997,30 @@ PortOpt <- R6Class(
                                         rep(Inf, nrow(private$input_data)))
         private$variable_bounds$lower <- c(private$variable_bounds$lower,
                                         rep(0, nrow(private$input_data)))
-        
+
+        # Finish bookkeeping for max_position and max_order data by adding
+        # values for the joint level. When we add joint position and trading
+        # limits as constraints this section will no longer be needed.
+        private$max_position <-
+          rbind(
+            private$max_position,
+            private$max_position %>%
+              mutate(strategy = "joint") %>%
+              group_by(strategy, id) %>%
+              summarise(max_pos_lmv = sum(max_pos_lmv),
+                        max_pos_smv = sum(max_pos_smv)) %>%
+              ungroup())
+
+        private$max_order <-
+          rbind(
+            private$max_order,
+            private$max_order %>%
+              mutate(strategy = "joint") %>%
+              group_by(strategy, id) %>%
+              summarise(max_order_gmv = sum(max_order_gmv)) %>%
+              ungroup())
+
+            
         invisible(self)
       },
       

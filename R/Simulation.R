@@ -30,8 +30,10 @@ Simulation <- R6Class(
     #'   \code{date} column. Data supplied using this parameter will be
     #'   used if the configuration option \code{simulator/input_data/type} is
     #'   set to \code{object}. Defaults to \code{NULL}.
-    #' @param input_dates Vector of class \code{Date} that specifies when input
-    #'   data should be updated.
+    #' @param input_dates Vector of class \code{Date} that specifies  when input
+    #'   data should be updated. If data is being supplied using the
+    #'   \code{raw_input_data} parameter, then \code{input_dates} defaults to
+    #'   set of dates present in this data.
     #' @param raw_pricing_data A data frame that contains all of the input data
     #'   (for all periods) for the simulation. The data frame must have a
     #'   \code{date} column. Data supplied using this parameter will only be
@@ -148,8 +150,12 @@ Simulation <- R6Class(
       }
       
       # Set dates
-      private$input_dates <- input_dates
-
+      if (is.null(input_dates) & !is.null(raw_input_data)) {
+        private$input_dates <- unique(sort(raw_input_data$date))
+      } else {
+        private$input_dates <- input_dates
+      }
+      
       invisible(self)
     },
     
@@ -249,7 +255,7 @@ Simulation <- R6Class(
       for (current_date in as.list(all_dates)) {
 
         if (isTRUE(private$verbose)) {
-          cat("Working on ", format(current_date), "\n", sep = "")
+          cat("[", private$config$getConfig("name"), "] Working on ", format(current_date), "\n", sep = "")
         }
         
         if (is.function(private$shiny_callback)) {
@@ -269,7 +275,8 @@ Simulation <- R6Class(
         } else {
           input_data <- input_data_obj$update(current_date)
           
-          # Collect metadata as specified in the config.
+          # Collect metadata as specified in the config (such as correlation of
+          # values from one period to the next).
           if (!is.null(simulator_config$input_data$track_metadata)) {
             input_stats <- input_data_obj$periodStats(simulator_config$input_data$track_metadata)
             private$saveInputStats(current_date, input_stats)
@@ -427,6 +434,33 @@ Simulation <- R6Class(
         # delistings in the simulator, but each strategy should be able to have
         # its own universe.
         input_data$investable <- !input_data$id %in% id_delisted
+        
+        # By default, presence in the latest set of input data affects
+        # investability: stocks that are not in the latest update are not
+        # investable. This makes it easy to define the investable universe
+        # simply as the stocks present in the input cross-section.
+        #
+        # This behavior may not always be desirable, and can be controlled by
+        # setting the simulator/inputs_define_universe configuration option to
+        # FALSE. For example, a user may want to pass in updated factor data for
+        # stocks that are no longer in the universe but may be in the portfolio.
+        #
+        # Note that simulator/inputs_define_universe = TRUE is the same as
+        # having the expression `!inputs_carry_forward` as part of the
+        # simulator/universe configuration parameter.
+        #
+        # Note also that any expression in simulator/universe will be applied
+        # regardless of the setting of simulator/inputs_define_universe.
+        
+        # TODO We need to validate config entries and set defaults in the
+        # StrategyConfig class.
+        inputs_define_universe <- simulator_config$inputs_define_universe
+        stopifnot(is.null(inputs_define_universe) || is.logical(inputs_define_universe))
+
+        if (is.null(inputs_define_universe) || isTRUE(inputs_define_universe)) {
+          input_data$investable <- input_data$investable & !input_data$inputs_carry_forward
+        }
+        
         if (!is.null(simulator_config$universe) && length(simulator_config$universe) > 0) {
           univ <- eval(rlang::parse_expr(simulator_config$universe), envir = input_data)
           if (any(is.na(univ))) {
@@ -435,13 +469,26 @@ Simulation <- R6Class(
           input_data$investable <- input_data$investable & univ
         }
         
-        # Perform normalization, if necessary. Here we normalize the entire
-        # vector, but we should consider, especially in the case of a signal
-        # vector, how we are treating values for stocks not in the universe,
-        # stocks for which data has been carried forward, delisted stocks, etc.
+        
+
+        # Perform normalization for variables listed in
+        # simulator/normalize_vars.
+        #
+        # The procedure is as follows:
+        #
+        # 1. Set variable values for non-investable securities to NA.
+        # 2. Normalize variable to N(0, 1).
+        # 3. Set variable values for non-investable securities to zero.
+        #
+        # Store raw (pre-normalized) in_var values for column foo in the detail
+        # dataset column foo_raw.
         if (!is.null(simulator_config$normalize_vars)) {
           for (normalize_var in simulator_config$normalize_vars) {
-            input_data[[normalize_var]] <- normalize(input_data[[normalize_var]])
+            raw_normalize_var <- paste0(normalize_var, "_raw")
+            input_data <- input_data %>%
+              mutate(
+                !!raw_normalize_var := get(normalize_var),
+                !! normalize_var := replace_na(normalize(ifelse(investable, get(normalize_var), NA)), 0))
           }
         }
         
@@ -463,27 +510,113 @@ Simulation <- R6Class(
         orders <- portOpt$getResultData() %>%
           select("id", contains("shares"))
         
+        # Handle positions that have grown too large.
+        #
+        # After the optimization has generated orders, if the force_trim_factor
+        # is set, add orders to trim positions that are too large.
+        #
+        # A force_trim_factor value of X means "if a position grows larger than
+        # X times its max position size, force a trade to trim the position back
+        # to X times its max position size."
+        #
+        # So if a security has a max long position size of 10,000, its current
+        # size is 15,000, and force_trim_factor = 1.2, we add a trade to sell
+        # 3,000 so that the post-trade position size is 1.2 times max position
+        # size = 12,000.
+        #
+        # TODO Trim positions in PortOpt as part of the optimization process
+        # (when setting variable limits). We will still want the ability to force
+        # trim positions, however, since these limits will also be subject to
+        # loosening when no solution can be found.
+        if (!is.null(simulator_config$force_trim_factor)) {
+
+          force_trim_factor <- simulator_config$force_trim_factor
+          stopifnot(is.numeric(force_trim_factor),
+                    force_trim_factor >= 1)
+          
+          vol_var <- private$config$getConfig("vol_var")
+          too_big <- input_data %>%
+            select("id", !!vol_var, "start_price",
+                   !!portfolio$getShareColumns()) %>%
+            pivot_longer(cols = portfolio$getShareColumns(),
+                         names_to = "strategy",
+                         names_prefix = "shares_",
+                         values_to = "shares") %>%
+            left_join(portOpt$getMaxPosition(), by = c("id", "strategy")) %>%
+            mutate(pos_nmv = shares * start_price,
+                   max_pos_trim = ifelse(shares > 0, max_pos_lmv, max_pos_smv) *
+                     force_trim_factor) %>%
+            
+            # Grab those positions that are above the market value trim
+            # threshold.
+            filter(abs(shares * start_price) > abs(max_pos_trim)) %>%
+            
+            # Compute how much can be trimmed
+            left_join(portOpt$getMaxOrder(), by = c("id", "strategy")) %>%
+            mutate(
+              
+              # trim_gmv is the lesser of the amount required to trade the
+              # position down to max_pos_trim and the maximum order size.
+              trim_gmv = pmin(abs(pos_nmv) - abs(max_pos_trim), max_order_gmv),
+              
+              order_shares = -1 * sign(shares) * floor(trim_gmv / start_price)) %>%
+            
+            # Filter out cases where we are less than 1 share away from the
+            # max
+            filter(order_shares != 0) %>%
+            select("id", "strategy", "order_shares")
+
+          if (nrow(too_big) > 0) {
+            
+            # Calculate joint level shares.
+            joint_level <- too_big %>%
+              group_by(id) %>%
+              summarise(
+                strategy = "joint",
+                order_shares = sum(order_shares))
+            
+            too_big <- rbind(too_big, joint_level)
+            
+            # Now pivot back to wide format
+            too_big <- too_big %>%
+              pivot_wider(names_from = "strategy",
+                          values_from = "order_shares",
+                          names_prefix = "order_shares_")
+            
+            # Adjust column order to match data frame 'orders'
+            too_big <- too_big[names(orders)]
+            
+            # Finally: remove orders generated by the optimization (if any) and
+            # add the force-exit orders.
+            orders <- filter(orders, !.data$id %in% too_big$id)
+            orders <- rbind(orders, too_big)
+          }
+        }
         
-        # Handle non-investable securites.
+        # Handle non-investable securities.
         #
         # Often due to a changing universe the portfolio will have positions in
         # stocks that are not part of the investable universe. Setting the
-        # simulator/non_investable_policy configuration parameter controls how
-        # these positions are handled. If the simulator/non_investable_policy
-        # parameter is not set, such positions are allowed in the portfolio (but
-        # increasing their size is prohibited in the optimization).
+        # simulator/force_exit_non_investable configuration parameter controls
+        # how these positions are handled. If the
+        # simulator/force_exit_non_investable parameter is not set, such
+        # positions are allowed in the portfolio (but increasing their size is
+        # prohibited in the optimization).
         #
-        # It would be better (and in some ways much cleaner) to handle this logic in the
-        # optimization. If we force trades in the optimization the resulting
-        # constraints could prevent us from finding a solution. Loosening the
-        # constraints in such a situation might prevent the trades from getting
-        # done (which means we're no longer forcing the trades).
-        if (isTRUE(simulator_config$non_investable_policy %in% "force-exit")) {
+        # TODO Exit non-investable positions in PortOpt as part of the
+        # optimization process (when setting variable limits). Like position
+        # trimming, we will still want the ability to force exit these
+        # positions, since these limits will also be subject to loosening when
+        # no solution can be found.
+        #
+        # TODO Refactor force-trimming above and force-exiting below to remove
+        # duplicated code.
+        if (isTRUE(simulator_config$force_exit_non_investable)) {
           
           vol_var <- private$config$getConfig("vol_var")
           non_investable <- input_data %>%
             filter(!investable) %>%
-            select("id", !!vol_var, !!portfolio$getShareColumns()) %>%
+            select("id", !!vol_var, start_price, !!portfolio$getShareColumns()) %>%
             pivot_longer(cols = portfolio$getShareColumns(),
                          names_to = "strategy",
                          names_prefix = "shares_",
@@ -491,29 +624,18 @@ Simulation <- R6Class(
             filter(shares != 0)
           
           if (nrow(non_investable) > 0) {
-            
-            # pct_adv_map is a named vector where the names are strategies and the
-            # values are trading limit as a pct adv.
-            pct_adv_map <- 
-              sapply(private$config$getStrategyNames(), 
-                     function(x) {
-                       private$config$getStrategyConfig(x, "trading_limit_pct_adv")
-                     })
-            
-            non_investable$pct_adv_lim <- pct_adv_map[non_investable$strategy]
-            
-            stopifnot(!any(is.na(non_investable)))
-            
+
             # Call floor on abs share value to round toward zero (to avoid
-            # over-filling in corner cases).
+            # over-sizing in corner cases).
             non_investable <- non_investable %>%
-              mutate(order_shares = -1 *
-                       sign(shares) * pmin(abs(shares),
-                                           floor((pct_adv_lim / 100) * !!vol_var / start_price))) %>%
+              left_join(portOpt$getMaxOrder(), by = c("id", "strategy")) %>%
+              mutate(
+                pos_nmv = shares * start_price,
+                exit_gmv = pmin(abs(pos_nmv), max_order_gmv),
+                order_shares = -1 * sign(shares) * floor(exit_gmv / start_price)) %>%
               select("id", "strategy", "order_shares")
             
-            # Calculate joint level shares (this all would be easier to delegate
-            # to PortOpt).
+            # Calculate joint level shares.
             joint_level <- non_investable %>%
               group_by(id) %>%
               summarise(
@@ -537,7 +659,7 @@ Simulation <- R6Class(
             orders <- rbind(orders, non_investable)
           }
         }
-        
+
         # Join result data back to the inputs data that was passed to the
         # optimization.
         stopifnot(setequal(orders$id, input_data$id))
@@ -655,7 +777,7 @@ Simulation <- R6Class(
         res <- res %>%
           inner_join(select(input_data, "id", "start_price", "end_price", "dividend", "distribution",
                             "investable",
-                            !!simulator_config$save_detail_columns),
+                            !!simulator_config$add_detail_columns),
                             by = "id") %>%
           mutate(
             # Position P&L is computed by comparing the value of the starting
@@ -707,6 +829,10 @@ Simulation <- R6Class(
             end_nmv = .data$end_shares * .data$end_price,
             end_gmv = abs(.data$end_nmv))
 
+        # Bring in max position information
+        res <- res %>%
+          left_join(portOpt$getMaxPosition(), by = c("strategy", "id"))
+        
         # if (nrow(filter(res, strategy %in% "joint" & transfer_fill_gmv != 0))) browser()
         
         # Simple sums
@@ -814,6 +940,17 @@ Simulation <- R6Class(
         # only turn saving detail off and on.
         if (is.null(simulator_config$skip_saving) ||
             !"detail" %in% simulator_config$skip_saving) {
+          
+          # The full detail dataset is large. To save specific columns, use the
+          # simulator/keep_detail_columns parameter.
+          
+          if (!is.null(simulator_config$keep_detail_columns)) {
+            keep_detail_columns <-
+                unique(c("id", "strategy",
+                       simulator_config$keep_detail_columns))
+            res <- res %>% select(!!keep_detail_columns)
+          }
+          
           private$saveSimDetail(current_date, res)
         }
         private$saveOptimizationSummary(current_date, portOpt$summaryDf())
@@ -1534,7 +1671,7 @@ Simulation <- R6Class(
       
       # Group by month and calculate return.
       month_ret_long <- group_by(res, date = as.Date(paste0(format(sim_date, "%Y-%m"), "-01"))) %>%
-        summarize(ret = sum(net_ret) * 100) %>%
+        summarise(ret = sum(net_ret) * 100) %>%
         ungroup() %>%
         transmute(year = lubridate::year(date),
                   month = lubridate::month(date),
@@ -1546,7 +1683,7 @@ Simulation <- R6Class(
       
       # Compute summary statistics for each year.
       stats_yearly <- group_by(res, year = lubridate::year(sim_date)) %>%
-        summarize(
+        summarise(
           total_ret = 100 *sum(net_ret),
           ann_ret = 100 * mean(net_ret) * 252, 
           ann_vol = 100 * sd(net_ret) * sqrt(252)) %>%

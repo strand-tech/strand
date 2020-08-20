@@ -14,8 +14,13 @@ volume) for setting trading and position limit constraints.
 passed to input_dates contols the dates on which input data (e.g., alpha and
 risk factors) is updated.
 
+* Added force-trim feature to trim back positions that grow too large. Setting
+the simulator configuration parameter `force_trim_factor` to a numeric value X
+will cause orders to be created that trim positions back to X times their
+maximum allowable size.
+
 * Added force-exit feature for non-investable securities. Setting the simulator
-configuration parameter `non_investable_policy` to `"force-exit"` will cause exit
+configuration parameter `force_exit_non_investable` to `TRUE` will cause exit
 orders to be created for positions not in the universe during a simulation.
 
 * Now saving gross, long, and short exposures in addition to net.

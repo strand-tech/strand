@@ -17,7 +17,7 @@
 #' @import R6
 #' @import ggplot2
 #' @importFrom methods is
-#' @importFrom dplyr %>% select mutate mutate_at mutate_if filter inner_join left_join vars group_by summarise summarise_all rename contains matches bind_rows ungroup arrange desc 
+#' @importFrom dplyr %>% select mutate mutate_at mutate_if filter inner_join left_join vars group_by summarise summarise_all rename contains matches bind_rows ungroup arrange desc transmute 
 #' @importFrom tibble enframe
 #' @importFrom tidyr replace_na starts_with ends_with one_of everything pivot_longer pivot_wider gather unnest unnest_wider
 #' @importFrom Matrix Matrix Diagonal
