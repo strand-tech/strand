@@ -255,7 +255,7 @@ Simulation <- R6Class(
       for (current_date in as.list(all_dates)) {
 
         if (isTRUE(private$verbose)) {
-          cat("Working on ", format(current_date), "\n", sep = "")
+          cat("[", private$config$getConfig("name"), "] Working on ", format(current_date), "\n", sep = "")
         }
         
         if (is.function(private$shiny_callback)) {
