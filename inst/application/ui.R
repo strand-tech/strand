@@ -1,9 +1,7 @@
 library(DT)
 library(plotly)
-<<<<<<< HEAD
 library(shinyFiles)
-=======
->>>>>>> upstream/master
+
 
 .readYamlConfig <- function() {
   config <- example_strategy_config()
@@ -52,7 +50,6 @@ ui <- fluidPage(
              ),
              fluidRow(
                column(2,
-                      # textInput("simDirectory", "Paste your simulation directory"),
                       shinyDirButton("simDir", "Directory select", "Please select your simulation directory")
                ),
                column(10,
@@ -109,15 +106,8 @@ ui <- fluidPage(
             column(
               12,
               br(),
-<<<<<<< HEAD
-              # plotlyOutput('plot_3'),
               uiOutput('plot_3s'),
-              # plotlyOutput('plot_4')
               uiOutput('factor_exposure')
-=======
-              plotlyOutput('plot_3'),
-              plotlyOutput('plot_4')
->>>>>>> upstream/master
             )
           )
         ),
