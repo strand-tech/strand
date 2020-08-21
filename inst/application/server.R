@@ -5,6 +5,7 @@ library(tidyr)
 library(DT)
 library(plotly)
 library(shinyFiles)
+library(shinyjs)
 
 server <- function(input, output, session) {
 
@@ -487,7 +488,6 @@ server <- function(input, output, session) {
     
     # Decides what simulation to run
     if (input$runSim & !input$loadSim) {
-    # if (input$runSim & !input$directory) {
       # Create a Progress object
       progress <- Progress$new()
       progress$set(message = "Running simulation", value = 0)
@@ -536,6 +536,9 @@ server <- function(input, output, session) {
     } else if (!input$runSim & input$loadSim) {
       if(!is.integer(input$simDir)) {
         
+        
+        # hide('simDir')
+        disable('loadSim')
         # gets the yaml file from the uploaded directory and converts the list to a yaml
         upload_yaml <- yaml::read_yaml(paste0(parseDirPath(volumes, input$simDir), "/config.yaml")) %>%
           yaml::as.yaml()
@@ -554,6 +557,8 @@ server <- function(input, output, session) {
         # updateTabsetPanel(session,
         #                   "top",
         #                   selected = "Results")
+        # show('simDir')
+        enable('loadSim')
       } else { 
         return(showNotification(p(strong("Error:"), "select a valid directory"), type = "error"))
       }

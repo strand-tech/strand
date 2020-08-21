@@ -1,6 +1,7 @@
 library(DT)
 library(plotly)
 library(shinyFiles)
+library(shinyjs)
 
 
 .readYamlConfig <- function() {
@@ -42,6 +43,8 @@ ui <- fluidPage(
                                     value = .readYamlConfig()
                       )
                )),
+             # added useshinyjs() call
+             useShinyjs(),
              fluidRow(
                column(
                  12,
