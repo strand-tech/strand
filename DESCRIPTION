@@ -48,6 +48,7 @@ Suggests:
     knitr,
     rmarkdown,
     shiny,
+    shinyFiles,
     DT,
     Rsymphony,
     officer,
