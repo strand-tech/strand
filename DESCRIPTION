@@ -49,6 +49,7 @@ Suggests:
     rmarkdown,
     shiny,
     shinyFiles,
+    shinyjs,
     DT,
     Rsymphony,
     officer,

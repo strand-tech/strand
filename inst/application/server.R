@@ -530,19 +530,25 @@ server <- function(input, output, session) {
         
         values$sim_obj <- sim
         
+        # need to  iron out the flow of this, so I don't have to repeat this
+        updateTabsetPanel(session,
+                          "top",
+                          selected = "Results")
+        
       },
       error = function(e) { showNotification(e$message, type = "error", duration = NULL)}
       )
     } else if (!input$runSim & input$loadSim) {
       if(!is.integer(input$simDir)) {
         
-        
+        showNotification(p(strong("Loading Simulation")), duration = NULL, type = "message", id = "progress")
         # hide('simDir')
         disable('loadSim')
+        disable('simDir')
         # gets the yaml file from the uploaded directory and converts the list to a yaml
         upload_yaml <- yaml::read_yaml(paste0(parseDirPath(volumes, input$simDir), "/config.yaml")) %>%
           yaml::as.yaml()
-        
+        # browser()
         # updates displayed fig in the text area
         updateTextAreaInput(session, "config", value = upload_yaml)
         
@@ -554,20 +560,28 @@ server <- function(input, output, session) {
         values$sim_obj <- sim
         
         # this is used in both if statements, move it outside to optimize flow
-        # updateTabsetPanel(session,
-        #                   "top",
-        #                   selected = "Results")
-        # show('simDir')
-        enable('loadSim')
+        updateTabsetPanel(session,
+                          "top",
+                          selected = "Results")
+       
+        # there is an offset between the tabsetpanel and the remove notification
+        # and enabling of the clicking of loadSim because the UI does not update
+        # in the order of the code. Without the delay the message dissappears and 
+        # the button becomes clickable before the tab is changed
+        delay(200, {
+          removeNotification("progress")
+          enable('loadSim')
+          enable('simDir')})
+        
       } else { 
         return(showNotification(p(strong("Error:"), "select a valid directory"), type = "error"))
       }
     }
     
     
-    updateTabsetPanel(session,
-                      "top",
-                      selected = "Results")
+    # updateTabsetPanel(session,
+    #                   "top",
+    #                   selected = "Results")
     
   })
 }
