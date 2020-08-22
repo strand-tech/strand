@@ -36,7 +36,7 @@ Imports:
     Rglpk,
     dplyr,
     tidyr,
-    feather,
+    arrow,
     lubridate,
     rlang,
     yaml,

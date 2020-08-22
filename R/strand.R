@@ -24,7 +24,7 @@
 #' @importFrom Rglpk Rglpk_solve_LP
 #' @importFrom yaml yaml.load_file
 #' @importFrom rlang .data has_name :=
-#' @importFrom feather read_feather write_feather
+#' @importFrom arrow read_feather write_feather
 #' @importFrom lubridate day month year day<- month<-
 #' @importFrom stats cor qnorm sd as.formula residuals lm
 #' @importFrom utils head
