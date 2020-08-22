@@ -3,6 +3,7 @@ library(strand)
 library(dplyr)
 library(tidyr)
 library(DT)
+library(arrow)
 library(plotly)
 library(shinyFiles)
 library(shinyjs)
@@ -319,7 +320,7 @@ server <- function(input, output, session) {
                      '<br>P&L: ', selection_plot$net_pnl,
                      '<br>NMV: ', selection_plot$end_nmv,
                      '<br>',  config_values()$in_var,': ', selection_plot[[config_values()$in_var]],
-                     '<br>Shares: ', selection_plot$shares,
+                     '<br>Start Shares: ', selection_plot$shares,
                      '<br>Order: ', selection_plot$order_shares,
                      '<br>Fill: ', selection_plot$fill_shares,
                      '<br>End Shares: ', selection_plot$end_shares,
@@ -364,7 +365,7 @@ server <- function(input, output, session) {
                     '<br>P&L: ', selection_plot$net_pnl,
                     '<br>NMV: ', selection_plot$end_nmv,
                     '<br>',  config_values()$in_var,': ', selection_plot[[config_values()$in_var]],
-                    '<br>Shares: ', selection_plot$shares,
+                    '<br>Start Shares: ', selection_plot$shares,
                     '<br>Order: ', selection_plot$order_shares,
                     '<br>Fill: ', selection_plot$fill_shares,
                     '<br>End Shares: ', selection_plot$end_shares,
@@ -415,7 +416,7 @@ server <- function(input, output, session) {
                                        '<br>P&L: ', selection_plot$net_pnl,
                                        '<br>NMV: ', selection_plot$end_nmv,
                                        '<br>',  config_values()$in_var,': ', selection_plot[[config_values()$in_var]],
-                                       '<br>Shares: ', selection_plot$shares,
+                                       '<br>Start Shares: ', selection_plot$shares,
                                        '<br>Order: ', selection_plot$order_shares,
                                        '<br>Fill: ', selection_plot$fill_shares,
                                        '<br>End Shares: ', selection_plot$end_shares,
