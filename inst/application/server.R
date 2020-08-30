@@ -3,17 +3,40 @@ library(strand)
 library(dplyr)
 library(tidyr)
 library(DT)
+library(arrow)
 library(plotly)
+library(shinyFiles)
+library(shinyjs)
 
 server <- function(input, output, session) {
 
   # Store the sim result data in a reactiveValues object.
   values <- reactiveValues()
   
+  
+  # volumes is the root of the directory
+  volumes <- c(Home = fs::path_home(), "R Installation" = R.home(), getVolumes()())
+  shinyDirChoose(input, "simDir", roots = volumes, session = session, restrictions = system.file(package = "base"))
+  
+  # Displays directory path
+  output$directory <- renderText({
+    parseDirPath(volumes, input$simDir)
+  })
+  
+  
+  # Creates a warning message if the user did not set save_detail_columns: in_var in their simulation
+  observeEvent(values$sim_obj, {
+    if(!config_values()$in_var %in% colnames(values$sim_obj$getSimDetail())) {
+    showNotification(p(strong("Warning:"), "no in_var present, some features will be disabled"), type = "warning", duration = 30)
+    }
+  })
+  
+  
+  
   # Creates a data.frame of the final positions
-  position_summary <- eventReactive(values$sim_result, {
-    
-    values$sim_result$getPositionSummary(strategy_name = "joint") %>%
+  position_summary <- eventReactive(values$sim_obj, {
+            # result to obj
+    values$sim_obj$getPositionSummary(strategy_name = "joint") %>%
       left_join(values$sim_obj$getSecurityReference()[c("id","symbol")], by = "id") %>%
       ungroup() %>%
       select(.data$symbol, .data$gross_pnl, .data$net_pnl,
@@ -21,41 +44,69 @@ server <- function(input, output, session) {
              .data$total_trading, .data$trade_costs, .data$financing_costs,
              .data$days_in_portfolio) %>%
       arrange(.data$gross_pnl)
+  })
+  
+
+  # eventReactive that returns the name of the strategy, the in_var, and the factors  
+  config_values <- eventReactive(values$sim_obj, {
+    # browser()
+    strategy_name <- values$sim_obj$getConfig()$getStrategyNames()
     
+    # returns the config in_var
+    in_var <- values$sim_obj$getConfig()$getStrategyConfig(strategy_name, "in_var")
+    
+    # creates vectors of the categories and factors to track
+    config_category <- values$sim_obj$getConfig()$getConfig("simulator")$calculate_exposures$category_vars %>%
+      as.vector()
+    config_factors <- values$sim_obj$getConfig()$getConfig("simulator")$calculate_exposures$factor_vars %>%
+      as.vector()
+    
+    list(
+      "in_var" = in_var,
+      "config_category" = config_category,
+      "config_factors" = config_factors
+    )
   })
   
   # Produces a name value list that stores
-  #   maximum alpha (alpha_max)
-  #   minimum alpha (alpha_min)
+  #   maximum alpha (in_var_max)
+  #   minimum alpha (in_var_min)
   #   list of markey fill quarties (market_fill_quartile[[%]])
-  alpha_range_and_size <- eventReactive(values$sim_result, {
+  plot_aesthetics <- eventReactive(config_values(), {
+    
     
     # Creates a data.frame of all positions throughout the simulation
     # Rounds alpha to get full alpha range
     # Includes days when no trades happen to compare alpha throughout simulation
-    simulation_summary <- values$sim_result$getSimDetail(strategy_name = "joint") %>%
-      group_by(id) %>%
-      mutate(alpha_1 = round(alpha_1, digits = 2)) %>%
-      ungroup() 
+    in_var_summary <- values$sim_obj$getSimDetail(strategy_name = "joint") %>%
+      select(!!config_values()$in_var, market_fill_nmv) %>%
+      mutate(
+        !!config_values()$in_var := round(get(config_values()$in_var), digits = 2)
+      )
     
     # Creates a data frame of all trades throughout the simulation
     # Removes all days when no trades happen
-    trade_summary <- simulation_summary %>%
+    trade_summary <- in_var_summary %>%
+      select(market_fill_nmv) %>%
       filter(market_fill_nmv != 0)
     
-    list("alpha_max" = max(simulation_summary$alpha_1),
-         "alpha_min" = min(simulation_summary$alpha_1), 
+    in_var_max <- max(in_var_summary[[config_values()$in_var]])
+    in_var_min <- min(in_var_summary[[config_values()$in_var]])
+  
+    
+    list("in_var_max" = in_var_max,
+         "in_var_min" = in_var_min, 
          # Normalizes the alpha, the mean is the average, not necessarily zero 
          # Used for plotly gradient
-         "alpha_normalized_average" = (mean(simulation_summary$alpha_1) - min(simulation_summary$alpha_1)) / 
-           (max(simulation_summary$alpha_1) -  min(simulation_summary$alpha_1)),
+         "in_var_normalized_average" = (mean(in_var_summary[[config_values()$in_var]]) - in_var_min) / 
+           (in_var_max - in_var_min),
          # Uses trade summary instead of simulation summary for trade quantile
          "market_fill_quartile" = quantile(abs(trade_summary$market_fill_nmv)))
   })
   
   # creates a data frame filled with the day by day of selected position
   selected_holding_row <- eventReactive(input$positionSummaryTable_rows_selected, {
-    
+    # browser()
     # Gets the ID of the selected holding
     # Returns a data frame of the position's id and symbol
     selected_sec_ref <- values$sim_obj$getSecurityReference() %>%
@@ -66,11 +117,10 @@ server <- function(input, output, session) {
 
     # Add 'save_detail_columns: alpha_1' under simulation 
     # Uses id and symbol to get simulation details of the position
-    selected_holdings <- 
-      left_join(values$sim_result$getSimDetail(strategy_name = "joint", 
+    selected_holdings <- left_join(values$sim_obj$getSimDetail(strategy_name = "joint", 
                                                security_id = selected_sec_ref$id), 
                 selected_sec_ref, by = "id") %>%
-      select("sim_date", "symbol", "net_pnl", "shares", "alpha_1","order_shares", "fill_shares", 
+      select("sim_date", "symbol", "net_pnl", "shares", !!config_values()$in_var, "order_shares", "fill_shares", 
              "market_fill_nmv", "end_shares", "end_nmv", "gross_pnl", "trade_costs", "financing_costs") %>%
       mutate(end_nmv = round(end_nmv),
              gross_pnl = round(gross_pnl, digits = 2),
@@ -80,35 +130,64 @@ server <- function(input, output, session) {
              net_pnl = round(net_pnl, digits = 0),
              gross_pnl = cumsum(gross_pnl),
              gross_pnl = round(gross_pnl, digits = 0),
-             alpha_1 = round(alpha_1, digits = 2),
+           !!config_values()$in_var := round(get(config_values()$in_var), digits = 2),
              market_fill_nmv = round(market_fill_nmv, digits = 0))
   })
  
-  observeEvent(values$sim_result, {
-    
+                      
+  # changed from values$sim_obj
+  observeEvent(config_values(), {
     output$plot_1 <- renderPlotly(
-      ggplotly(values$sim_result$plotPerformance(), tooltip = FALSE) 
-    )
-    
-    output$plot_2 <- renderPlotly(
-      ggplotly(values$sim_result$plotMarketValue(), tooltip = FALSE)
-    )
-    
-    # TODO dynamically select exposure plot in_vars based on config file
-    output$plot_3 <- renderPlotly(
-      ggplotly(values$sim_result$plotCategoryExposure(in_var = "category_1"), tooltip = FALSE)
+      ggplotly(values$sim_obj$plotPerformance(), tooltip = FALSE) 
     )
 
-    output$plot_4 <- renderPlotly(
-      ggplotly(values$sim_result$plotFactorExposure(in_var = c("factor_1", "factor_2", "factor_3", "factor_4")), tooltip = FALSE)
+    output$plot_2 <- renderPlotly(
+      ggplotly(values$sim_obj$plotMarketValue(), tooltip = FALSE)
     )
+    
+    output$plot_3s <- renderUI({
+      if(!is.null(config_values()$config_category)){
+        category_plot_list <- lapply(1:length(config_values()$config_category), function(i) {
+          cat_plot_name <- paste("cat_plot_", i, sep = "")
+          plotlyOutput(cat_plot_name)
+        })
+        do.call(tagList, category_plot_list)
+      } else {
+        fluidRow(
+          column(
+            8,
+            align = "center",
+            offset = 2,
+            p(strong("You're not currently tracking any category exposures."))
+          )
+        )
+      }
+    })
+    
+    output$factor_exposure <- renderUI({
+      if(!is.null(config_values()$config_factors)){
+        output$plot_4 <- renderPlotly(
+          ggplotly(values$sim_obj$plotFactorExposure(in_var = config_values()$config_factors), tooltip = FALSE)
+        )
+        plotlyOutput('plot_4')
+      } else {
+        fluidRow(
+          column(
+            8,
+            align = "center",
+            offset = 2,
+            p(strong("You're not currently tracking any factor exposures."))
+          )
+        )
+      }
+    })
     
     output$plot_5 <- renderPlotly(
-      ggplotly(values$sim_result$plotNumPositions(), tooltip = FALSE)
+      ggplotly(values$sim_obj$plotNumPositions(), tooltip = FALSE)
     )
-    output$overallStatsTable <- renderTable(values$sim_result$overallStatsDf(), align = "lrr")
-
-    summary_data <- values$sim_result$getSingleStrategySummaryDf("joint", include_zero_row = FALSE)
+    output$overallStatsTable <- renderTable(values$sim_obj$overallStatsDf(), align = "lrr")
+                          
+    summary_data <- values$sim_obj$getSingleStrategySummaryDf("joint", include_zero_row = FALSE)
     perf_stats <- summary_data %>%
       transmute(
         Date = .data$sim_date,
@@ -146,13 +225,19 @@ server <- function(input, output, session) {
 
   })
   
+  # generates multple category exposure plots
+  observeEvent(config_values()$config_category, {
+      lapply(1:length(config_values()$config_category), function(i){
+        output[[paste("cat_plot_", i, sep = "")]] <- renderPlotly({
+          ggplotly(values$sim_obj$plotCategoryExposure(in_var = config_values()$config_category[[i]]), tooltip = FALSE)
+        })
+      })
+  })
+  
   observeEvent(input$holdingsDate, {
-    
     if (!is.null(values$sim_obj)) {
-      
       output$holdingsTable <- renderDT(
-        
-        left_join(values$sim_result$getSimDetail(as.character(input$holdingsDate), strategy_name = "joint"),
+        left_join(values$sim_obj$getSimDetail(as.character(input$holdingsDate), strategy_name = "joint"),
                   values$sim_obj$getSecurityReference(), by = "id") %>%
           select("symbol", "shares", "order_shares", "fill_shares", "end_shares", "end_nmv",
                  "gross_pnl", "trade_costs", "financing_costs") %>%
@@ -165,9 +250,8 @@ server <- function(input, output, session) {
   })
   
   
-  # making the seleted holdings data table
+  # makes the seleted holdings data table
   output$selectedHolding <- renderDT(
-    
     selected_holding_row(),
     rownames = FALSE,
     selection = "none"
@@ -186,9 +270,9 @@ server <- function(input, output, session) {
       mutate(buy_sell = ifelse(fill_shares > 0, 'triangle-up',
                                   ifelse(fill_shares < 0, 'triangle-down', '0')),
              magnitude = ifelse(market_fill_nmv == 0, 5,
-                                 ifelse(abs(market_fill_nmv) > alpha_range_and_size()$market_fill_quartile[["50%"]],
-                                 ifelse(abs(market_fill_nmv) > alpha_range_and_size()$market_fill_quartile[["75%"]], 30, 25),
-                                 ifelse(abs(market_fill_nmv) > alpha_range_and_size()$market_fill_quartile[["25%"]], 20, 15))))
+                                 ifelse(abs(market_fill_nmv) > plot_aesthetics()$market_fill_quartile[["50%"]],
+                                 ifelse(abs(market_fill_nmv) > plot_aesthetics()$market_fill_quartile[["75%"]], 30, 25),
+                                 ifelse(abs(market_fill_nmv) > plot_aesthetics()$market_fill_quartile[["25%"]], 20, 15))))
     
     # Creates one plot with two traces for the PNL and NMV
     holdings_plot <- plot_ly() %>%
@@ -205,25 +289,26 @@ server <- function(input, output, session) {
         ),
         marker = list(
           opacity = 1,
-          color = selection_plot$alpha_1,
+          color = selection_plot[[config_values()$in_var]],
           line = list(
             color = 'black'
           ),
           symbol = factor(selection_plot$buy_sell),
           size = selection_plot$magnitude,
           # Sets range of alpha colorscale based off all alphas
-          cmin = alpha_range_and_size()$alpha_min,
-          cmax = alpha_range_and_size()$alpha_max,
+          cmin = plot_aesthetics()$in_var_min,
+          cmax = plot_aesthetics()$in_var_max,
           colorscale = list(c(0, "rgb(178, 34, 34)"),
                             # Yellow will be set to normalized average
                             # Colorscale is based on [0, 1] range
-                            list(alpha_range_and_size()$alpha_normalized_average, "rgb(255, 255, 0)"),
+                            list(plot_aesthetics()$in_var_normalized_average, "rgb(255, 255, 0)"),
                             list(1, "rgb(50, 205, 50)")),
           colorbar = list(
-            title='Symbol:
+            title= paste('Symbol:
                    \n▲ Buy
                    \n▼ Sell
-                   \nAlpha:'
+                   \n', config_values()$in_var, ': '),
+            thickness = 10
           ),
           showlegend =  TRUE),
         # Creates tool tip aesthetics and information
@@ -234,8 +319,8 @@ server <- function(input, output, session) {
         text = paste('Profit and Loss<br>Date: ', selection_plot$sim_date,
                      '<br>P&L: ', selection_plot$net_pnl,
                      '<br>NMV: ', selection_plot$end_nmv,
-                     '<br>Alpha: ', selection_plot$alpha_1,
-                     '<br>Shares: ', selection_plot$shares,
+                     '<br>',  config_values()$in_var,': ', selection_plot[[config_values()$in_var]],
+                     '<br>Start Shares: ', selection_plot$shares,
                      '<br>Order: ', selection_plot$order_shares,
                      '<br>Fill: ', selection_plot$fill_shares,
                      '<br>End Shares: ', selection_plot$end_shares,
@@ -253,22 +338,23 @@ server <- function(input, output, session) {
        ),
        marker = list(
          opacity = 1,
-         color = selection_plot$alpha_1,
+         color = selection_plot[[config_values()$in_var]],
          line = list(
            color = 'black'
          ),
          symbol = factor(selection_plot$buy_sell),
          size = selection_plot$magnitude,
-         cmin = alpha_range_and_size()$alpha_min,
-         cmax = alpha_range_and_size()$alpha_max,
+         cmin = plot_aesthetics()$in_var_min,
+         cmax = plot_aesthetics()$in_var_max,
          colorscale = list(c(0, "rgb(178, 34, 34)"),
-                           list(alpha_range_and_size()$alpha_normalized_average, "rgb(255, 255, 0)"),
+                           list(plot_aesthetics()$in_var_normalized_average, "rgb(255, 255, 0)"),
                            list(1, "rgb(50, 205, 50)")),
          colorbar = list(
-            title='Symbol:
+            title= paste('Symbol:
                    \n▲ Buy
                    \n▼ Sell
-                   \nAlpha:'
+                   \n', config_values()$in_var, ': '),
+            thickness = 10
           ),
          showlegend =  TRUE),
        hoverinfo = "text",
@@ -278,8 +364,8 @@ server <- function(input, output, session) {
        text = paste('Net Market Value<br>Date: ', selection_plot$sim_date,
                     '<br>P&L: ', selection_plot$net_pnl,
                     '<br>NMV: ', selection_plot$end_nmv,
-                    '<br>Alpha: ', selection_plot$alpha_1,
-                    '<br>Shares: ', selection_plot$shares,
+                    '<br>',  config_values()$in_var,': ', selection_plot[[config_values()$in_var]],
+                    '<br>Start Shares: ', selection_plot$shares,
                     '<br>Order: ', selection_plot$order_shares,
                     '<br>Fill: ', selection_plot$fill_shares,
                     '<br>End Shares: ', selection_plot$end_shares,
@@ -289,6 +375,9 @@ server <- function(input, output, session) {
           # initial title is same as PNL for consistency when the plot renders
           text = paste("Cumulative Profit and Loss of", selection_plot$symbol[1])
         ),
+        # legend = list(
+        #   font = list(size = 500)
+        # ),
         # Controls graph toggle button
         updatemenus =  list(
           list(
@@ -314,7 +403,7 @@ server <- function(input, output, session) {
         ))
       
     # Creates the alpha sub plot                             
-    alpha_plot <- plot_ly(selection_plot, x = ~sim_date, y = ~alpha_1,
+    in_var_plot <- plot_ly(x = selection_plot$sim_date, y = selection_plot[[config_values()$in_var]],
                           type = "scatter", mode = "lines",
                           line = list(
                             color = "rgb(0, 102, 204)"
@@ -323,19 +412,19 @@ server <- function(input, output, session) {
                           hoverlabel = list(
                             bgcolor = 'white'
                           ),
-                          text = paste('Alpha<br>Date: ', selection_plot$sim_date,
+                          text = paste(config_values()$in_var, '<br>Date: ', selection_plot$sim_date,
                                        '<br>P&L: ', selection_plot$net_pnl,
                                        '<br>NMV: ', selection_plot$end_nmv,
-                                       '<br>Alpha: ', selection_plot$alpha_1,
-                                       '<br>Shares: ', selection_plot$shares,
+                                       '<br>',  config_values()$in_var,': ', selection_plot[[config_values()$in_var]],
+                                       '<br>Start Shares: ', selection_plot$shares,
                                        '<br>Order: ', selection_plot$order_shares,
                                        '<br>Fill: ', selection_plot$fill_shares,
                                        '<br>End Shares: ', selection_plot$end_shares,
                                        '<br>Fill Market Value: ', selection_plot$market_fill_nmv)) %>%
       layout(
         yaxis = list(
-          title = "Alpha",
-          range = c(alpha_range_and_size()$alpha_min, alpha_range_and_size()$alpha_max),
+          title = paste(config_values()$in_var),
+          range = c(plot_aesthetics()$in_var_min, plot_aesthetics()$in_var_max),
           # Removes vertical zoom function from alpha plot
           fixedrange = TRUE, showzeroline = FALSE,
           # Controls vertical lines around alpha plot
@@ -349,30 +438,39 @@ server <- function(input, output, session) {
         showlegend = FALSE)
     
     # Combines holdings plot with alpha plot and links horizontal axis
-    multi_layed_plot <- subplot(holdings_plot, alpha_plot,
+    multi_layed_plot <- subplot(holdings_plot, in_var_plot,
                                 nrows = 2, shareX = TRUE, titleY = TRUE, heights = c(0.80, 0.20))
-     
-      
-
   })
   
  # renders the updated UI when a row is clicked
   observeEvent(position_summary(), {
     output$selectedPlotAndTable <- renderUI({
-      if(is.null(input$positionSummaryTable_rows_selected)){
+      # checks to see if there is in in_var column in the position summary
+      if(config_values()$in_var %in% colnames(values$sim_obj$getSimDetail())) {
+        if(is.null(input$positionSummaryTable_rows_selected)){
+          fluidRow(
+            column(
+              8,
+              align = "center",
+              offset = 2,
+              p(strong("Select rows for day by day information"))
+            )
+          )
+        } else {
+          fluidRow(
+            plotlyOutput('selectedHoldingPlot', height = "800px"),
+            br(),
+            DT::dataTableOutput('selectedHolding')
+          )
+        }
+      } else {
         fluidRow(
           column(
             8,
             align = "center",
             offset = 2,
-            p(strong("Select rows for day by day information"))
+            p(strong("Add save_detailed_columns: in_var to your simulation configuration to see more."))
           )
-        )
-      } else {
-        fluidRow(
-            plotlyOutput('selectedHoldingPlot', height = "800px"),
-          br(),
-          DT::dataTableOutput('selectedHolding')
         )
       }
     })
@@ -381,60 +479,110 @@ server <- function(input, output, session) {
   
   
   
-  observeEvent(input$runSim, {
-    
-    if (input$runSim %in% 0) {
+  observeEvent(input$runSim | input$loadSim, {
+    # checkts to see if BOTH inputs are null
+    if (input$runSim %in% 0 & input$loadSim %in% 0) {
+    # if (input$runSim %in% 0 & input$directory %in% 0) {
       return(NULL)
     }
     
-    # Create a Progress object
-    progress <- Progress$new()
-    progress$set(message = "Running simulation", value = 0)
     
-    # Close the progress when this reactive exits (even if there's an error)
-    on.exit(progress$close())
-    
-    updateProgress <- function(value = NULL, detail = NULL) {
-      progress$set(value = value, detail = detail)
+    # Decides what simulation to run
+    if (input$runSim & !input$loadSim) {
+      # Create a Progress object
+      progress <- Progress$new()
+      progress$set(message = "Running simulation", value = 0)
+      
+      # Close the progress when this reactive exits (even if there's an error)
+      on.exit(progress$close())
+      
+      updateProgress <- function(value = NULL, detail = NULL) {
+        progress$set(value = value, detail = detail)
+      }
+      
+      # Load yaml from config textAreaInput ui element
+      config <- yaml::read_yaml(text = input$config)
+      
+      # For debugging:
+      #
+      # config <- yaml::yaml.load_file("strategy_config.yaml")
+      # config$from <- as.Date("2019-01-03")
+      # config$to <- as.Date("2019-01-07")
+      
+      # Supplement with other ui settings
+      config$from <- input$startDate
+      config$to <- input$endDate
+      
+      # Create and run the sim
+      tryCatch({
+        
+        data(sample_inputs)
+        data(sample_pricing)
+        data(sample_secref)
+        
+        
+        sim <- Simulation$new(config,
+                              raw_input_data = sample_inputs,
+                              raw_pricing_data = sample_pricing,
+                              security_reference_data = sample_secref)
+        sim$setShinyCallback(updateProgress)
+        sim$run()
+        
+        
+        values$sim_obj <- sim
+        
+        # need to  iron out the flow of this, so I don't have to repeat this
+        updateTabsetPanel(session,
+                          "top",
+                          selected = "Results")
+        
+      },
+      error = function(e) { showNotification(e$message, type = "error", duration = NULL)}
+      )
+    } else if (!input$runSim & input$loadSim) {
+      if(!is.integer(input$simDir)) {
+        
+        showNotification(p(strong("Loading Simulation")), duration = NULL, type = "message", id = "progress")
+        # hide('simDir')
+        disable('loadSim')
+        disable('simDir')
+        # gets the yaml file from the uploaded directory and converts the list to a yaml
+        upload_yaml <- yaml::read_yaml(paste0(parseDirPath(volumes, input$simDir), "/config.yaml")) %>%
+          yaml::as.yaml()
+        # browser()
+        # updates displayed fig in the text area
+        updateTextAreaInput(session, "config", value = upload_yaml)
+        
+        # uploads simulation from the directory
+        sim <- Simulation$new()
+        
+        sim$readFeather(parseDirPath(volumes, input$simDir))
+        
+        values$sim_obj <- sim
+        
+        # this is used in both if statements, move it outside to optimize flow
+        updateTabsetPanel(session,
+                          "top",
+                          selected = "Results")
+       
+        # there is an offset between the tabsetpanel and the remove notification
+        # and enabling of the clicking of loadSim because the UI does not update
+        # in the order of the code. Without the delay the message dissappears and 
+        # the button becomes clickable before the tab is changed
+        delay(200, {
+          removeNotification("progress")
+          enable('loadSim')
+          enable('simDir')})
+        
+      } else { 
+        return(showNotification(p(strong("Error:"), "select a valid directory"), type = "error"))
+      }
     }
     
-    # Load yaml from config textAreaInput ui element
-    config <- yaml::read_yaml(text = input$config)
-
-    # For debugging:
-    #
-    # config <- yaml::yaml.load_file("strategy_config.yaml")
-    # config$from <- as.Date("2019-01-03")
-    # config$to <- as.Date("2019-01-07")
     
-    # Supplement with other ui settings
-    config$from <- input$startDate
-    config$to <- input$endDate
+    # updateTabsetPanel(session,
+    #                   "top",
+    #                   selected = "Results")
     
-    # Create and run the sim
-    tryCatch({
-      
-      data(sample_inputs)
-      data(sample_pricing)
-      data(sample_secref)
-      
-      sim <- Simulation$new(config,
-                            raw_input_data = sample_inputs,
-                            raw_pricing_data = sample_pricing,
-                            security_reference_data = sample_secref)
-      sim$setShinyCallback(updateProgress)
-      res <- sim$run()
-
-      values$sim_result <- res
-      values$sim_obj <- sim
-      
-      updateTabsetPanel(session,
-                        "top",
-                        selected = "Results"
-      )
-    },
-    error = function(e) { showNotification(e$message, type = "error", duration = NULL)}
-    )
- 
   })
 }

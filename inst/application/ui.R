@@ -1,5 +1,8 @@
 library(DT)
 library(plotly)
+library(shinyFiles)
+library(shinyjs)
+
 
 .readYamlConfig <- function() {
   config <- example_strategy_config()
@@ -23,24 +26,44 @@ ui <- fluidPage(
     type = "tabs",
     tabPanel("Configuration",
              br(),
-             column(2,
-                    dateInput("startDate", label = "Start date", value = "2019-01-02",
-                              min = "2019-01-02", max = "2019-03-29",
-                              daysofweekdisabled = c(0,6)),
-                    dateInput("endDate", label = "End date", value = "2019-03-29",
-                              min = "2019-01-02", max = "2019-03-29",
-                              daysofweekdisabled = c(0,6)),
-                    actionButton("runSim", "Run simulation")
+             fluidRow(
+               column(2,
+                      dateInput("startDate", label = "Start date", value = "2019-01-02",
+                                min = "2019-01-02", max = "2019-03-29",
+                                daysofweekdisabled = c(0,6)),
+                      dateInput("endDate", label = "End date", value = "2019-03-29",
+                                min = "2019-01-02", max = "2019-03-29",
+                                daysofweekdisabled = c(0,6)),
+                      actionButton("runSim", "Run simulation")
+               ),
+               column(10,
+                      textAreaInput("config", "Configuration",
+                                    width = "600px",
+                                    height = "400px",
+                                    value = .readYamlConfig()
+                      )
+               )),
+             # added useshinyjs() call
+             useShinyjs(),
+             fluidRow(
+               column(
+                 12,
+                 p(strong("Select your simulation directory and press Load Simulation"))
+               )
              ),
-             column(10,
-                    textAreaInput("config", "Configuration",
-                                  width = "600px",
-                                  height = "400px",
-                                  value = .readYamlConfig()
-                                  )
-             )),
-    tabPanel(
-      "Results",
+             fluidRow(
+               column(2,
+                      shinyDirButton("simDir", "Directory select", "Please select your simulation directory")
+               ),
+               column(10,
+                      textOutput("directory")
+               )),
+             fluidRow(
+               column(2,
+                      br(),
+                      actionButton("loadSim", "Load simulation")
+             ))),
+    tabPanel("Results",
       br(),
       tabsetPanel(
         id = "results",
@@ -86,8 +109,8 @@ ui <- fluidPage(
             column(
               12,
               br(),
-              plotlyOutput('plot_3'),
-              plotlyOutput('plot_4')
+              uiOutput('plot_3s'),
+              uiOutput('factor_exposure')
             )
           )
         ),
