@@ -62,7 +62,7 @@ Create a new \code{Simulation} object.
   input_dates = NULL,
   raw_pricing_data = NULL,
   security_reference_data = NULL,
-  delisting_dates_data = NULL
+  delisting_data = NULL
 )}\if{html}{\out{</div>}}
 }
 
@@ -107,14 +107,21 @@ will only be used if the configuration option
 \code{simulator/secref_data/type} is set to \code{object}. Defaults to
 \code{NULL}.}
 
-\item{\code{delisting_dates_data}}{A data frame that contains the dates on which
-securities are delisted. It must contain two columns: id (character)
-and delisting_date (Date). The date in the delisting_date column means
-the day on which a stock will be removed from the simulation portfolio,
-at the beginning of the day, due to delisting. Data supplied using this
-parameter will only be used if the configuration option
-\code{simulator/delisting_data/type} is set to \code{object}. Defaults to
-\code{NULL}.}
+\item{\code{delisting_data}}{A data frame that contains delisting dates and
+associated returns. It must contain three columns: id (character),
+delisting_date (Date), and delisting_return (numeric). The date in the
+delisting_date column means the day on which a stock will be removed
+from the simulation portfolio. It is typically the day after the last
+day of trading. The delisting_return column reflects what, if any, P&L
+should be recorded on the delisting date. A delisting_return of -1
+means that the shares were deemed worthless. The delisting return is
+multiplied by the starting net market value of the position to
+determine P&L for the delisted position on the delisting date. Note
+that the portfolio optimization does not include stocks that are being
+removed due to delisting. Data supplied using this parameter will only
+be used if the configuration option
+\code{simulator/delisting_data/type} is set to \code{object}. Defaults
+to \code{NULL}.}
 }
 \if{html}{\out{</div>}}
 }
@@ -353,6 +360,16 @@ An object of class \code{data.frame} that contains security-level
     period.}
     \item{distribution}{Distribution (e.g., spin-off) for the security, if
     any, for the period.}
+    \item{investable}{Logical indicating whether the security is part of
+    the investable universe. The value of the flag is set to TRUE if the
+    security has not been delisted and satisfies the universe criterion
+    provided (if any) in the \code{simulator/universe} configuration
+    option.}
+    \item{delisting}{Logical indicating whether a position in the
+    security was removed due to delisting. If delisting is set to TRUE,
+    the gross_pnl and net_pnl columns will contain the P&L
+    due to delisting, if any. P&L due to delisting is calculated as the
+    delisting return times the \code{start_nmv} of the position.}
     \item{position_pnl}{Position P&L, calculated as shares * (end_price +
     dividend + distribution - start_price)}
     \item{trading_pnl}{The difference between the market value of
@@ -388,11 +405,7 @@ An object of class \code{data.frame} that contains security-level
     period.}
     \item{end_gmv}{Gross market value of the position at the end of the
     period.}
-    \item{investable}{Logical indicating whether the security is part of
-    the investable universe. The value of the flag is set to TRUE if the
-    security has not been delisted and satisfies the universe criterion
-    provided (if any) in the \code{simulator/universe} configuration
-    option.}
+    
   }
 }
 }

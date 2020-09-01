@@ -47,21 +47,28 @@ Simulation <- R6Class(
     #'   will only be used if the configuration option
     #'   \code{simulator/secref_data/type} is set to \code{object}. Defaults to
     #'   \code{NULL}.
-    #' @param delisting_dates_data A data frame that contains the dates on which
-    #'   securities are delisted. It must contain two columns: id (character)
-    #'   and delisting_date (Date). The date in the delisting_date column means
-    #'   the day on which a stock will be removed from the simulation portfolio,
-    #'   at the beginning of the day, due to delisting. Data supplied using this
-    #'   parameter will only be used if the configuration option
-    #'   \code{simulator/delisting_data/type} is set to \code{object}. Defaults to
-    #'   \code{NULL}.
+    #' @param delisting_data A data frame that contains delisting dates and
+    #'   associated returns. It must contain three columns: id (character),
+    #'   delisting_date (Date), and delisting_return (numeric). The date in the
+    #'   delisting_date column means the day on which a stock will be removed
+    #'   from the simulation portfolio. It is typically the day after the last
+    #'   day of trading. The delisting_return column reflects what, if any, P&L
+    #'   should be recorded on the delisting date. A delisting_return of -1
+    #'   means that the shares were deemed worthless. The delisting return is
+    #'   multiplied by the starting net market value of the position to
+    #'   determine P&L for the delisted position on the delisting date. Note
+    #'   that the portfolio optimization does not include stocks that are being
+    #'   removed due to delisting. Data supplied using this parameter will only
+    #'   be used if the configuration option
+    #'   \code{simulator/delisting_data/type} is set to \code{object}. Defaults
+    #'   to \code{NULL}.
     #' @return A new \code{Simulation} object.
     initialize = function(config = NULL,
                           raw_input_data = NULL,
                           input_dates = NULL,
                           raw_pricing_data = NULL,
                           security_reference_data = NULL,
-                          delisting_dates_data = NULL) {
+                          delisting_data = NULL) {
       
       if (is.character(config)) {
         if (!file.exists(config)) {
@@ -94,16 +101,18 @@ Simulation <- R6Class(
         stop(paste0("Invalid config value for secref_config/type: ", secref_config$type))
       }
 
-      # Set delisting_dates field. Delisting dates are not required. If no
-      # delisting_data field is present in the config, set the delisting_dates
-      # field to an empty data frame with the appropriate columns.
+      # Set delisting_data field. Delisting data is not required. If no
+      # delisting_data parameter is specified in the config, set the
+      # delisting_data field to an empty data frame with the appropriate
+      # columns.
       #
-      # TODO Pull setup logic for secref and delisting dates into helper
+      # TODO Pull setup logic for secref and delisting data into helper
       # methods.
       delistings_config <- private$config$getConfig("simulator")$delisting_data
       if (is.null(delistings_config)) {
-        private$delisting_dates <- data.frame(id = character(0),
-                                              delisting_date = structure(numeric(0), class = "Date"))
+        private$delisting_data <- data.frame(id = character(0),
+                                              delisting_date = structure(numeric(0), class = "Date"),
+                                              delisting_return = numeric(0))
       } else {
       
         stopifnot(!is.null(delistings_config$type),
@@ -111,9 +120,9 @@ Simulation <- R6Class(
                   is.character(delistings_config$type))
         
         if (delistings_config$type %in% "file") {
-          private$delisting_dates <- read_feather(delistings_config$filename)
+          private$delisting_data <- read_feather(delistings_config$filename)
         } else if (delistings_config$type %in% "object") {
-          private$delisting_dates <- delisting_dates_data
+          private$delisting_data <- delisting_data
         } else {
           stop(paste0("Invalid config value for delistings_config/type: ", delistings_config$type))
         }
@@ -369,29 +378,38 @@ Simulation <- R6Class(
           select(pricing_data, "id", "adjustment_ratio"))
 
         # Process delistings
-        if (isTRUE(simulator_config$delisting_policy %in% "remove")) {
-          
-          # TODO For delisted stocks we can go back to our data interfaces and
-          # ensure data for them is not carried back after the delisting date.
-          # For now we remove any position on the delisting date and prevent
-          # further entry by (later in this method) setting the investable flag
-          # to FALSE for all delisted securities.
-          
-          # We could save time and use equality on current_date here, but we run
-          # the risk of having dead securities in the portfolio.
-          id_delisted <- private$delisting_dates$id[private$delisting_dates$delisting_date <= current_date]
-          pos_delisted <- portfolio$getPositions() %>% filter(.data$id %in% id_delisted &
-                                                                (.data$int_shares != 0 | .data$ext_shares != 0))
-          pos_delisted <- pos_delisted %>% left_join(select(pricing_data, "id", "start_price"), by = "id")
-          
-          if (nrow(pos_delisted) > 0) {
-            # Record delisting info
-            private$saveDelistings(current_date, pos_delisted)
-            # Remove from portfolio
-            portfolio$removePositions(pos_delisted$id)
-          }
-        } else {
-          id_delisted <- c()
+        
+        # Delistings are handled in the following way:
+        #
+        # 1. All securities that have a delisting date that is equal to or
+        # earlier than current_date are recorded in the id_delisted vector.
+        # These stocks are marked not investable.
+        #
+        # 2. Positions in delisted stocks are recorded in the pos_delisted data
+        # frame. They are omitted from the day's portfolio optimization.
+        #
+        # 3. "Delisting trades" are added as part of the EOD bookkeeping
+        # sequence so that positions in delisted stocks are flattened. In the
+        # day's detail data, the logical column 'delisting' indicates that the
+        # trade was due to a delisting.
+        #
+        # TODO For delisted stocks we can go back to our data interfaces and
+        # ensure data for them is not carried forward after the delisting date.
+        # This will decrease the size of our inputs by omitting securities we
+        # know we will never trade again.
+        
+        # We could save time and use equality on current_date here, but we run
+        # the risk of having dead securities in the portfolio.
+        id_delisted <- private$delisting_data$id[private$delisting_data$delisting_date <= current_date]
+        pos_delisted <- portfolio$getPositions() %>% filter(.data$id %in% id_delisted &
+                                                            (.data$int_shares != 0 | .data$ext_shares != 0))
+        pos_delisted <- pos_delisted %>%
+          left_join(select(pricing_data, "id", "start_price"), by = "id") %>%
+          left_join(private$delisting_data, by = "id")
+        
+        if (nrow(pos_delisted) > 0) {
+          # Record delisting info
+          private$saveDelistings(current_date, pos_delisted)
         }
         
         # Merge together consolidated, wide format positions, pricing data,
@@ -420,11 +438,12 @@ Simulation <- R6Class(
           left_join(private$security_reference,
                     by = "id") %>%
           mutate(ref_price = .data$start_price,
-                 investable = TRUE) %>%
+                 investable = TRUE,
+                 delisting = .data$id %in% pos_delisted$id) %>%
           mutate_at(.vars = vars(portfolio$getShareColumns()),
                     .funs = ~ replace_na(., 0))
-        
-        
+          
+          
         # Set investable flag based on
         #
         # 1. Delisting status
@@ -468,9 +487,7 @@ Simulation <- R6Class(
           }
           input_data$investable <- input_data$investable & univ
         }
-        
-        
-
+  
         # Perform normalization for variables listed in
         # simulator/normalize_vars.
         #
@@ -480,22 +497,40 @@ Simulation <- R6Class(
         # 2. Normalize variable to N(0, 1).
         # 3. Set variable values for non-investable securities to zero.
         #
-        # Store raw (pre-normalized) in_var values for column foo in the detail
-        # dataset column foo_raw.
+        # Store raw (pre-normalized) values for column foo in the detail dataset
+        # column foo_raw.
         if (!is.null(simulator_config$normalize_vars)) {
           for (normalize_var in simulator_config$normalize_vars) {
             raw_normalize_var <- paste0(normalize_var, "_raw")
             input_data <- input_data %>%
               mutate(
-                !!raw_normalize_var := get(normalize_var),
+                !! raw_normalize_var := get(normalize_var),
                 !! normalize_var := replace_na(normalize(ifelse(investable, get(normalize_var), NA)), 0))
           }
         }
         
         stopifnot(!any(is.na(input_data)))
+
+        # Make a copy of input_data to pass to the PortOpt class. We do this to
+        # accomodate delistings, which will be removed from the portfolio later
+        # in the process, and which should not contribute to the current day's
+        # constraint calculations.
+
+        opt_input <- input_data
+
+        if(nrow(pos_delisted) > 0) {
+          
+          # Omit positions in stocks that will be exited due to delisting from the
+          # optimization. Do this by setting their current share levels to 0 in
+          # the optimization's input data.
+
+          opt_input <- opt_input %>%
+            mutate_at(.vars = portfolio$getShareColumns(),
+                      .funs = ~ replace(., delisting, 0))
+        }
         
         # Create problem and solve
-        portOpt <- PortOpt$new(private$config, input_data)
+        portOpt <- PortOpt$new(private$config, opt_input)
         portOpt$solve()
         
         # Record information on loosened constraints
@@ -506,7 +541,7 @@ Simulation <- R6Class(
                                     pct_loosened = 100 * (1 - as.vector(unlist(portOpt$getLoosenedConstraints()))))
           private$saveLooseningInfo(current_date, loosened_df)
         }
-        
+
         orders <- portOpt$getResultData() %>%
           select("id", contains("shares"))
         
@@ -536,6 +571,7 @@ Simulation <- R6Class(
           
           vol_var <- private$config$getConfig("vol_var")
           too_big <- input_data %>%
+            filter(!delisting) %>%
             select("id", !!vol_var, "start_price",
                    !!portfolio$getShareColumns()) %>%
             pivot_longer(cols = portfolio$getShareColumns(),
@@ -615,7 +651,7 @@ Simulation <- R6Class(
           
           vol_var <- private$config$getConfig("vol_var")
           non_investable <- input_data %>%
-            filter(!investable) %>%
+            filter(!investable & ! delisting) %>%
             select("id", !!vol_var, start_price, !!portfolio$getShareColumns()) %>%
             pivot_longer(cols = portfolio$getShareColumns(),
                          names_to = "strategy",
@@ -660,8 +696,40 @@ Simulation <- R6Class(
           }
         }
 
-        # Join result data back to the inputs data that was passed to the
-        # optimization.
+        # Handle delistings
+        #
+        # Here we enter delisting trades so that the entire positions in stocks
+        # that are delisted are removed by EOD. Note that below, fill rate for
+        # delisting trades will be set to 1 regardless of volume.
+        if (any(input_data$delisting)) {
+
+          delistings <- input_data %>%
+            filter(delisting) %>%
+            select("id", !!portfolio$getShareColumns()) %>%
+            pivot_longer(cols = portfolio$getShareColumns(),
+                         names_to = "strategy",
+                         names_prefix = "shares_",
+                         values_to = "order_shares") %>%
+            # Completely exit the position
+            mutate(order_shares = -1 * order_shares) %>%
+            # Pivot back
+            pivot_wider(names_from = "strategy",
+                        values_from = "order_shares",
+                        names_prefix = "order_shares_")
+          
+          
+          # Recalculate order_shares_joint
+          delistings$order_shares_joint <- rowSums(select(delistings, -"id"))
+          
+          # Adjust column order to match data frame 'orders'
+          delistings <- delistings[names(orders)]
+          
+          orders <- filter(orders, !.data$id %in% delistings$id)
+          orders <- rbind(orders, delistings)
+        }
+
+        # Now that the order generation process is complete, join orders back to the
+        # original cross-section.
         stopifnot(setequal(orders$id, input_data$id))
         input_data <-
           inner_join(input_data, orders, by = "id")
@@ -677,14 +745,15 @@ Simulation <- R6Class(
         
         input_data$fill_shares_max <-
             round(input_data$volume * simulator_config$fill_rate_pct_vol / 100)
-        
+
         # Compute the fill rate ahead of time for each stock. The fill rate is 1
         # if the maximum number of shares available (fill_shares_max) is greater
         # than the size of the total order across all strategies. Computing this
         # value makes fill calculations easier.
         input_data$fill_rate <-
           ifelse(input_data$order_shares_joint %in% 0 |
-                   abs(input_data$order_shares_joint) <= input_data$fill_shares_max,
+                   abs(input_data$order_shares_joint) <= input_data$fill_shares_max |
+                   input_data$delisting,
                  1,
                  input_data$fill_shares_max / abs(input_data$order_shares_joint))
         
@@ -751,7 +820,6 @@ Simulation <- R6Class(
             # End number of shares = start + fill
             end_shares = .data$shares + .data$fill_shares)
         
-        
         res <- res %>%
           select("id", "strategy", "shares",
                         ends_with("_shares"))
@@ -776,7 +844,7 @@ Simulation <- R6Class(
 
         res <- res %>%
           inner_join(select(input_data, "id", "start_price", "end_price", "dividend", "distribution",
-                            "investable",
+                            "investable", "delisting",
                             !!simulator_config$add_detail_columns),
                             by = "id") %>%
           mutate(
@@ -829,6 +897,52 @@ Simulation <- R6Class(
             end_nmv = .data$end_shares * .data$end_price,
             end_gmv = abs(.data$end_nmv))
 
+        # Finish processing delistings
+        if (any(res$delisting)) {
+          # Work on rows corresponding to delistings
+          res_delisting <- filter(res, delisting)
+          
+          # First make sure the ending position is flat.
+          if (any(res_delisting$end_int_shares != 0) ||
+              any(res_delisting$end_ext_shares != 0) ||
+              any(res_delisting$end_shares != 0)) {
+            stop("Found non-zero ending position in delisted security")
+          }
+          
+          # Bring in delisting_return
+          res_delisting <- res_delisting %>% left_join(select(pos_delisted, id, delisting_return), by = "id")
+          
+          if (any(is.na(res_delisting$delisting_return))) {
+            stop("Found NA delisting return")
+          }
+          
+          if (!is.numeric(res_delisting$delisting_return)) {
+            stop("Delisting return must be numeric")
+          }
+          
+          if (any(res_delisting$delisting_return < -1)) {
+            stop("Delisting return can not be less than -1")
+          }
+          
+          # Ensure that all P&L and costs for the delisting are zero. Then set
+          # gross and net P&L to the delisting return times starting net
+          # market value.
+          res_delisting <- res_delisting %>%
+            mutate(
+              position_pnl = 0,
+              trading_pnl = 0,
+              trade_costs = 0,
+              financing_costs = 0,
+              gross_pnl = start_nmv * delisting_return,
+              net_pnl = gross_pnl
+            ) %>%
+            select(-delisting_return)
+          
+          # Replace the original rows with the rows we worked on
+          res <- filter(res, !delisting)
+          res <- rbind(res, res_delisting)
+        }
+        
         # Bring in max position information
         res <- res %>%
           left_join(portOpt$getMaxPosition(), by = c("strategy", "id"))
@@ -1100,6 +1214,16 @@ Simulation <- R6Class(
     #'     period.}
     #'     \item{distribution}{Distribution (e.g., spin-off) for the security, if
     #'     any, for the period.}
+    #'     \item{investable}{Logical indicating whether the security is part of
+    #'     the investable universe. The value of the flag is set to TRUE if the
+    #'     security has not been delisted and satisfies the universe criterion
+    #'     provided (if any) in the \code{simulator/universe} configuration
+    #'     option.}
+    #'     \item{delisting}{Logical indicating whether a position in the
+    #'     security was removed due to delisting. If delisting is set to TRUE,
+    #'     the gross_pnl and net_pnl columns will contain the P&L
+    #'     due to delisting, if any. P&L due to delisting is calculated as the
+    #'     delisting return times the \code{start_nmv} of the position.}
     #'     \item{position_pnl}{Position P&L, calculated as shares * (end_price +
     #'     dividend + distribution - start_price)}
     #'     \item{trading_pnl}{The difference between the market value of
@@ -1135,11 +1259,7 @@ Simulation <- R6Class(
     #'     period.}
     #'     \item{end_gmv}{Gross market value of the position at the end of the
     #'     period.}
-    #'     \item{investable}{Logical indicating whether the security is part of
-    #'     the investable universe. The value of the flag is set to TRUE if the
-    #'     security has not been delisted and satisfies the universe criterion
-    #'     provided (if any) in the \code{simulator/universe} configuration
-    #'     option.}
+    #'     
     #'   }
     getSimDetail = function(sim_date = NULL,
                             strategy_name = NULL,
@@ -1794,7 +1914,7 @@ Simulation <- R6Class(
     input_dates = NULL,
     raw_pricing_data = NULL,
     security_reference = NULL,
-    delisting_dates = NULL,
+    delisting_data = NULL,
     shiny_callback = NULL,
     verbose = FALSE,
 

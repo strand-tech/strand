@@ -28,6 +28,8 @@ orders to be created for positions not in the universe during a simulation.
 * Standardized simulation result data and plotting methods to have a
 strategy_name parameter where appropriate.
 
+* Improved handling of delistings.
+
 * Added new plotting methods for the `Simulation` class: `plotContribution`,
 `plotTurnover`, `plotUniverseSize`, and `plotNonInvestablePct`.
 

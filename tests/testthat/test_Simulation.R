@@ -339,6 +339,70 @@ test_that("force_exit_non_investable triggers exiting positions in non-investabl
 
 })
 
+
+# Use the simple_*_2 datasets to test the handling of delistings.
+#
+# Construct simple_delisting_data_2 where stock 104 is delisted on day 2 of the
+# simulation (2019-01-03) with a return of -0.5.
+
+simple_delisting_data_2 <- data.frame(
+  id = "104",
+  delisting_date = as.Date("2019-01-03"),
+  delisting_return = -0.5,
+  stringsAsFactors = FALSE
+)
+
+test_that("delistings are handled properly", {
+  
+  # Setup: long-short balanced. Max position 50%.
+  sim_config <- yaml::yaml.load_file("data/test_Simulation_simple.yaml")
+  sim_config$to <- "2019-01-03"
+  sim_config$strategies$strategy_1$ideal_short_weight <- 1
+  sim_config$strategies$strategy_1$position_limit_pct_lmv <- 100
+  sim_config$strategies$strategy_1$position_limit_pct_smv <- 100
+  sim_config$simulator$delisting_data <- list(type = "object")
+  
+  sim <- Simulation$new(sim_config,
+                        raw_input_data = simple_input_data_2, 
+                        raw_pricing_data = simple_pricing_data_2,
+                        security_reference_data = simple_secref_data_2,
+                        delisting_data = simple_delisting_data_2)
+
+  sim$run()
+  
+  # Check that 104 is removed by the end of the day on the delisting date.
+  expect_equal(
+    sim$getSimDetail(strategy_name = "joint", security_id = "104") %>%
+      pull(end_nmv), 
+    c(-500, 0)
+  )
+
+  # Check P&L series for 104.
+  # * On 1/2, net P&L is -0.5 (10 bps of cost for a trade gmv of 500).
+  # * On 1/3, net P&L is 250 (-50% delisting return applied to nmv of -500).
+  expect_equal(
+    sim$getSimDetail(strategy_name = "joint", security_id = "104") %>%
+      pull(net_pnl), 
+    c(-0.5, 250)
+  )
+  
+  # Check delisting column for 104.
+  expect_equal(
+    sim$getSimDetail(strategy_name = "joint", security_id = "104") %>%
+      pull(delisting), 
+    c(FALSE, TRUE)
+  )
+
+  # Check that position in 104 is replaced by position in 103 on 1/3, the
+  # delisting date, because the position to be removed does not appear in the
+  # optimization.
+  expect_equal(
+    sim$getSimDetail(strategy_name = "joint", security_id = "103") %>%
+      pull(end_nmv), 
+    c(0, -501))
+})
+
+
 # Tests of summary functions
 
 test_that("overallStatsDf returns the correct values", {
