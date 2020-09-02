@@ -11,7 +11,7 @@ StrategyConfig <-  R6Class(
       }
       
       if (is.null(config$vol_var)) {
-        config$vol_var <- "average_volume"
+        config$vol_var <- "rc_vol"
       }
       
       if (is.null(config$price_var)) {

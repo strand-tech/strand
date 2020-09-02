@@ -1,5 +1,5 @@
 price_var: prior_close_unadj
-vol_var: average_volume
+vol_var: rc_vol
 solver: glpk
 strategies:
   strategy_1:

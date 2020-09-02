@@ -24,7 +24,7 @@ server <- function(input, output, session) {
   })
   
   
-  # Creates a warning message if the user did not set save_detail_columns: in_var in their simulation
+  # Creates a warning message if the user did not set add_detail_columns: in_var in their simulation
   observeEvent(values$sim_obj, {
     if(!config_values()$in_var %in% colnames(values$sim_obj$getSimDetail())) {
     showNotification(p(strong("Warning:"), "no in_var present, some features will be disabled"), type = "warning", duration = 30)
@@ -115,7 +115,6 @@ server <- function(input, output, session) {
       select("id", "symbol") %>%
       as.data.frame()
 
-    # Add 'save_detail_columns: alpha_1' under simulation 
     # Uses id and symbol to get simulation details of the position
     selected_holdings <- left_join(values$sim_obj$getSimDetail(strategy_name = "joint", 
                                                security_id = selected_sec_ref$id), 

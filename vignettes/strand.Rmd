@@ -113,7 +113,7 @@ Alpha and factor inputs are used in the daily portfolio construction process. Al
 
 * `date`: the date for which the information should be used to create orders.
 * `id`: the security identifier. The identifier must appear in the security reference discussed above.
-* `average_volume`: an estimate of the amount of volume, in market value (in the simulation's reference currency) that we expect to see for one day, on average. This measure of volume is used in the portfolio optimization step to ensure that our order sizes are in line with the amount we expect to be able to trade in the market. It is also used in the optimization's liquidity constraint on position size.
+* `rc_vol`: an estimate of the amount of volume, in market value (in the simulation's reference currency) that we expect to see for one day, on average. This measure of volume is used in the portfolio optimization step to ensure that our order sizes are in line with the amount we expect to be able to trade in the market. It is also used in the optimization's liquidity constraint on position size.
 * One column for each alpha variable used in the simulation.
 * One column for each numeric factor variable used in an exposure constraint.
 
@@ -132,10 +132,10 @@ data(sample_inputs)
 
 sample_inputs %>%
   filter(date %in% as.Date("2019-01-04")) %>%
-  select("date", "id", "average_volume", "alpha_1", "factor_1",  "factor_2")
+  select("date", "id", "rc_vol", "alpha_1", "factor_1",  "factor_2")
 ```
 
-The first column, `date`, contains the date for which the data should be used to generate orders in the simulation. The second and third columns are the `id` and `average_volume` columns described above. The column `alpha_1` is a numeric column that serves as the signal for the backtest run in this vignette. Columns `factor_1` and `factor_2` are numeric values that are used in factor constraints.
+The first column, `date`, contains the date for which the data should be used to generate orders in the simulation. The second and third columns are the `id` and `rc_vol` columns described above. The column `alpha_1` is a numeric column that serves as the signal for the backtest run in this vignette. Columns `factor_1` and `factor_2` are numeric values that are used in factor constraints.
 
 > *Note regarding date semantics for inputs data:* The data for 2019-01-04 is used for constructing the portfolio and generating orders for trading on that day. As a result, it is assumed that this data is known *before* trading begins on 2019-01-04 (e.g., data as-of the close on 2019-01-03). How the strategy operates and any expectations around the timeliness of data delivery should dictate what is used as inputs for a given date.
 
@@ -271,9 +271,9 @@ These parameters express limits on the size of positions as a percentage of the 
 
 ### Liquidity constraints
 
-There are two ways in which the `average_volume` measure in our inputs data is used to impose liquidity constraints on our portfolio construction process.
+There are two ways in which the `rc_vol` measure in our inputs data is used to impose liquidity constraints on our portfolio construction process.
 
-First, the `position_limit_pct_adv` parameter is used to impose a position size constraint in addition to the constraints discussed in the previous section.  This parameter limits the position size, in absolute value, to a percentage of the `average_volume` measure in the current day's input data. In `sample.yaml` we have:
+First, the `position_limit_pct_adv` parameter is used to impose a position size constraint in addition to the constraints discussed in the previous section.  This parameter limits the position size, in absolute value, to a percentage of the `rc_vol` measure in the current day's input data. In `sample.yaml` we have:
 
 ```
 strategies:
@@ -281,7 +281,7 @@ strategies:
     position_limit_pct_adv: 30
 ```
 
-which means a position in our simulation can be no greater than 30\% of our `average_volume` value.  For example, suppose the average volume measure for security ABC is \$10M. This means that the liquidity constraint imposes a limit on the size of long positions in ABC of \$3M and a limit on the size of short positions of -\$3mm.
+which means a position in our simulation can be no greater than 30\% of our `rc_vol` value.  For example, suppose the average volume measure for security ABC is \$10M. This means that the liquidity constraint imposes a limit on the size of long positions in ABC of \$3M and a limit on the size of short positions of -\$3mm.
 
 Second, the `trading_limit_pct_adv` parameter limits the size of the order that can be generated for a stock. The idea is to size orders to be in line with the amount of trading expected in the market and any limitation we are planning on imposing on participation. It's difficult to control exposures effectively if we don't do this!  In the example configuration file, we have:
 
@@ -291,7 +291,7 @@ strategies:
     trading_limit_pct_adv: 5
 ```
 
-which means that we can buy at most 5\% or sell at most 5\% of a security's `average_volume` measure on a given day. Continuing our example above, if our measurement on a given day is that ABC is trading on average \$10M per day, we can buy at most \$500,000 or sell at most \$500,000 on that day.
+which means that we can buy at most 5\% or sell at most 5\% of a security's `rc_vol` measure on a given day. Continuing our example above, if our measurement on a given day is that ABC is trading on average \$10M per day, we can buy at most \$500,000 or sell at most \$500,000 on that day.
 
 ### Factor constraints
 

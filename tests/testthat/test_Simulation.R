@@ -60,15 +60,15 @@ test_that("in_vars and factor_vars are normalized properly", {
   sim_config$simulator$pricing_data$type <- "object"
   sim_config$simulator$secref_data$type <- "object"
 
-  # Set universe to stocks with average_volume > 50000.
-  sim_config$simulator$universe <- "average_volume > 50000"
+  # Set universe to stocks with rc_vol > 50000.
+  sim_config$simulator$universe <- "rc_vol > 50000"
   sim_config$simulator$add_detail_columns <- c("alpha_1", "factor_1")
   sim_config$simulator$normalize_in_vars <- "alpha_1"
   sim_config$simulator$normalize_factor_vars <- "factor_1"
   
-  # Starting on day 2 (1/3), set the average_volume value to 50000 for stocks with id < 150.
+  # Starting on day 2 (1/3), set the rc_vol value to 50000 for stocks with id < 150.
   test_input_data <- test_input_data %>%
-    mutate(average_volume = replace(average_volume, as.numeric(id) < 150 & date >= as.Date("2019-01-03"), 50000))
+    mutate(rc_vol = replace(rc_vol, as.numeric(id) < 150 & date >= as.Date("2019-01-03"), 50000))
   
   sim <- Simulation$new(sim_config,
                         raw_input_data = test_input_data,
@@ -299,7 +299,7 @@ test_that("force_trim_factor triggers trimming of large positions", {
   # trading_limit_pct_adv set to 100, that means trimming will be limited to 50
   # on 1/3. The remaining 25 is trimmed on 1/4.
   simple_input_data_2 <- simple_input_data_2 %>%
-    mutate(average_volume = replace(average_volume, id %in% "101" & date %in% as.Date("2019-01-03"), 45))
+    mutate(rc_vol = replace(rc_vol, id %in% "101" & date %in% as.Date("2019-01-03"), 45))
     
   sim <- Simulation$new(sim_config,
                         raw_input_data = simple_input_data_2, 
@@ -322,18 +322,18 @@ test_that("force_exit_non_investable triggers exiting positions in non-investabl
   # the most negative alpha score, so we will have a short position in it at the
   # end of 1/2.
   #
-  # We define the universe to be stocks with an average_volume measure greater
+  # We define the universe to be stocks with an rc_vol measure greater
   # than 5000.
   #
-  # We then set the average_volume to 4,000 for stock 104 for 2019-01-03
-  # onwards; for all other stocks we set average_volume to 10,000.
+  # We then set the rc_vol to 4,000 for stock 104 for 2019-01-03
+  # onwards; for all other stocks we set rc_vol to 10,000.
   
   simple_pricing_data_2 <- simple_pricing_data_2 %>%
     mutate(price_unadj = replace(price_unadj, id %in% 101 & date >= as.Date("2019-01-02"), 1.5),
            prior_close_unadj = replace(prior_close_unadj, id %in% 101 & date >= as.Date("2019-01-03"), 1.5))
   
   simple_input_data_2 <- simple_input_data_2 %>%
-    mutate(average_volume = if_else(id %in% 104 & date >= as.Date("2019-01-03"), 4000, 10000))
+    mutate(rc_vol = if_else(id %in% 104 & date >= as.Date("2019-01-03"), 4000, 10000))
   
     
   # Setup: long-short balanced. Max position 50%.
@@ -344,7 +344,7 @@ test_that("force_exit_non_investable triggers exiting positions in non-investabl
   sim_config$strategies$strategy_1$position_limit_pct_smv <- 100
   sim_config$strategies$strategy_1$trading_limit_pct_adv <- 10
   sim_config$simulator$force_exit_non_investable <- TRUE
-  sim_config$simulator$universe <- "average_volume >= 5000"
+  sim_config$simulator$universe <- "rc_vol >= 5000"
   
   
   sim <- Simulation$new(sim_config,
@@ -359,7 +359,7 @@ test_that("force_exit_non_investable triggers exiting positions in non-investabl
   #   select(sim_date, id, strategy, shares, start_price, end_price, end_nmv, end_shares, max_pos_lmv, max_pos_smv)
   
   # On 2019-01-03, stock 104 falls outside of the universe due to its low
-  # average_volume measure. Since force_exit_non_investable is set, trades to
+  # rc_vol measure. Since force_exit_non_investable is set, trades to
   # exit 104 are added on 2019-01-03 and 2019-01-04. 10% ADV = 400 can be traded
   # each day for 104. So at the end of the day on 2019-01-03 the position in 104
   # has nmv of -100. At the end of 2019-01-04 the position in 104 is flat, while
