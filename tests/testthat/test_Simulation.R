@@ -53,6 +53,55 @@ test_that("simulation produces same result when data supplied as objects", {
   
 })
 
+# Normalization tests
+test_that("in_vars and factor_vars are normalized properly", {
+  sim_config <- yaml::yaml.load_file("data/test_Simulation.yaml")
+  sim_config$simulator$input_data$type <- "object"
+  sim_config$simulator$pricing_data$type <- "object"
+  sim_config$simulator$secref_data$type <- "object"
+
+  # Set universe to stocks with average_volume > 50000.
+  sim_config$simulator$universe <- "average_volume > 50000"
+  sim_config$simulator$add_detail_columns <- c("alpha_1", "factor_1")
+  sim_config$simulator$normalize_in_vars <- "alpha_1"
+  sim_config$simulator$normalize_factor_vars <- "factor_1"
+  
+  # Starting on day 2 (1/3), set the average_volume value to 50000 for stocks with id < 150.
+  test_input_data <- test_input_data %>%
+    mutate(average_volume = replace(average_volume, as.numeric(id) < 150 & date >= as.Date("2019-01-03"), 50000))
+  
+  sim <- Simulation$new(sim_config,
+                        raw_input_data = test_input_data,
+                        raw_pricing_data = test_pricing_data,
+                        security_reference_data = test_secref_data)
+  sim$run()
+  
+  det_data <- sim$getSimDetail(strategy_name = "joint") %>%
+    filter(id %in% 101) %>%
+    select(sim_date, id, investable, start_nmv, alpha_1, factor_1)
+
+  # > det_data
+  # # A tibble: 5 x 6
+  #   sim_date   id    investable start_nmv alpha_1 factor_1
+  #   <date>     <chr> <lgl>          <dbl>   <dbl>    <dbl>
+  # 1 2019-01-02 101   TRUE              0     1.59   -0.217
+  # 2 2019-01-03 101   FALSE          5020.    0      -0.230
+  # 3 2019-01-04 101   FALSE          2505.    0      -0.257
+  # 4 2019-01-07 101   FALSE             0     0       0    
+  # 5 2019-01-08 101   FALSE             0     0       0    
+  
+  # By construction, stock 101 falls out of the universe after the 1st day
+  expect_equal(det_data$investable, c(TRUE, rep(FALSE, 4)))
+  
+  # alpha_1 is normalized as an in_var, therefore its value goes to zero on day
+  # 2
+  expect_equal(!det_data$alpha_1 %in% 0, c(TRUE, rep(FALSE, 4)))
+  
+  # factor_1 is normalized as a factor_var, so its values are preserved until
+  # the position in 101 has been exited.
+  expect_equal(!det_data$factor_1 %in% 0, c(TRUE, TRUE, TRUE, FALSE, FALSE))
+  
+})
 
 
 # Simple simulation tests

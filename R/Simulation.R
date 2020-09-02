@@ -488,19 +488,21 @@ Simulation <- R6Class(
           input_data$investable <- input_data$investable & univ
         }
   
+        # Normalization of input variables and risk factors.
+        
         # Perform normalization for variables listed in
-        # simulator/normalize_vars.
+        # simulator/normalize_in_vars.
         #
         # The procedure is as follows:
         #
         # 1. Set variable values for non-investable securities to NA.
         # 2. Normalize variable to N(0, 1).
-        # 3. Set variable values for non-investable securities to zero.
+        # 3. Replace NAs created in step 1 with 0.
         #
         # Store raw (pre-normalized) values for column foo in the detail dataset
         # column foo_raw.
-        if (!is.null(simulator_config$normalize_vars)) {
-          for (normalize_var in simulator_config$normalize_vars) {
+        if (!is.null(simulator_config$normalize_in_vars)) {
+          for (normalize_var in simulator_config$normalize_in_vars) {
             raw_normalize_var <- paste0(normalize_var, "_raw")
             input_data <- input_data %>%
               mutate(
@@ -508,7 +510,34 @@ Simulation <- R6Class(
                 !! normalize_var := replace_na(normalize(ifelse(investable, get(normalize_var), NA)), 0))
           }
         }
-        
+
+        # Perform normalization for variables listed in
+        # simulator/normalize_factor_vars.
+        #
+        # factor_vars (variables used in constraint calculations) are normalized
+        # as follows:
+        #
+        # 1. Set variable values for non-investable securities *in which there
+        # is no position* to NA.
+        # 2. Normalize variable to N(0, 1).
+        # 3. Replace NAs created in step 1 with 0.
+        #
+        # The idea is that in_var values should be 0 for stocks that are
+        # non-investable to encourage exiting, while factor_vars for positions
+        # in such stocks should be preserved so that accurate exposures can be
+        # calculated.
+        if (!is.null(simulator_config$normalize_factor_vars)) {
+          for (normalize_var in simulator_config$normalize_factor_vars) {
+            raw_normalize_var <- paste0(normalize_var, "_raw")
+            # Preserve factor_var value if there is a position in any strategy.
+            non_zero_pos <- rowSums(abs(input_data[portfolio$getShareColumns()])) != 0
+            input_data <- input_data %>%
+              mutate(
+                !! raw_normalize_var := get(normalize_var),
+                !! normalize_var := replace_na(normalize(ifelse(investable | non_zero_pos, get(normalize_var), NA)), 0))
+          }
+        }
+
         stopifnot(!any(is.na(input_data)))
 
         # Make a copy of input_data to pass to the PortOpt class. We do this to
