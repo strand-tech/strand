@@ -225,14 +225,16 @@ test_that("fill_rate_pct limits order filling", {
 })
 
 
-# Slightly more complicated setup with 4 securities.
+# Slightly more complicated setup with 6 securities.
 #
-# Default setup is that 101 and 102 have positive alpha, 103 and 104 have
+# Default setup is that 101, 102, 105 have positive alpha, 103, 104, and 106 have
 # negative alpha.
-test_ids <- as.character(101:104)
+test_ids <- as.character(101:106)
 simple_input_data_2 <- filter(test_input_data, .data$id %in% !!test_ids) %>%
   mutate(alpha_1 = case_when(id %in% "101" ~ 3,
                              id %in% "102" ~ 2.5,
+                             id %in% "105" ~ 2,
+                             id %in% "106" ~ -2,
                              id %in% "103" ~ -2.5,
                              id %in% "104" ~ -3))
 
@@ -258,7 +260,8 @@ test_that("force_trim_factor triggers trimming of large positions", {
   sim_config$strategies$strategy_1$ideal_short_weight <- 1
   sim_config$strategies$strategy_1$position_limit_pct_lmv <- 50
   sim_config$strategies$strategy_1$position_limit_pct_smv <- 50
-
+  sim_config$simulator$add_detail_columns <- "alpha_1"
+  
   sim <- Simulation$new(sim_config,
                         raw_input_data = simple_input_data_2, 
                         raw_pricing_data = simple_pricing_data_2,
@@ -268,7 +271,7 @@ test_that("force_trim_factor triggers trimming of large positions", {
   # Investigate:
   #
   # sim$getSimDetail(strategy_name = "joint") %>%
-  #   select(sim_date, id, strategy, shares, start_price, end_price, end_nmv, end_shares, max_pos_lmv, max_pos_smv)
+  #   select(sim_date, id, strategy, shares, start_price, end_price, end_nmv, end_shares, max_pos_lmv, max_pos_smv, alpha_1)
 
   # Without force_trim_factor set, position in 101 remains at
   # gmv of 375 despite max position of 250.
@@ -294,12 +297,44 @@ test_that("force_trim_factor triggers trimming of large positions", {
       filter(sim_date %in% as.Date("2019-01-03")) %>%
       pull(end_gmv), 
     300)
-  
-  # Finally, re-run but set average volume of 101 to 50 for 2019-01-03. With
-  # trading_limit_pct_adv set to 100, that means trimming will be limited to 50
-  # on 1/3. The remaining 25 is trimmed on 1/4.
+
+  # On 2019-01-03, set alpha_1 of 101 from 3 to 2, and alpha_1 of 105 to from 2
+  # to 3. The optimization will want to close 101 and enter 105, so the
+  # force-trim order is not necessary.
   simple_input_data_2 <- simple_input_data_2 %>%
-    mutate(rc_vol = replace(rc_vol, id %in% "101" & date %in% as.Date("2019-01-03"), 45))
+    mutate(
+      alpha_1 = replace(alpha_1, id %in% "101" & date >= as.Date("2019-01-03"), 2),
+      alpha_1 = replace(alpha_1, id %in% "105" & date >= as.Date("2019-01-03"), 3))
+  
+  sim <- Simulation$new(sim_config,
+                        raw_input_data = simple_input_data_2, 
+                        raw_pricing_data = simple_pricing_data_2,
+                        security_reference_data = simple_secref_data_2)
+  sim$run()
+  
+  expect_equal(
+    sim$getSimDetail(strategy_name = "joint", security_id = "101") %>%
+      filter(sim_date <= as.Date("2019-01-03")) %>%
+      pull(end_gmv),
+    c(375, 0)
+    )
+  
+  expect_equal(
+    sim$getSimDetail(strategy_name = "joint", security_id = "105") %>%
+      filter(sim_date <= as.Date("2019-01-03")) %>%
+      pull(end_gmv),
+    c(0, 250)
+  )
+  
+  # Restore the alpha_1 values of 101 and 105. Re-run but set average volume of
+  # 101 to 45 for 2019-01-03. With trading_limit_pct_adv set to 100, that means
+  # trimming will be limited to 45 on 2019-01-03. The remaining 30 is trimmed on
+  # 2019-01-04.
+  simple_input_data_2 <- simple_input_data_2 %>%
+    mutate(
+      alpha_1 = replace(alpha_1, id %in% "101" & date >= as.Date("2019-01-03"), 3),
+      alpha_1 = replace(alpha_1, id %in% "105" & date >= as.Date("2019-01-03"), 2),
+      rc_vol = replace(rc_vol, id %in% "101" & date %in% as.Date("2019-01-03"), 45))
     
   sim <- Simulation$new(sim_config,
                         raw_input_data = simple_input_data_2, 
@@ -450,6 +485,11 @@ test_that("delistings are handled properly", {
       pull(end_nmv), 
     c(0, -501))
 })
+
+
+
+
+
 
 
 # Tests of summary functions
