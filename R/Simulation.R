@@ -660,9 +660,10 @@ Simulation <- R6Class(
               # order would represent an increase in the size of the position.
               
               mutate(sign_mismatch = sign(force_order_shares) * sign(order_shares) < 0,
-                     order_shares = replace(order_shares, !is.na(force_order_shares) &
+                     order_shares = ifelse(!is.na(force_order_shares) &
                                               abs(order_shares) < abs(force_order_shares),
-                                            force_order_shares))
+                                           force_order_shares,
+                                           order_shares))
             
             stopifnot(!any(revised_orders$sign_mismatch, na.rm = TRUE))
             
