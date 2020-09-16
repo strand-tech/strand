@@ -1028,7 +1028,7 @@ Simulation <- R6Class(
 
         # More complex aggregation on nmv
         summary_addl_data <- res %>%
-          select("strategy", "end_nmv", "start_nmv") %>%
+          select("strategy", "end_nmv", "start_nmv", "investable") %>%
           group_by(.data$strategy) %>%
           summarise(
             end_lmv = sum(.data$end_nmv[.data$end_nmv > 0]),
@@ -1037,7 +1037,8 @@ Simulation <- R6Class(
             start_smv = sum(.data$start_nmv[.data$start_nmv < 0]),
             end_num = sum(.data$end_nmv != 0),
             end_num_long = sum(.data$end_nmv > 0),
-            end_num_short = sum(.data$end_nmv < 0)
+            end_num_short = sum(.data$end_nmv < 0),
+            num_investable = sum(.data$investable)
             )
 
         summary_data <- 
@@ -1067,9 +1068,7 @@ Simulation <- R6Class(
           exposures_input <-
             res %>%
             select("strategy", "id", "end_nmv", "end_gmv") %>%
-            left_join(select(private$security_reference, "id", one_of(!!category_vars)),
-                             by = "id") %>%
-            left_join(select(input_data, "id", one_of(!!factor_vars)),
+            left_join(select(input_data, "id", one_of(!!factor_vars), one_of(!!category_vars)),
                              by = "id") %>%
             mutate(end_lmv = ifelse(end_nmv > 0, end_nmv, 0),
                    end_smv = ifelse(end_nmv < 0, end_nmv, 0))
@@ -1220,6 +1219,7 @@ Simulation <- R6Class(
     #'     trade_costs - financing_costs.}
     #'     \item{fill_rate_pct}{Total fill rate across all market orders,
     #'     calculated as 100 * market_fill_gmv / market_order_gmv.}
+    #'     \item{num_investable}{Number of investable securities (size of universe).}
     #'     
     #'   }
     #'   
@@ -1749,11 +1749,10 @@ Simulation <- R6Class(
     #' @param strategy_name Character vector of length 1 specifying the strategy
     #'   for the plot. Defaults to \code{joint}.
     plotUniverseSize = function(strategy_name = "joint") {
-      investable_data <- self$getSimDetail(strategy_name = strategy_name,
-                                           columns = c("sim_date", "id", "investable"))
+      
+      investable_data <- self$getSimSummary(strategy_name = strategy_name)
+      
       investable_data %>%
-        group_by(sim_date) %>%
-        summarise(num_investable = sum(investable)) %>%
         ggplot(aes(x = sim_date, y = num_investable)) + geom_line() +
         xlab("Date") + ylab("Number of securities") + 
         ggtitle("Universe size") + 

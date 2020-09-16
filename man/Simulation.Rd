@@ -285,6 +285,7 @@ An object of class \code{data.frame} that contains summary data
     trade_costs - financing_costs.}
     \item{fill_rate_pct}{Total fill rate across all market orders,
     calculated as 100 * market_fill_gmv / market_order_gmv.}
+    \item{num_investable}{Number of investable securities (size of universe).}
     
   }
 }
