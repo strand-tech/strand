@@ -67,6 +67,7 @@ simulator:
   fill_rate_pct_vol: 20
   transaction_cost_pct: 0.1
   financing_cost_pct: 1
+  keep_detail_all_rows: TRUE
   calculate_exposures:
     category_vars: category_1
     factor_vars: [alpha_1, factor_1]

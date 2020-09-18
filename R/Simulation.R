@@ -1122,11 +1122,26 @@ Simulation <- R6Class(
           # The full detail dataset is large. To save specific columns, use the
           # simulator/keep_detail_columns parameter.
           
+          
+          
           if (!is.null(simulator_config$keep_detail_columns)) {
             keep_detail_columns <-
                 unique(c("id", "strategy",
                        simulator_config$keep_detail_columns))
             res <- res %>% select(!!keep_detail_columns)
+          }
+          
+          # The 'keep_detail_all_rows' flag controls whether to save all detail
+          # rows, or only rows where there is a holding or trade for the stock.
+          # It defaults to FALSE.
+          keep_detail_all_rows <- FALSE
+          if (!is.null(simulator_config$keep_detail_all_rows) &&
+              is.logical(simulator_config$keep_detail_all_rows)) {
+            keep_detail_all_rows <- simulator_config$keep_detail_all_rows
+          }
+          
+          if (!isTRUE(keep_detail_all_rows)) {
+            res <- res %>% filter(start_nmv != 0 | end_nmv != 0)
           }
           
           private$saveSimDetail(current_date, res)
