@@ -1578,18 +1578,31 @@ Simulation <- R6Class(
     #'   for the plot. Defaults to \code{"joint"}.
     plotContribution = function(category_var, strategy_name = "joint") {
       
+      stopifnot(length(strategy_name) %in% 1)
+      
       summary_data <- self$getSimSummary(strategy_name) %>%
         select(sim_date, end_gmv)
       
-      contrib_data <- self$getSimDetail(strategy_name = strategy_name,
-                                        columns = c("id", "sim_date", "net_pnl")) %>%
-        left_join(select(self$getSecurityReference(), "id", !!category_var), by = "id") %>%
-        group_by(sim_date, assay_sector) %>%
+      # Get the category var values from the security reference if possible.
+      # Otherwise look for them in the detail result data.
+      
+      if (category_var %in% names(self$getSecurityReference())) {
+        contrib_data <- self$getSimDetail(strategy_name = strategy_name,
+                                          columns = c("id", "sim_date", "net_pnl")) %>%
+          left_join(select(self$getSecurityReference(), "id", !!category_var), by = "id")
+      } else {
+        contrib_data <- self$getSimDetail(strategy_name = strategy_name,
+                                          columns = c("id", "sim_date", "net_pnl", category_var))
+      }
+      
+      contrib_data <- contrib_data %>%
+        group_by_at(c("sim_date", category_var)) %>%
         summarise(net_pnl = sum(net_pnl)) %>%
-        left_join(summary_data, by = "sim_date") %>%
-        mutate(net_ret = net_pnl / end_gmv) %>%
-        group_by(assay_sector) %>%
-        mutate(cum_net_ret = cumsum(net_ret)) %>%
+        ungroup() %>%
+        left_join(summary_data, by = c("sim_date")) %>%
+        group_by_at(category_var) %>%
+        mutate(net_ret = net_pnl / end_gmv,
+               cum_net_ret = cumsum(net_ret)) %>%
         ungroup()
       
       # Adding zero-row for each group
