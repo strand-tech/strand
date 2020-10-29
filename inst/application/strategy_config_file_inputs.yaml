@@ -1,57 +1,41 @@
-from: 2019-01-02
-to: 2019-01-15
-name: example_sim
-turnover_limit: 25e3
+from: 2020-06-01
+to: 2020-08-31
 solver: glpk
 strategies:
   strategy_1:
-    in_var: alpha_1
+    in_var: value
     strategy_capital: 1e6
     ideal_long_weight: 1
     ideal_short_weight: 1
+    position_limit_pct_lmv: 1
+    position_limit_pct_smv: 1
     position_limit_pct_adv: 30
-    position_limit_pct_lmv: 0.5
-    position_limit_pct_smv: 0.5
     trading_limit_pct_adv: 5
     constraints:
-      factor_1:
+      size:
         type: factor
-        in_var: factor_1
-        upper_bound: 0.03
-        lower_bound: -0.01
-      factor_2:
-        type: factor
-        in_var: factor_2
+        in_var: size
         upper_bound: 0.01
         lower_bound: -0.01
-      factor_3:
-        type: factor
-        in_var: factor_3
-        upper_bound: 0.01
-        lower_bound: -0.01
-      factor_4:
-        type: factor
-        in_var: factor_4
-        upper_bound: 0.01
-        lower_bound: -0.01
-      category_1:
+      sector:
         type: category
-        in_var: category_1
+        in_var: sector
         upper_bound: 0.02
         lower_bound: -0.02
+turnover_limit: 25000
+target_weight_policy: half-way
 simulator:
-  add_detail_columns: alpha_1
+  add_detail_columns: value
   fill_rate_pct_vol: 4
   transaction_cost_pct: 0.1
   financing_cost_pct: 1
   calculate_exposures:
-    category_vars: category_1
-    factor_vars: [factor_1, factor_2, factor_3, factor_4]
+    category_vars: sector
+    factor_vars: [value, size]
   input_data:
     type: file
     directory: sample_data/inputs
     prefix: inputs
-    track_metadata: [factor_1, factor_2, factor_3, factor_4]
   pricing_data:
     type: file
     directory: sample_data/pricing

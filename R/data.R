@@ -1,49 +1,82 @@
 #' Sample security reference data for examples and testing
 #'
-#' A dataset containing sample (fake) security reference data for 500 securities.
+#' A dataset containing sample reference data for the securities of 492 large
+#' companies. All securities in the dataset were in the S&P 500 for most or all
+#' of the period June-August 2020.
 #'
-#' @format A data frame with 500 rows and 4 variables:
+#' @format A data frame with 492 rows and 4 variables:
 #' \describe{
-#'   \item{id}{security identifier}
-#'   \item{symbol}{human-readable trading symbol}
-#'   \item{category_1}{categorical variable with values A-F}
-#'   \item{category_2}{categorical variable with values A-L}
-#' }
+#'   \item{id}{Unique security identifier (the security's ticker).}
+#'   \item{name}{Company name.}
+#'   \item{symbol}{Human-readable symbol for display and reporting purposes. In
+#'   the case of this dataset it is the same as the \code{id} variable.}
+#'   \item{sector}{GICS sector for the company according to the Wikipedia page \href{https://en.wikipedia.org/wiki/List_of_S\%26P_500_companies}{List of S&P 500 companies}.} }
+#' @usage data(sample_secref)
 "sample_secref"
 
 #' Sample security inputs for examples and testing
 #'
-#' A dataset containing sample (fake) security input data for 500 securities and
-#' 63 weekdays, from 2019-01-02 to 2019-03-29.
+#' A dataset containing sample security input data for 492 securities and 65
+#' weekdays, from 2020-06-01 to 2020-08-31. Data items include average trading
+#' dollar volume, market cap, and normalized size and value factors. The pricing
+#' data used to construct the dataset was downloaded using the
+#' \href{https://api.tiingo.com/}{Tiingo Stock API} and is used with permission.
+#' Fundamental data items were downloaded from EDGAR.
 #'
-#' @format A data frame with 31500 rows and 9 variables:
+#' Data for most members of the S&P 500 are present. Some securities have been
+#' omitted due to data processing complexities. For example, securities for
+#' companies with multiple share classes have been omitted in the current
+#' version.
+#'
+#' Values for shares outstanding and stockholders' equity downloaded from EDGAR may be
+#' inaccurate due to XBRL parsing issues.
+#'
+#' Full code for reconstructing the dataset can be found in the
+#' \href{https://github.com/strand-tech/pystrand}{pystrand} repository.
+#'
+#' @format A data frame with 31980 rows and 7 variables: 
 #' \describe{
-#'   \item{id}{security identifier}
-#'   \item{date}{input date}
-#'   \item{rc_vol}{measurement of average security trading volume, in reference currency (e.g., USD)}
-#'   \item{alpha_1}{sample numeric alpha input}
-#'   \item{alpha_2}{sample numeric alpha input}
-#'   \item{factor_1}{sample numeric factor input}
-#'   \item{factor_2}{sample numeric factor input}
-#'   \item{factor_3}{sample numeric factor input}
-#'   \item{factor_4}{sample numeric factor input}
-#' }
+#'   \item{date}{Input date. It is assumed that the input data for day X is
+#'   known at the beginning of day X (e.g., the data is as-of the previous day's
+#'   close).}
+#'   \item{id}{Security identifier.}
+#'   \item{rc_vol}{Average dollar
+#'   trading volume for the security over the past 20 trading days.}
+#'   \item{market_cap}{Market capitalization, in dollars. The shares outstanding
+#'   value used to calculate market cap is the latest value available at the
+#'   beginning of the month.}
+#'   \item{book_to_price}{Ratio of total equity to
+#'   market cap. The stockholders' equity value used to calculate book to price
+#'   is the latest value available at the beginning of the month.}
+#'   \item{size}{Market cap factor normalized to be N(0,1) for each day.}
+#'   \item{value}{Book to price factor normalized to be N(0,1) for each day.} }
+#' @usage data(sample_inputs)
 "sample_inputs"
 
-#' Sample pricing data for examples and testing
+#' Sample security pricing data for examples and testing
 #'
-#' A dataset containing sample (fake) pricing data for 500 securities and
-#' 63 weekdays, from 2019-01-02 to 2019-03-29.
+#' A dataset containing sample security pricing data for 492 securities and 65
+#' weekdays, from 2020-06-01 to 2020-08-31. This data was downloaded using the
+#' \href{https://api.tiingo.com/}{Tiingo Stock API} and is redistributed with
+#' permission.
 #'
-#' @format A data frame with 31500 rows and 8 variables:
+#' Full code for reconstructing the dataset can be found in the
+#' \href{pystrand}{https://github.com/strand-tech/pystrand} repository.
+#'
+#' @format A data frame with 31980 rows and 8 variables:
 #' \describe{
-#'   \item{id}{security identifier}
-#'   \item{date}{pricing date}
-#'   \item{price_unadj}{the unadjusted price of the security}
-#'   \item{prior_close_unadj}{the unadjusted prior closing price of the security}
-#'   \item{dividend_unadj}{the dividend for the security on an unadjusted basis}
-#'   \item{distribution_unadj}{the distribution (e.g., spin-off) for the security on an unadjusted basis}
-#'   \item{volume}{trading volume for the security, in shares}
-#'   \item{adjustment_ratio}{the adjustment ratio for the security}
+#'   \item{date}{Pricing date.}
+#'   \item{id}{Security identifier.}
+#'   \item{price_unadj}{The unadjusted price of the security.}
+#'   \item{prior_close_unadj}{The unadjusted prior closing price of the security.}
+#'   \item{dividend_unadj}{The dividend for the security on an unadjusted basis, if any.}
+#'   \item{distribution_unadj}{The distribution (e.g., spin-off) for the
+#'   security on an unadjusted basis (note that there is no spin-off information
+#'   in this dataset, so all values are zero).}
+#'   \item{volume}{Trading volume for the security, in shares.}
+#'   \item{adjustment_ratio}{The adjustment ratio for the security. For example,
+#'   AAPL has an adjustment ratio of 0.25 to account for its 4:1 split on
+#'   2020-08-31.}
 #' }
+#' @usage data(sample_pricing)
 "sample_pricing"

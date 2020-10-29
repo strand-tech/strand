@@ -468,7 +468,7 @@ server <- function(input, output, session) {
             8,
             align = "center",
             offset = 2,
-            p(strong("Add save_detailed_columns: in_var to your simulation configuration to see more."))
+            p(strong("Set add_detail_columns: <your_in_var> to your simulation configuration to see more."))
           )
         )
       }

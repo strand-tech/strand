@@ -38,6 +38,9 @@
 #' # Load sample configuration
 #' config <- example_strategy_config()
 #'
+#' # Override config file end date to run a two week sim
+#' config$to <- as.Date("2020-06-12")
+#' 
 #' # Create the Simulation object and run
 #' sim <- Simulation$new(config,
 #'                       raw_input_data = sample_inputs,

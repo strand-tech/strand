@@ -24,7 +24,7 @@ knitr::opts_chunk$set(collapse = T, comment = "#>", fig.width = 7, fig.height = 
 # Set default values so that errors are not thrown for inline chunks if the above env var is set.
 overall_stats <- list()
 
-options(tibble.print_min = 4L, tibble.print_max = 4L, tibble.width = Inf)
+options(tibble.print_min = 4L, tibble.print_max = 4L, tibble.width = Inf, dplyr.summarise.inform = FALSE)
 ```
 
 ## Introduction
@@ -71,7 +71,11 @@ Three types of input data are needed to run a `strand` simulation:
 2. Daily alpha and factor inputs for each stock in the universe.
 3. Daily market data for each stock in the universe.
 
-This data can be provided to the simulator directly using objects stored in memory, or the simulator can read the data from binary files stored in `feather` format on disk. In this vignette we will use the package's sample (fake) data sets as input and supply them as objects in memory. For a discussion of how to use files for input data, see [Appendix: file-based inputs].
+This data can be provided to the simulator directly using objects stored in memory, or the simulator can read the data from binary files stored in `feather` format on disk.
+
+In this vignette we will use the package's sample data sets as input and supply them as objects in memory. For a discussion of how to use files for input data, see [Appendix: file-based inputs].
+
+The package's sample data set includes value and size factors, as well as pricing information, for most of the stocks in the S&P 500 for the period June-August 2020. The source of fundamental data is EDGAR, and all pricing data was downloaded using the [Tiingo Stock API](https://api.tiingo.com/).
 
 ### Loading required packages
 
@@ -87,7 +91,7 @@ library(dplyr)
 The security reference specifies static information about each security in the backtest. Security reference data must include at least the following columns:
 
 * `id` containing a unique security identifier.
-* `symbol` for reporting.
+* `symbol` (required for reporting).
 * One column for each category used in an exposure constraint.
 
 Below is a listing of a few rows and columns from the `sample_secref` data set included with the package:
@@ -96,10 +100,11 @@ Below is a listing of a few rows and columns from the `sample_secref` data set i
 data(sample_secref)
 
 sample_secref %>%
-  select("id", "symbol", "category_1")
+  select(id, name, sector) %>%
+  head()
 ```
 
-Shown are three columns, all of class `character`: `id`, `symbol`, and one category column `category_1`. In `sample.yaml` we indicate that this data will be passed to the simulator as an object by configuring `/simulator/secref_data` as follows:
+Shown are three columns, all of class `character`: `id`, `name`, and one category column `sector`. In `sample.yaml` we indicate that this data will be passed to the simulator as an object by configuring `/simulator/secref_data` as follows:
 
 ```
 simulator:
@@ -131,13 +136,14 @@ We will be using the `sample_inputs` data set included with the package as the a
 data(sample_inputs)
 
 sample_inputs %>%
-  filter(date %in% as.Date("2019-01-04")) %>%
-  select("date", "id", "rc_vol", "alpha_1", "factor_1",  "factor_2")
+  filter(date %in% as.Date("2020-06-01")) %>%
+  select("date", "id", "rc_vol", "size", "value") %>%
+  head()
 ```
 
-The first column, `date`, contains the date for which the data should be used to generate orders in the simulation. The second and third columns are the `id` and `rc_vol` columns described above. The column `alpha_1` is a numeric column that serves as the signal for the backtest run in this vignette. Columns `factor_1` and `factor_2` are numeric values that are used in factor constraints.
+The first column, `date`, contains the date for which the data should be used to generate orders in the simulation. The second and third columns are the `id` and `rc_vol` columns described above. The column `value` is a numeric column that serves as the signal for the backtest run in this vignette. The `size` column contains a numeric factor that is used in a portfolio construction constraint.
 
-> *Note regarding date semantics for inputs data:* The data for 2019-01-04 is used for constructing the portfolio and generating orders for trading on that day. As a result, it is assumed that this data is known *before* trading begins on 2019-01-04 (e.g., data as-of the close on 2019-01-03). How the strategy operates and any expectations around the timeliness of data delivery should dictate what is used as inputs for a given date.
+> *Note regarding date semantics for inputs data:* The data for 2020-06-01 is used for constructing the portfolio and generating orders for trading on that day. As a result, it is assumed that this data is known *before* trading begins on 2020-06-01 (e.g., data as-of the close on 2020-05-29). How the strategy operates and any expectations around the timeliness of data delivery should dictate what is used as inputs for a given date.
 
 ### Market data
 
@@ -184,14 +190,15 @@ We will be using the `sample_pricing` data set included with the package as the 
 data(sample_pricing)
 
 sample_pricing %>%
-  filter(date %in% as.Date("2019-01-04")) %>%
+  filter(date %in% as.Date("2020-06-01")) %>%
   select("date", "id", "price_unadj", "prior_close_unadj", "adjustment_ratio",
-         "volume", "dividend_unadj", "distribution_unadj")
+         "volume", "dividend_unadj", "distribution_unadj") %>%
+  head()
 ```
 
-As per the configuration file, the `price_unadj`, `prior_close_unadj`, `dividend_unadj`, and `distribution_unadj` columns will be treated by the simulator as the `close_price`, `prior_close_price`, `dividend`, and `distrubtion` columns, respectively. There are no dividends or distributions for the securities shown, so these values are `NA`. There are no splits or other changes to the securities' adjustment basis, so all `adjustment_ratio` values are 1.
+As per the configuration file, the `price_unadj`, `prior_close_unadj`, `dividend_unadj`, and `distribution_unadj` columns will be treated by the simulator as the `close_price`, `prior_close_price`, `dividend`, and `distribution` columns, respectively. There are no dividends or distributions for the securities shown, so these values are `NA`. There are no splits or other changes to the securities' adjustment basis, so all `adjustment_ratio` values are 1.
 
-> *Note regarding date semantics for pricing/market data:* The pricing data for date 2019-01-04 in the simulator is data *as-of* 2019-01-04. Therefore, some of the data could not have been known until the end of that day. For example, the `close_price` and `volume` data items are measured at the end of the trading day on 2019-01-04. Note that these semantics are in contrast with the date semantics for alpha/factor input data, where all data is assumed to have been known *before* trading beings on the data date.
+> *Note regarding date semantics for pricing/market data:* The pricing data for date 2020-06-01 in the simulator is data *as-of* 2020-06-01. Therefore, some of the data could not have been known until the end of that day. For example, the `close_price` and `volume` data items are measured at the end of the trading day on 2020-06-01. Note that these semantics are in contrast with the date semantics for alpha/factor input data, where all data is assumed to have been known *before* trading beings on the data date.
 
 ## Strategy specification
 
@@ -200,28 +207,23 @@ All strategy settings, including input signal and exposure constraints, are spec
 ```
 strategies:
   strategy_1:
-    in_var: alpha_1
+    in_var: value
     strategy_capital: 1e6
     ideal_long_weight: 1
     ideal_short_weight: 1
-    position_limit_pct_lmv: 0.5
-    position_limit_pct_smv: 0.5
+    position_limit_pct_lmv: 1
+    position_limit_pct_smv: 1
     position_limit_pct_adv: 30
     trading_limit_pct_adv: 5
     constraints:
-      factor_1:
+      size:
         type: factor
-        in_var: factor_1
+        in_var: size
         upper_bound: 0.01
         lower_bound: -0.01
-      factor_2:
-        type: factor
-        in_var: factor_2
-        upper_bound: 0.01
-        lower_bound: -0.01
-      category_1:
+      sector:
         type: category
-        in_var: category_1
+        in_var: sector
         upper_bound: 0.02
         lower_bound: -0.02
 turnover_limit: 25000
@@ -237,10 +239,10 @@ In this section we'll be discussing each of the entries listed above. Note that 
 ```
 strategies:
   strategy_1:
-    in_var: alpha_1
+    in_var: value
 ```
 
-The above indicates that in the objective function for our optimization we are maximizing the exposure of our portfolio to `alpha_1`. As we saw in the previous section, `alpha_1` is one of the columns in our inputs data.
+The above indicates that in the objective function for our optimization we are maximizing the exposure of our portfolio to `value`. As we saw in the previous section, `value` is one of the columns in our inputs data.
 
 ### Market value constraints
 
@@ -263,11 +265,11 @@ Position sizes are controlled by the parameters `position_limit_pct_lmv` and `po
 ```
 strategies:
   strategy_1:
-    position_limit_pct_lmv: 0.5
-    position_limit_pct_smv: 0.5
+    position_limit_pct_lmv: 1
+    position_limit_pct_smv: 1
 ```
 
-These parameters express limits on the size of positions as a percentage of the target long and short market values for the portfolio (calculated in the previous example). In our example both are set to 0.5, which means that the maximum size for a long position is 0.5\% times \$1mm = \$5,000, and the maximum size for a short position is 0.5\% times -\$1mm = -\$5,000.
+These parameters express limits on the size of positions as a percentage of the target long and short market values for the portfolio (calculated in the previous example). In our example both are set to 1, which means that the maximum size for a long position is 1\% times \$1mm = \$10,000, and the maximum size for a short position is 1\% times -\$1mm = -\$10,000.
 
 ### Liquidity constraints
 
@@ -297,60 +299,58 @@ which means that we can buy at most 5\% or sell at most 5\% of a security's `rc_
 
 Factor constraints limit the amount of exposure we can have in our optimization to a given numeric value. That is, we impose an upper and/or lower bound on the product of our position weights and the numeric value. In the context of exposure constraints, a *position weight* means the signed market value of a position divided by the strategy's `strategy_capital` value.
 
-In this vignette's example we impose factor constraints on `factor_1` and `factor_2`:
+In this vignette's example we impose factor constraints on `size`:
 
 ```
 strategies:
   strategy_1:
     constraints:
-      factor_1:
+      size:
         type: factor
-        in_var: factor_1
-        upper_bound: 0.01
-        lower_bound: -0.01
-      factor_2:
-        type: factor
-        in_var: factor_2
+        in_var: size
         upper_bound: 0.01
         lower_bound: -0.01
 ```
 
-Recall that both `factor_1` and `factor_2` must be columns present in the daily inputs data. Each constraint is configured in a separate entry in the `constraints` section that contains the following key/value pairs:
+Recall that `size` must be a column present in the daily inputs data. Each constraint is configured in a separate entry in the `constraints` section that contains the following key/value pairs:
 
 * `type`: in this case `factor` because we are constraining exposure to a numeric value.
 * `in_var`: the name of the column in the input data that contains the numeric value.
 * `upper_bound`: the upper bound on exposure to `in_var`.
 * `lower_bound`: the lower bound on exposure to `in_var`.
 
-In our example we are limiting exposure to both `factor_1` and `factor_2` to be within +/-1\%.
+In our example we are limiting exposure to `size` to be within +/-1\%.
 
 ### Category exposure constraints
 
-Category exposure constraints are similar to factor exposure constraints. A category constraint imposes a limit on the exposure (i.e., the sum of the position weights) within each level of a category. In our example we have a single constraint on `category_1`:
+Category exposure constraints are similar to factor exposure constraints. A category constraint imposes a limit on the exposure (i.e., the sum of the position weights) within each level of a category. In our example we have a single constraint on `sector`:
 
 ```
 strategies:
   strategy_1:
     constraints:
-      category_1:
+      sector:
         type: category
-        in_var: category_1
+        in_var: sector
         upper_bound: 0.02
         lower_bound: -0.02
 ```
 
-Here, `category_1` must be a column that appears in the security reference. As with factor constraints, the category constraint is defined in its own entry in the `constraints` section of the configuration file for `strategy_1` with the following key/value pairs:
+Here, `sector` must be a column that appears in the security reference or the simulation's input data. As with factor constraints, the category constraint is defined in its own entry in the `constraints` section of the configuration file for `strategy_1` with the following key/value pairs:
 
 * `type`: in this case `category` because we are constraining exposure to the levels of a category.
 * `in_var`: the name of the column in the security reference that contains the category level for each security.
 * `upper_bound`: the upper bound on exposure for each level of `in_var`.
 * `lower_bound`: the lower bound on exposure for each level of `in_var`.
 
-There are 6 levels in `category_1` in our security reference:
+There are 11 levels in `sector` in our security reference:
 
 ```{r}
 data(sample_secref)
-table(sample_secref$category_1)
+sample_secref %>%
+  group_by(sector) %>%
+  summarise(count = n()) %>%
+  print(n = Inf)
 ```
 
 The constraint above indicates that in our optimization we may have no more than +/-2% of exposure in any one of these levels.
@@ -369,7 +369,7 @@ The `target_weight_policy` top-level configuration item controls how aggresively
 
 There may be cases where, given the constraints imposed on the portfolio construction process, no solution can be found. In this scenario, the violating constraints are *loosened* in an attempt to find a solution. This loosening applies to factor and category exposure constraints.
 
-For example, suppose the current exposure to level `A` of `category_1` is 3\%, and we have set a 2\% exposure limit on exposure to `A`. If no solution is found, the optimization is re-run with a limit that is 50\% as strict. That is, we set the limit to the midpoint between the current exposure and the constraint limit. In our example, the midpoint between the current exposure and the limit is 2.5\%. If no solution is found with the new limit of 2.5\%, the constraint is loosened again by 50\%, moving the limit to 2.75\%. If no solution is found after this second round of loosening, the constraint limit is set to the current exposure, in this case 3\%, to ensure that the constraint can be satisfied.
+For example, suppose the current exposure to level `Industrials` of `sector` is 3\%, and we have set a 2\% exposure limit on exposure to `Industrials`. If no solution is found, the optimization is re-run with a limit that is 50\% as strict. That is, we set the limit to the midpoint between the current exposure and the constraint limit. In our example, the midpoint between the current exposure and the limit is 2.5\%. If no solution is found with the new limit of 2.5\%, the constraint is loosened again by 50\%, moving the limit to 2.75\%. If no solution is found after this second round of loosening, the constraint limit is set to the current exposure, in this case 3\%, to ensure that the constraint can be satisfied.
 
 ## Simulator settings
 
@@ -380,11 +380,11 @@ In the previous section we discussed how to define the strategy that we want to 
 The top-level items `from` and `to` control the starting and ending dates for the backtest:
 
 ```
-from: 2019-01-02
-to: 2019-03-29
+from: 2020-06-01
+to: 2020-08-31
 ```
 
-In this vignette we will run a simulation over 3 months of daily data, beginning on January 2, 2019 and ending on March 29, 2019.
+In this vignette we will run a simulation over 3 months of daily data, beginning on June 1, 2020 and ending on August 31, 2020.
 
 ### Solver
 
@@ -405,7 +405,7 @@ simulator:
   fill_rate_pct_vol: 4
 ```
 
-As an example, suppose on 2019-07-15 that the optimization process for `strategy_1` generates an order to buy 5,000 shares of security ABC.  But suppose ABC only trades 100,000 shares on that day. Because we have set a 4\% limit on participation, `strategy_1` will only be able to buy 4,000 shares, despite generating an order to buy 5,000.
+As an example, suppose on 2020-06-01 that the optimization process for `strategy_1` generates an order to buy 5,000 shares of security .  But suppose ABC only trades 100,000 shares on that day. Because we have set a 4\% limit on participation, `strategy_1` will only be able to buy 4,000 shares, despite generating an order to buy 5,000.
 
 ### Transaction costs
 
@@ -481,12 +481,12 @@ sim$plotMarketValue()
 
 #### Category exposures
 
-The `plotCategoryExposure()` method shows the exposure over time within each level of a given category. Below we plot the exposure within the levels of `category_1`, which in our backtest has an exposure constraint of +/-2\%:
+The `plotCategoryExposure()` method shows the exposure over time within each level of a given category. Below we plot the exposure within the levels of `sector`, which in our backtest has an exposure constraint of +/-2\%:
 ```{r}
-sim$plotCategoryExposure("category_1")
+sim$plotCategoryExposure("sector")
 ```
 
-Note that there are some cases where the exposure to a level of `category_1` falls outside of +/-2\% despite the category exposure constraint we impose during portfolio construction. This can be due to the following:
+Note that there are some cases where the exposure to a level of `sector` falls outside of +/-2\% despite the category exposure constraint we impose during portfolio construction. This can be due to the following:
 
 * Prices for securities in the level of the category are rising (in the case of an exposure that is too positive) or falling (in the case of an exposure that is too negative). The portfolio construction step uses prices as of the *start* of the day, while the plot above shows exposures at the *end* of the day. So even if constraints are within bounds using starting market values they could be out of bounds at the end of the day due to price movement.
 * Lack of liquidity. The trades that we need to make to bring an exposure back within bounds could be left unfilled due to a lack of liquidity. Recall that we configured our backtest to only allow fills up to 4\% of the number of shares traded in the market.
@@ -496,10 +496,10 @@ Exploring these scenarios is possible by looking at lower-level backtest results
 
 #### Factor exposures
 
-The `plotFactorExposure()` method shows the portfolio exposure over time to one or more factors. Below we plot the exposure to `factor_1` and `factor_2`, each of which in our backtest has an exposure constraint of +/-1\%:
+The `plotFactorExposure()` method shows the portfolio exposure over time to one or more factors. Below we plot the exposure to `size`, which in our backtest has an exposure constraint of +/-1\%:
 
 ```{r}
-sim$plotFactorExposure(c("factor_1", "factor_2"))
+sim$plotFactorExposure(c("size"))
 ```
 
 Here we can also see spikes of exposure outside the constrained range +/-1\%. As discussed in the previous section, price movement, lack of liquidity and constraint loosening are possible explanations for these spikes in end-of-day exposure. In the case of factor constraints, another possible explanation is a significant day-over-day change in factor values. Again, exploring these scenarios is possible by diving more deeply into the backtest's result data, but is outside the scope of this document.

@@ -5,24 +5,44 @@
 \alias{sample_inputs}
 \title{Sample security inputs for examples and testing}
 \format{
-A data frame with 31500 rows and 9 variables:
+A data frame with 31980 rows and 7 variables: 
 \describe{
-  \item{id}{security identifier}
-  \item{date}{input date}
-  \item{rc_vol}{measurement of average security trading volume, in reference currency (e.g., USD)}
-  \item{alpha_1}{sample numeric alpha input}
-  \item{alpha_2}{sample numeric alpha input}
-  \item{factor_1}{sample numeric factor input}
-  \item{factor_2}{sample numeric factor input}
-  \item{factor_3}{sample numeric factor input}
-  \item{factor_4}{sample numeric factor input}
-}
+  \item{date}{Input date. It is assumed that the input data for day X is
+  known at the beginning of day X (e.g., the data is as-of the previous day's
+  close).}
+  \item{id}{Security identifier.}
+  \item{rc_vol}{Average dollar
+  trading volume for the security over the past 20 trading days.}
+  \item{market_cap}{Market capitalization, in dollars. The shares outstanding
+  value used to calculate market cap is the latest value available at the
+  beginning of the month.}
+  \item{book_to_price}{Ratio of total equity to
+  market cap. The stockholders' equity value used to calculate book to price
+  is the latest value available at the beginning of the month.}
+  \item{size}{Market cap factor normalized to be N(0,1) for each day.}
+  \item{value}{Book to price factor normalized to be N(0,1) for each day.} }
 }
 \usage{
-sample_inputs
+data(sample_inputs)
 }
 \description{
-A dataset containing sample (fake) security input data for 500 securities and
-63 weekdays, from 2019-01-02 to 2019-03-29.
+A dataset containing sample security input data for 492 securities and 65
+weekdays, from 2020-06-01 to 2020-08-31. Data items include average trading
+dollar volume, market cap, and normalized size and value factors. The pricing
+data used to construct the dataset was downloaded using the
+\href{https://api.tiingo.com/}{Tiingo Stock API} and is used with permission.
+Fundamental data items were downloaded from EDGAR.
+}
+\details{
+Data for most members of the S&P 500 are present. Some securities have been
+omitted due to data processing complexities. For example, securities for
+companies with multiple share classes have been omitted in the current
+version.
+
+Values for shares outstanding and stockholders' equity downloaded from EDGAR may be
+inaccurate due to XBRL parsing issues.
+
+Full code for reconstructing the dataset can be found in the
+\href{https://github.com/strand-tech/pystrand}{pystrand} repository.
 }
 \keyword{datasets}

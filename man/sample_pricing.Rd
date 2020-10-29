@@ -3,25 +3,35 @@
 \docType{data}
 \name{sample_pricing}
 \alias{sample_pricing}
-\title{Sample pricing data for examples and testing}
+\title{Sample security pricing data for examples and testing}
 \format{
-A data frame with 31500 rows and 8 variables:
+A data frame with 31980 rows and 8 variables:
 \describe{
-  \item{id}{security identifier}
-  \item{date}{pricing date}
-  \item{price_unadj}{the unadjusted price of the security}
-  \item{prior_close_unadj}{the unadjusted prior closing price of the security}
-  \item{dividend_unadj}{the dividend for the security on an unadjusted basis}
-  \item{distribution_unadj}{the distribution (e.g., spin-off) for the security on an unadjusted basis}
-  \item{volume}{trading volume for the security, in shares}
-  \item{adjustment_ratio}{the adjustment ratio for the security}
+  \item{date}{Pricing date.}
+  \item{id}{Security identifier.}
+  \item{price_unadj}{The unadjusted price of the security.}
+  \item{prior_close_unadj}{The unadjusted prior closing price of the security.}
+  \item{dividend_unadj}{The dividend for the security on an unadjusted basis, if any.}
+  \item{distribution_unadj}{The distribution (e.g., spin-off) for the
+  security on an unadjusted basis (note that there is no spin-off information
+  in this dataset, so all values are zero).}
+  \item{volume}{Trading volume for the security, in shares.}
+  \item{adjustment_ratio}{The adjustment ratio for the security. For example,
+  AAPL has an adjustment ratio of 0.25 to account for its 4:1 split on
+  2020-08-31.}
 }
 }
 \usage{
-sample_pricing
+data(sample_pricing)
 }
 \description{
-A dataset containing sample (fake) pricing data for 500 securities and
-63 weekdays, from 2019-01-02 to 2019-03-29.
+A dataset containing sample security pricing data for 492 securities and 65
+weekdays, from 2020-06-01 to 2020-08-31. This data was downloaded using the
+\href{https://api.tiingo.com/}{Tiingo Stock API} and is redistributed with
+permission.
+}
+\details{
+Full code for reconstructing the dataset can be found in the
+\href{pystrand}{https://github.com/strand-tech/pystrand} repository.
 }
 \keyword{datasets}

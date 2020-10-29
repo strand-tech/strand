@@ -28,11 +28,11 @@ ui <- fluidPage(
              br(),
              fluidRow(
                column(2,
-                      dateInput("startDate", label = "Start date", value = "2019-01-02",
-                                min = "2019-01-02", max = "2019-03-29",
+                      dateInput("startDate", label = "Start date", value = "2020-06-01",
+                                min = "2020-06-01", max = "2020-08-31",
                                 daysofweekdisabled = c(0,6)),
-                      dateInput("endDate", label = "End date", value = "2019-03-29",
-                                min = "2019-01-02", max = "2019-03-29",
+                      dateInput("endDate", label = "End date", value = "2020-08-31",
+                                min = "2020-06-01", max = "2020-08-31",
                                 daysofweekdisabled = c(0,6)),
                       actionButton("runSim", "Run simulation")
                ),
@@ -131,7 +131,7 @@ ui <- fluidPage(
           fluidRow(
             column(
               12,
-              dateInput("holdingsDate", label = "Date", value = "2019-01-02",
+              dateInput("holdingsDate", label = "Date", value = "2020-06-01",
                         daysofweekdisabled = c(0,6)),
               DT::dataTableOutput('holdingsTable')
             ) 

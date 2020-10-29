@@ -28,11 +28,11 @@ data(sample_pricing)
 # Construct optimization input for one day from sample data. The columns
 # of the input data must match the input configuration.
 optim_input <-
-  dplyr::inner_join(sample_inputs, sample_pricing,
-                    by = c("id", "date")) \%>\%
-  dplyr::left_join(sample_secref, by = "id") \%>\%
-  dplyr::filter(date \%in\% as.Date("2019-01-02")) \%>\%
-  dplyr::mutate(ref_price = price_unadj,
+  inner_join(sample_inputs, sample_pricing,
+             by = c("id", "date")) \%>\%
+  left_join(sample_secref, by = "id") \%>\%
+  filter(date \%in\% as.Date("2020-06-01")) \%>\%
+  mutate(ref_price = price_unadj,
                 shares_strategy_1 = 0)
 
 opt <-
@@ -102,11 +102,11 @@ data(sample_pricing)
 # Construct optimization input for one day from sample data. The columns
 # of the input data must match the input configuration.
 optim_input <-
-  dplyr::inner_join(sample_inputs, sample_pricing,
-                    by = c("id", "date")) \%>\%
-  dplyr::left_join(sample_secref, by = "id") \%>\%
-  dplyr::filter(date \%in\% as.Date("2019-01-02")) \%>\%
-  dplyr::mutate(ref_price = price_unadj,
+  inner_join(sample_inputs, sample_pricing,
+             by = c("id", "date")) \%>\%
+  left_join(sample_secref, by = "id") \%>\%
+  filter(date \%in\% as.Date("2020-06-01")) \%>\%
+  mutate(ref_price = price_unadj,
                 shares_strategy_1 = 0)
 
 opt <-

@@ -5,18 +5,20 @@
 \alias{sample_secref}
 \title{Sample security reference data for examples and testing}
 \format{
-A data frame with 500 rows and 4 variables:
+A data frame with 492 rows and 4 variables:
 \describe{
-  \item{id}{security identifier}
-  \item{symbol}{human-readable trading symbol}
-  \item{category_1}{categorical variable with values A-F}
-  \item{category_2}{categorical variable with values A-L}
-}
+  \item{id}{Unique security identifier (the security's ticker).}
+  \item{name}{Company name.}
+  \item{symbol}{Human-readable symbol for display and reporting purposes. In
+  the case of this dataset it is the same as the \code{id} variable.}
+  \item{sector}{GICS sector for the company according to the Wikipedia page \href{https://en.wikipedia.org/wiki/List_of_S\%26P_500_companies}{List of S&P 500 companies}.} }
 }
 \usage{
-sample_secref
+data(sample_secref)
 }
 \description{
-A dataset containing sample (fake) security reference data for 500 securities.
+A dataset containing sample reference data for the securities of 492 large
+companies. All securities in the dataset were in the S&P 500 for most or all
+of the period June-August 2020.
 }
 \keyword{datasets}

@@ -35,6 +35,15 @@ provides an in-depth discussion of setup and usage. See
     no solution is found.
   - Realistic trade filling based on percentage of actual volume.
 
+### Tiingo and EDGAR sample data
+
+The package’s sample data set includes value and size factors, as well
+as daily pricing information, for most of the stocks in the S\&P 500 for
+the period June-August 2020. The source of fundamental data is
+[EDGAR](https://www.sec.gov/edgar.shtml), and all pricing data was
+downloaded using the [Tiingo Stock API](https://api.tiingo.com/).
+Special thanks to Tiingo for giving permission to release this data.
+
 ## Installation
 
 ``` r
@@ -106,18 +115,18 @@ sim$run()
 sim$overallStatsDf()
 ```
 
-    ##                            Item Gross       Net
-    ## 1                     Total P&L   419    -2,507
-    ## 2       Total Return on GMV (%)   0.0      -0.1
-    ## 3  Annualized Return on GMV (%)   0.5      -3.2
-    ## 4            Annualized Vol (%)   0.5       0.7
-    ## 5             Annualized Sharpe  1.12     -4.61
-    ## 6              Max Drawdown (%)  -0.1      -0.1
-    ## 7                       Avg GMV       1,999,350
-    ## 8                       Avg NMV              73
-    ## 9                     Avg Count             403
-    ## 10           Avg Daily Turnover         220,439
-    ## 11      Holding Period (months)             0.9
+    ##                            Item   Gross       Net
+    ## 1                     Total P&L -32,355   -40,867
+    ## 2       Total Return on GMV (%)    -1.8      -2.3
+    ## 3  Annualized Return on GMV (%)    -6.9      -8.7
+    ## 4            Annualized Vol (%)     8.9       8.8
+    ## 5             Annualized Sharpe   -0.77     -0.98
+    ## 6              Max Drawdown (%)    -6.6      -6.8
+    ## 7                       Avg GMV         1,976,540
+    ## 8                       Avg NMV              -716
+    ## 9                     Avg Count               189
+    ## 10           Avg Daily Turnover            53,022
+    ## 11      Holding Period (months)               3.6
 
 ### Example shiny application (local)
 
