@@ -1,27 +1,29 @@
 Package: strand
 Type: Package
 Title: A Framework for Investment Strategy Simulation
-Version: 0.1.3.9009
-Date: 2020-09-02
+Version: 0.2.0
+Date: 2020-11-17
 Authors@R:
     c(person(given = "Jeff",
              family ="Enos",
-             email = "jeff@strand.tech",
-             role = c("cre", "aut")),
+             email = "jeffrey.enos@gmail.com",
+             role = c("cre", "aut", "cph")),
       person(given = "David",
              family = "Kane",
-             email = "david@strand.tech",
+             email = "dave.kane@gmail.com",
              role = "aut"),
       person(given = "Ben",
              family = "Czekanski",
-             email = "bmczekanski@gmail.com",
              role = "ctb"),
       person(given = "Robert",
              family = "Hoover",
-             email = "rbthoover@outlook.com",
-             role = "ctb"),       
-      person(given = "Strand Technologies, Inc.",
-             role = "cph"))
+             role = "ctb"),
+      person(given = "Jack",
+             family = "Luby",
+             role = "ctb"),
+      person(given = "Nils",
+             family = "Wallin",
+             role = "ctb"))
 Description: Provides a framework for performing discrete (share-level) simulations of
   investment strategies. Simulated portfolios optimize exposure to an input signal subject
   to constraints such as position size and factor exposure. For background see L. Chincarini
@@ -58,4 +60,4 @@ Suggests:
 Encoding: UTF-8
 LazyData: true
 VignetteBuilder: knitr
-RoxygenNote: 7.1.0
+RoxygenNote: 7.1.1

@@ -1,4 +1,12 @@
-# strand 0.2.0 (unreleased)
+# strand 0.2.0
+
+* The sample dataset has been replaced with real-world data. Pricing data has
+been sourced from the Tiingo Stock API, and financial data has been sourced from
+EDGAR. The dataset includes size and value factors for most of the stocks in the
+S&P 500 for the period June-August 2020.
+
+* The sample shiny app has multiple improvements, including the ability to load
+simulation results and improved visualizations.
 
 * The `PortOpt` class has been exported. This class can be used to solve single
 portfolio optimization problems.
@@ -6,9 +14,12 @@ portfolio optimization problems.
 * Writing html reports for a simulation based on an Rmd template is now possible
 using the `writeReport` method of the `Simulation` class.
 
+* Delistings can now be entered with a delisting return.
+
 * Average volume has been changed to a market value measure from a shares
 measure. This makes it much easier to provide a measure of ADV (average daily
-volume) for setting trading and position limit constraints.
+volume) in a reference currency for setting trading and position limit
+constraints. By default the column is called `rc_vol`.
 
 * Added input_dates parameter to Simulation class constructor. The date vector
 passed to input_dates contols the dates on which input data (e.g., alpha and
@@ -22,6 +33,12 @@ maximum allowable size.
 * Added force-exit feature for non-investable securities. Setting the simulator
 configuration parameter `force_exit_non_investable` to `TRUE` will cause exit
 orders to be created for positions not in the universe during a simulation.
+
+* Added feature to limit LMV/SMV increase/decrease on a single day. This feature
+is useful when ramping up the portfolio to its target LMV/SMV at the beginning
+of the simulation. For example, setting the simulator configuration parameter
+`max_weight_change` to 0.1 will limit LMV/SMV increase to 10% of the target
+LMV/SMV per day.
 
 * Now saving gross, long, and short exposures in addition to net.
 
