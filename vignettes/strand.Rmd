@@ -1,6 +1,6 @@
 ---
 title: "Backtesting with strand"
-author: Jeff Enos and David Kane, Strand Technologies
+author: Jeff Enos and David Kane
 output:
   rmarkdown::html_vignette:
     toc: true

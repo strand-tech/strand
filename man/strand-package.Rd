@@ -24,8 +24,8 @@ data(sample_inputs)
 # Load sample configuration
 config <- example_strategy_config()
 
-# Override config file end date to run a two week sim
-config$to <- as.Date("2020-06-12")
+# Override config file end date to run a one-week sim
+config$to <- as.Date("2020-06-05")
 
 # Create the Simulation object and run
 sim <- Simulation$new(config,
@@ -49,11 +49,11 @@ head(sim$getExposures())
 \dontrun{
 sim$plotPerformance()
 sim$plotMarketValue()
-sim$plotCategoryExposure("category_1") 
-sim$plotFactorExposure(c("factor_1", "factor_2", "factor_3"))
+sim$plotCategoryExposure("sector") 
+sim$plotFactorExposure(c("value", "size"))
 sim$plotNumPositions()
 }
 }
 \author{
-Jeff Enos \email{jeff@strand.tech} and David Kane \email{david@strand.tech}
+Jeff Enos \email{jeffrey.enos@gmail.com} and David Kane \email{dave.kane@gmail.com}
 }
