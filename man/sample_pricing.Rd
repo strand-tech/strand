@@ -32,6 +32,6 @@ permission.
 }
 \details{
 Full code for reconstructing the dataset can be found in the
-\href{pystrand}{https://github.com/strand-tech/pystrand} repository.
+\href{https://github.com/strand-tech/pystrand}{pystrand} repository.
 }
 \keyword{datasets}

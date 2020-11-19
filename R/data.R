@@ -61,7 +61,7 @@
 #' permission.
 #'
 #' Full code for reconstructing the dataset can be found in the
-#' \href{pystrand}{https://github.com/strand-tech/pystrand} repository.
+#' \href{https://github.com/strand-tech/pystrand}{pystrand} repository.
 #'
 #' @format A data frame with 31980 rows and 8 variables:
 #' \describe{
