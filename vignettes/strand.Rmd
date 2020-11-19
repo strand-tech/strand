@@ -7,7 +7,7 @@ output:
 vignette: >
   %\VignetteIndexEntry{Backtesting with strand}
   %\VignetteEngine{knitr::rmarkdown}
-  %\usepackage[utf8]{inputenc}
+  %\VignetteEncoding{UTF-8}
 ---
 
 
